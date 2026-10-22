@@ -1,0 +1,27 @@
+Dữ liệu đã có sẵn (chạy lại với --force để tạo lại từ đầu).
+
+Tóm tắt dữ liệu
+───────────────
+│ Bảng         │   Số dòng │     Heap │   Index │
+├──────────────┼───────────┼──────────┼─────────┤
+│ hw_contracts │   500,000 │  44.3 MB │ 10.7 MB │
+│ orders       │ 1,000,000 │  72.7 MB │ 21.4 MB │
+│ t_ab         │ 1,000,000 │  88.8 MB │ 21.4 MB │
+│ users        │ 1,000,000 │ 111.4 MB │ 60.2 MB │
+
+Các nhóm dòng được cài sẵn cho từng lab
+───────────────────────────────────────
+│ Nhóm                                   │ Số dòng │
+├────────────────────────────────────────┼─────────┤
+│ name LIKE 'ronin%' (tiền tố, Lab 09)   │   1,000 │
+│ name LIKE '%ronin' (hậu tố, Lab 09)    │   1,000 │
+│ length(name) = 6 (Lab 09)              │   1,000 │
+│ country = 'US' (Lab 05)                │ 200,146 │
+│ country = 'SG' (Lab 05)                │   4,927 │
+│ province = 'Texas' (Lab 05)            │  19,924 │
+│ name = 'Jane Nguyen' (Lab 05)          │     395 │
+│ Số tên khác nhau (cardinality, Lab 05) │   2,560 │
+│ status = 'PROCESSING' (Lab 07)         │  10,069 │
+│ status = 'DELIVERED' (Lab 07)          │ 900,009 │
+│ users chưa có đơn nào (Lab 07)         │ 367,574 │
+│ deleted_at IS NOT NULL (Lab 07)        │  49,956 │

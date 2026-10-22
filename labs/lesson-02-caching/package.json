@@ -1,0 +1,19 @@
+{
+  "name": "lesson-02-caching-labs",
+  "private": true,
+  "type": "module",
+  "description": "Runnable labs for lesson 2 (Caching Design). Labs 01-05 need no dependencies; lab 06 needs Redis and the advance_be_lab Postgres.",
+  "scripts": {
+    "lab1": "node 01-update-vs-delete-cache-race.mjs",
+    "lab2": "node 02-delete-first-vs-delete-later.mjs",
+    "lab3": "node 03-cache-breakdown-singleflight.mjs",
+    "lab4": "node 04-cache-avalanche-ttl-jitter.mjs",
+    "lab5": "node 05-cache-penetration-null-cache-bloom.mjs",
+    "lab6": "node 06-redis-imdb-read-aside-and-stampede.mjs",
+    "homework": "node homework-airport-cache.solution.ts"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "redis": "^6.3.0"
+  }
+}

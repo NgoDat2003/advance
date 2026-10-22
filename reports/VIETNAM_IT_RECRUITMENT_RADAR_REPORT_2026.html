@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vietnam IT Recruitment Radar 2025-2026 | Fullstack Career Roadmap</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-heading: #f0f6fc;
+      --accent: #58a6ff;
+      --accent-hover: #1f6feb;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --tag-bg: #21262d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container { max-width: 1300px; margin: 0 auto; }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #238636;
+      color: #fff;
+      margin-right: 8px;
+    }
+    .badge-ultra { background: #8957e5; }
+    .badge-target { background: #1f6feb; }
+    h1 { color: var(--text-heading); font-size: 28px; margin: 12px 0 6px 0; }
+    .subtitle { color: #8b949e; font-size: 15px; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .kpi-title { font-size: 13px; color: #8b949e; text-transform: uppercase; font-weight: 600; }
+    .kpi-val { font-size: 26px; font-weight: 700; color: var(--text-heading); margin: 6px 0; }
+    .kpi-desc { font-size: 12px; color: #8b949e; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: #8b949e;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text-heading); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Cards & Sections */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h2 { color: var(--text-heading); font-size: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h3 { color: var(--text-heading); font-size: 16px; margin: 16px 0 8px 0; }
+    p { margin-bottom: 12px; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th { background: #21262d; color: var(--text-heading); }
+    tr:nth-child(even) { background: #11151c; }
+
+    /* Bar Charts Simulation */
+    .bar-row {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .bar-label { width: 180px; font-weight: 600; color: var(--text-heading); }
+    .bar-container { flex-grow: 1; background: #21262d; border-radius: 4px; height: 22px; overflow: hidden; margin: 0 12px; position: relative; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, #1f6feb, #58a6ff); border-radius: 4px; display: flex; align-items: center; padding-left: 8px; color: #fff; font-size: 11px; font-weight: 700; }
+    .bar-val { width: 160px; text-align: right; color: #8b949e; }
+
+    /* Checklist */
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .checklist-item input { margin-top: 4px; }
+    .checklist-text { font-size: 14px; }
+
+    /* Search Box */
+    .search-box {
+      width: 100%;
+      padding: 12px 16px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .search-box:focus { outline: none; border-color: var(--accent); }
+    .job-item {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 10px;
+      transition: border 0.2s;
+    }
+    .job-item:hover { border-color: var(--accent); }
+    .job-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .job-source { font-weight: 700; color: var(--accent); font-size: 14px; }
+    .job-id { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #21262d; color: #8b949e; }
+    .job-desc { font-size: 13px; color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <span class="badge badge-ultra">ULTRA VERIFIER BEST-OF-5</span>
+        <span class="badge">OCTOBER 2026 RADAR</span>
+        <span class="badge badge-target">TARGET: ĐẠT (MAYCHA FULLSTACK)</span>
+      </div>
+      <h1>Vietnam IT Recruitment Market Radar & Career Roadmap 2025–2026</h1>
+      <div class="subtitle">Phân tích toàn diện 215 bài đăng tuyển dụng thực tế (100 Facebook Groups + 115 Web tuyển dụng ITviec, TopCV, Glints, LinkedIn, Indeed) & Báo cáo Lương ITviec 2025-2026.</div>
+    </header>
+
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Tổng Dữ Liệu Bóc Tách</div>
+        <div class="kpi-val" style="color: #58a6ff;">215</div>
+        <div class="kpi-desc">100 bài FB + 115 bài Web chính ngạch</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Thị Phần Entry-Level</div>
+        <div class="kpi-val" style="color: #f85149;">6.05%</div>
+        <div class="kpi-desc">Fresher: 1.86% | Junior: 4.19% (Khủng hoảng)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Thị Phần Middle (Nòng cốt)</div>
+        <div class="kpi-val" style="color: #3fb950;">52.1%</div>
+        <div class="kpi-desc">Dải lương: 22 - 38 Triệu VNĐ</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Thị Phần Senior & Lead</div>
+        <div class="kpi-val" style="color: #d29922;">41.8%</div>
+        <div class="kpi-desc">Senior: 38 - 60M | Lead: 60 - 110M+</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Thặng Dư Tiếng Anh</div>
+        <div class="kpi-val" style="color: #a371f7;">+57.0%</div>
+        <div class="kpi-desc">Lương max TB: 65.7M vs 41.8M VNĐ</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-macro')">📊 1. Vĩ Mô & Dải Lương</button>
+      <button class="tab-btn" onclick="switchTab('tab-stack')">⚙️ 2. Ma Trận Công Nghệ</button>
+      <button class="tab-btn" onclick="switchTab('tab-standards')">⚖️ 3. 10 Chuẩn Enterprise</button>
+      <button class="tab-btn" onclick="switchTab('tab-diff')">🚀 4. 5 Yếu Tố Bứt Phá</button>
+      <button class="tab-btn" onclick="switchTab('tab-channels')">🔍 5. Kênh Tuyển Dụng & Bẫy</button>
+      <button class="tab-btn" onclick="switchTab('tab-roadmap')">🎯 6. Lộ Trình Cho Đạt</button>
+      <button class="tab-btn" onclick="switchTab('tab-curriculum')">📚 7. 16 Chuyên Đề advance-be</button>
+      <button class="tab-btn" onclick="switchTab('tab-jobs')">📋 8. Tra Cứu 215 Bài Đăng</button>
+    </div>
+
+    <!-- TAB 1: VĨ MÔ & DẢI LƯƠNG -->
+    <div id="tab-macro" class="tab-content active">
+      <div class="section-card">
+        <h2>Bức Tranh Vĩ Mô & Nghịch Lý Hiệu Suất AI</h2>
+        <p>Thị trường IT Việt Nam cuối 2025 - 2026 chuyển dịch từ mô hình "Tăng trưởng nóng" sang "Hiệu quả vốn" và "Mật độ nhân tài cao" (High Talent Density). 96.8% kỹ sư đã dùng AI hỗ trợ code, số lượng CV nộp trung bình tăng từ 6.1 lên 7.5 (+23% YoY), nhưng số lượng offer thực tế nhận được không tăng (giữ nguyên ở mức 2.7). Doanh nghiệp tinh gọn từ phòng ban 10 người xuống Micro-teams 2-3 người tự chủ toàn diện (High-Agency Engineers).</p>
+        
+        <h3>Phân Bố Dải Lương Theo Cấp Bậc (Bóc tách từ 215 tin tuyển dụng)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Cấp bậc</th>
+              <th>Kinh nghiệm</th>
+              <th>Tỷ trọng mẫu</th>
+              <th>Dải lương thực tế (VNĐ)</th>
+              <th>Quy đổi USD</th>
+              <th>Tiêu chí quyết định</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Fresher / Intern</strong></td>
+              <td>0 - 1 năm</td>
+              <td>1.86% (4 bài)</td>
+              <td>8 - 14 triệu (TB: 10.6M)</td>
+              <td>$310 - $550</td>
+              <td>OOP, TypeScript, CRUD NestJS, SQL Join/Index cơ bản. Đòi hỏi làm được việc ngay.</td>
+            </tr>
+            <tr>
+              <td><strong>Junior</strong></td>
+              <td>1 - 2 năm</td>
+              <td>4.19% (9 bài)</td>
+              <td>14 - 22 triệu (TB: 17.5M)</td>
+              <td>$550 - $860</td>
+              <td>TypeScript strict, NestJS REST API, ReactJS Hooks, Next.js, Prisma, Docker cơ bản.</td>
+            </tr>
+            <tr>
+              <td><strong>Middle (Nòng cốt)</strong></td>
+              <td>2 - 4 năm</td>
+              <td>52.09% (112 bài)</td>
+              <td>22 - 38 triệu (TB: 31.6M)</td>
+              <td>$860 - $1,500</td>
+              <td>Tự chủ tính năng, Monorepo Turborepo, Clean Architecture, Next.js App Router, SQL EXPLAIN, Redis.</td>
+            </tr>
+            <tr>
+              <td><strong>Senior</strong></td>
+              <td>4 - 7 năm</td>
+              <td>34.42% (74 bài)</td>
+              <td>38 - 60 triệu (TB: 49.2M)</td>
+              <td>$1,500 - $2,350</td>
+              <td>System Design, Concurrency & Locking (Optimistic/Pessimistic/Deadlock), Kafka/BullMQ, RBAC, Mentor.</td>
+            </tr>
+            <tr>
+              <td><strong>Tech Lead / Architect</strong></td>
+              <td>7+ năm</td>
+              <td>7.44% (16 bài)</td>
+              <td>60 - 110+ triệu (TB: 73.5M)</td>
+              <td>$2,350 - $4,500+</td>
+              <td>Định hướng kiến trúc phân tán, Event-Driven, Microservices gRPC, quản trị kỹ thuật & Cloud.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Phân Bố Địa Lý</h3>
+        <div class="bar-row">
+          <div class="bar-label">TP. Hồ Chí Minh</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 45.6%;">45.6% (98 bài)</div></div>
+          <div class="bar-val">TB: 30.9M - 46.9M VNĐ</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Hà Nội</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 40.9%;">40.9% (88 bài)</div></div>
+          <div class="bar-val">TB: 30.2M - 45.5M VNĐ</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Remote Global / Ngoại</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 25%; background: linear-gradient(90deg, #8957e5, #a371f7);">7.4% (16 bài)</div></div>
+          <div class="bar-val">TB: 55.6M - 77.4M VNĐ ($2.2k-$5k)</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Đà Nẵng</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 15%;">4.2% (9 bài)</div></div>
+          <div class="bar-val">TB: 20.9M - 31.9M VNĐ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: MA TRẬN CÔNG NGHỆ -->
+    <div id="tab-stack" class="tab-content">
+      <div class="section-card">
+        <h2>Ma Trận Công Nghệ Trọng Tâm Trong Hệ Sinh Thái Fullstack Web</h2>
+        <p>Bóc tách từ 215 bài đăng tuyển dụng thực tế đối với các vị trí Fullstack / Backend / Frontend hiện đại:</p>
+
+        <div class="bar-row">
+          <div class="bar-label">TypeScript</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 94.4%;">94.4% hiệu dụng</div></div>
+          <div class="bar-val">P0 - Chuẩn mực bắt buộc</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Database SQL (Postgres)</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 100%;">100% hiệu dụng</div></div>
+          <div class="bar-val">P0 - Lõi lưu trữ bền vững</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">NestJS (Backend)</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 83.7%;">83.7% hiệu dụng (101 bài)</div></div>
+          <div class="bar-val">P0 - Thống trị Backend NodeJS</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Next.js (App Router)</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 61.4%;">61.4% hiệu dụng (81 bài)</div></div>
+          <div class="bar-val">P0 - Chuẩn Frontend hiện đại</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Redis / Caching</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 48.5%;">48.5% hiệu dụng (20 bài)</div></div>
+          <div class="bar-val">P1 - Cửa ngõ bứt phá Senior</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Docker & Container</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 42.8%;">42.8% hiệu dụng</div></div>
+          <div class="bar-val">P1 - Chuẩn mực đóng gói</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Message Broker (Kafka/Bull)</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 20.9%;">20.9% hiệu dụng (13 bài)</div></div>
+          <div class="bar-val">P1 - Hệ thống chịu tải cao</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">AI Integration / Agents</div>
+          <div class="bar-container"><div class="bar-fill" style="width: 18.1%;">18.1% hiệu dụng (39 bài)</div></div>
+          <div class="bar-val">P2 - Làn sóng công nghệ mới</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 10 CHUẨN ENTERPRISE -->
+    <div id="tab-standards" class="tab-content">
+      <div class="section-card">
+        <h2>Bảng So Sánh 10 Chiều Kích: 'Code Chạy Được' vs 'Code Chuẩn Enterprise'</h2>
+        <p>Khoảng cách giữa mức lương 25M và 50M+ VNĐ không nằm ở việc nhớ nhiều cú pháp hơn, mà nằm ở việc kiểm soát rủi ro vận hành trên Production:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Chiều kích</th>
+              <th>Junior / Mid Yếu [15 - 25M]</th>
+              <th>Senior / Enterprise Standard [38 - 60M+]</th>
+              <th>Hậu quả nếu làm sai trên Production</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Module NestJS</strong></td>
+              <td>Dồn hết logic vào Service; Controller gọi trực tiếp ORM; Circular Dependency dùng forwardRef bừa bãi.</td>
+              <td>Clean Architecture: Domain Entity cô lập, Use Cases / Port & Adapters, Interface tách rời Implementation.</td>
+              <td>Codebase rối rắm, không thể viết test độc lập, sửa chỗ này gãy chỗ kia khi scale.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Database & ORM</strong></td>
+              <td>Gọi include quan hệ vô tội vạ gây N+1 Query; không đánh Index; không đọc execution plan.</td>
+              <td>Dùng EXPLAIN ANALYZE; đánh B-Tree Composite Index chuẩn thứ tự; phân vùng bảng (Partitioning) khi lớn.</td>
+              <td>Sập RAM/CPU khi traffic tăng vọt; database lock hàng loạt, request timeout kéo dài.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Concurrency & Locking</strong></td>
+              <td>Đọc dữ liệu ra RAM, tính bằng JS, rồi gọi update() tuần tự không có khóa bảo vệ.</td>
+              <td>Sử dụng Pessimistic Locking (SELECT FOR UPDATE) hoặc Optimistic Locking (cột version) trong Transaction cô lập.</td>
+              <td>Race condition, Double Spending, trừ tiền/cọc sai lệch gây thất thoát tài chính.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Caching Redis</strong></td>
+              <td>Cache tùy tiện; key lộn xộn; set TTL vĩnh viễn hoặc không invalidate khi dữ liệu gốc đổi.</td>
+              <td>Mô hình Cache-Aside chuẩn; TTL Random Jitter chống Avalanche; Mutex Singleflight chống Stampede.</td>
+              <td>Tràn RAM Redis; hiển thị dữ liệu cũ sai lệch; DB chết đứng khi cache đồng loạt hết hạn.</td>
+            </tr>
+            <tr>
+              <td><strong>5. Next.js Rendering</strong></td>
+              <td>Gắn 'use client' bừa bãi; tải toàn bộ data ở Client bằng useEffect; bundle JS nặng chục MB.</td>
+              <td>React Server Components (RSC) mặc định; Streaming Suspense; Server Actions xử lý mutations.</td>
+              <td>Web tải chậm (>4s), điểm Core Web Vitals đỏ lòm, SEO tụt hạng, trải nghiệm lag.</td>
+            </tr>
+            <tr>
+              <td><strong>6. Tích hợp ERP/SAP</strong></td>
+              <td>Gọi HTTP request trực tiếp sang bên thứ ba trong luồng request người dùng; bên kia chậm là treo server.</td>
+              <td>Transactional Outbox Pattern kết hợp BullMQ/RabbitMQ; Retry Exponential Backoff; Idempotency.</td>
+              <td>Mất dữ liệu khi mạng chập chờn; dữ liệu nội bộ và ERP lệch nhau gây sai báo cáo tài chính.</td>
+            </tr>
+            <tr>
+              <td><strong>7. Phân quyền RBAC</strong></td>
+              <td>Hardcode user.role === 'ADMIN' rải rác khắp controller và UI.</td>
+              <td>Permission Engine dựa trên Resource & Action; CASL / Custom Decorators; lọc ở Guard & DB Query.</td>
+              <td>Lỗ hổng IDOR; người dùng phòng ban này xem và sửa được dữ liệu hợp đồng của phòng ban khác.</td>
+            </tr>
+            <tr>
+              <td><strong>8. Background Jobs</strong></td>
+              <td>Xử lý xuất Excel hàng nghìn dòng, nén file PDF, gửi email ngay trong tiến trình web chính.</td>
+              <td>Đẩy vào Queue nền (BullMQ Redis) với Worker riêng; streaming dữ liệu NodeJS Stream ra file tạm.</td>
+              <td>Server bị Out-of-Memory (OOM Crash); nghẽn Event Loop làm toàn bộ user khác không vào được web.</td>
+            </tr>
+            <tr>
+              <td><strong>9. Automated Testing</strong></td>
+              <td>Không viết test; test bằng cơm qua Postman; tự tin "code chạy trên máy em bình thường".</td>
+              <td>Unit Test (>80% core domain calculations); Integration Test với Testcontainers; CI pipeline tự động.</td>
+              <td>Bug ngầm nghiêm trọng mỗi lần deploy; dev luôn sống trong lo âu và sợ hãi vào ngày release.</td>
+            </tr>
+            <tr>
+              <td><strong>10. Ứng dụng AI</strong></td>
+              <td>Copy/paste code từ ChatGPT mà không hiểu; để lộ token/key lên prompt.</td>
+              <td>Dùng Cursor/Claude Code sinh boilerplate, viết test, refactor; tự mình làm chủ kiến trúc & bảo mật.</td>
+              <td>Codebase biến thành bãi rác mã nguồn hỗn tạp, gánh nợ kỹ thuật khổng lồ không thể bảo trì.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: 5 YẾU TỐ BỨT PHÁ -->
+    <div id="tab-diff" class="tab-content">
+      <div class="section-card">
+        <h2>5 Yếu Tố Bứt Phá Offer (Deal-Makers) Lên Mức 40 - 70M+ Hoặc $2,500 - $5,000 USD</h2>
+        
+        <h3>1. Tiếng Anh Giao Tiếp & Kỹ Thuật (+57.0% Lương)</h3>
+        <p>24.7% vị trí (53 bài) yêu cầu tiếng Anh. Lương tối đa trung bình: <strong>65.7 triệu VNĐ</strong> vs 41.8 triệu VNĐ. Là chiếc vé duy nhất giúp kỹ sư vượt qua trần lương nội địa để chạm tới các đãi ngộ toàn cầu.</p>
+
+        <h3>2. Message Broker & Event-Driven Architecture (+23.3% Lương)</h3>
+        <p>13 vị trí yêu cầu chuyên sâu Kafka, RabbitMQ, BullMQ (Lương max TB: 58.1M). Phân tách luồng xử lý đồng bộ và bất đồng bộ, đảm bảo tính toàn vẹn dữ liệu qua Transactional Outbox Pattern.</p>
+
+        <h3>3. Kiến Trúc Microservices & gRPC (+42.4% Lương)</h3>
+        <p>12 vị trí Enterprise (Lương max TB: 66.4M). Làm chủ Modular Monolith trước khi phân rã service; giao tiếp hiệu năng cao qua gRPC/Protobuf nhanh hơn REST 5-10 lần.</p>
+
+        <h3>4. Database Concurrency & Index Optimization (+50.0% Lương)</h3>
+        <p>Lương max TB các vị trí High Concurrency: <strong>71.5 triệu VNĐ</strong>. Xử lý triệt để tranh chấp dữ liệu, Race Condition, Deadlock và tối ưu hóa câu lệnh triệu dòng (Khớp 100% giáo trình advance-be).</p>
+
+        <h3>5. AI-Native & Agentic Engineering (Tăng Tốc 2-3x Năng Suất)</h3>
+        <p>18.1% vị trí (39 bài) ưu tiên ứng viên làm chủ công cụ AI (Cursor, Claude Code, Copilot) và biết tích hợp LLM APIs, Vector Database (pgvector) để xây dựng tính năng thông minh.</p>
+      </div>
+    </div>
+
+    <!-- TAB 5: KÊNH TUYỂN DỤNG & BẪY -->
+    <div id="tab-channels" class="tab-content">
+      <div class="section-card">
+        <h2>Đối Chiếu Facebook Groups vs Web Tuyển Dụng & Cạm Bẫy Tuyển Dụng</h2>
+        
+        <h3>So Sánh 2 Kênh</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Tiêu chí</th>
+              <th>Facebook Groups (100 bài)</th>
+              <th>Web Tuyển Dụng (115 bài: ITviec, TopCV, LinkedIn)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Loại hình công ty</strong></td>
+              <td>Startup, Agency, SME, dự án Remote nước ngoài cá nhân.</td>
+              <td>Tập đoàn lớn, Ngân hàng, Unicorn, Công ty Product MNC, Outsource Tier 1/2.</td>
+            </tr>
+            <tr>
+              <td><strong>Minh bạch lương</strong></td>
+              <td>Thường ghi thẳng con số cụ thể; có các tin Remote $3k - $5k USD.</td>
+              <td>30% ghi "Thoả thuận"; lương có tính pháp lý và tính ổn định cao hơn.</td>
+            </tr>
+            <tr>
+              <td><strong>Quy trình tuyển</strong></td>
+              <td>Nhanh gọn (1-2 vòng), chốt offer sau 3-7 ngày.</td>
+              <td>Nghiêm ngặt (3-4 vòng: Test, DSA, System Design, HR), kéo dài 2-4 tuần.</td>
+            </tr>
+            <tr>
+              <td><strong>Phân khúc nhân sự</strong></td>
+              <td>Sôi động ở Junior & Middle (1-3 năm); còn xuất hiện Fresher.</td>
+              <td>Áp đảo ở Senior (4-7 năm) và Tech Lead/Architect (7+ năm).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>4 Cạm Bẫy Cần Tuyệt Đối Cảnh Giác</h3>
+        <p>1. <strong>Bẫy Lương Net vs Gross:</strong> 35M Gross thực nhận chỉ còn ~28-29M sau thuế & bảo hiểm. Luôn đàm phán lương Gross và yêu cầu đóng 100% bảo hiểm trên lương thực tế.</p>
+        <p>2. <strong>Bẫy "Product Núp Bóng Outsource Deadline":</strong> Không có Product Roadmap dài hạn, dev bị ép chạy deadline chắp vá, không có thời gian viết test hay tối ưu kiến trúc.</p>
+        <p>3. <strong>Bẫy Tin Tuyển Dụng Ảo (Ghost Jobs):</strong> Đăng bài lặp đi lặp lại để khảo sát thị trường hoặc thu thập database CV của dev mà không tuyển thật.</p>
+        <p>4. <strong>Bẫy "Fullstack Giá Rẻ":</strong> Yêu cầu làm việc của cả phòng IT (Design, Frontend, Backend, DB, DevOps, sửa máy in) với mức lương bèo bọt 15 - 20 triệu VNĐ.</p>
+      </div>
+    </div>
+
+    <!-- TAB 6: LỘ TRÌNH CHO ĐẠT -->
+    <div id="tab-roadmap" class="tab-content">
+      <div class="section-card">
+        <h2>Lộ Trình Hành Động Cá Nhân Hóa Dành Riêng Cho Đạt (Maycha Fullstack)</h2>
+        <p>Dựa trên nền tảng cực tốt sẵn có tại <code>D:/work/maycha/quan_ly_hop_dong</code> (NestJS + Next.js App Router + Prisma + PostgreSQL + ERP SAP + Docker), Đạt có lợi thế rất lớn về tư duy nghiệp vụ thực tế. Dưới đây là checklist hành động để bứt phá lên mốc 35 - 50M+ VNĐ:</p>
+
+        <h3>Giai đoạn 1: 30 Ngày Đầu — Chuẩn Hóa Lõi Nghiệp Vụ & Testing</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk1">
+          <div class="checklist-text"><strong>Tách rời Pure Domain Model:</strong> Refactor engine tính tiền phạt và bậc thang tiền thuê thành các pure functions độc lập, tách rời hoàn toàn Prisma ORM.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk2">
+          <div class="checklist-text"><strong>Viết Unit Test với Jest đạt độ phủ >85%:</strong> Bao phủ toàn bộ các ca tính toán tài chính phức tạp, kiểm thử các kịch bản biên cắt lịch thanh toán.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk3">
+          <div class="checklist-text"><strong>Chuẩn hóa Error Response RFC 7807:</strong> Viết Custom Exception Filter trả về định dạng lỗi chuẩn hóa cho toàn bộ API NestJS.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk4">
+          <div class="checklist-text"><strong>Tối ưu truy vấn SQL qua EXPLAIN ANALYZE:</strong> Đánh Composite B-Tree Index cho các trường lọc danh sách hợp đồng (store_id, status, dates).</div>
+        </div>
+
+        <h3>Giai đoạn 2: Ngày 31 - 60 — Database Concurrency, Locking & Redis Caching</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk5">
+          <div class="checklist-text"><strong>Khóa bi quan (Pessimistic Locking):</strong> Triển khai <code>SELECT FOR UPDATE</code> khi cập nhật số dư tiền cọc và thanh toán hợp đồng để chống race condition.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk6">
+          <div class="checklist-text"><strong>Khóa lạc quan (Optimistic Locking):</strong> Thêm cột <code>version</code> vào bảng hợp đồng; tự động kiểm tra version để chặn xung đột ghi đồng thời.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk7">
+          <div class="checklist-text"><strong>Triển khai Redis Cache-Aside:</strong> Caching Master Data danh mục chuỗi cửa hàng Maycha với TTL có Random Jitter chống Cache Avalanche.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk8">
+          <div class="checklist-text"><strong>Chống Cache Stampede:</strong> Triển khai Mutex Singleflight đảm bảo chỉ 1 query nạp lại cache khi hết hạn.</div>
+        </div>
+
+        <h3>Giai đoạn 3: Ngày 61 - 90 — Background Queue & Transactional Outbox Pattern</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk9">
+          <div class="checklist-text"><strong>Tích hợp BullMQ Redis:</strong> Chuyển tác vụ xuất báo cáo Excel nặng và gửi email sang worker chạy nền.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk10">
+          <div class="checklist-text"><strong>Áp dụng Transactional Outbox Pattern:</strong> Lưu sự kiện đồng bộ SAP vào bảng outbox cùng transaction với hợp đồng, đảm bảo không mất dữ liệu.</div>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="chk11">
+          <div class="checklist-text"><strong>Tối ưu Next.js Streaming Suspense:</strong> Tách dashboard thành các RSC độc lập bọc trong Suspense để tải trang mượt mà.</div>
+        </div>
+
+        <h3>Giai đoạn 4: 6 Tháng - 1 Năm — Bứt Phá Lên Senior (35 - 50M+ VNĐ)</h3>
+        <p>Đóng gói toàn bộ kiến trúc Maycha thành Case Study xuất sắc trên CV / LinkedIn. Luyện tập phỏng vấn System Design và nộp hồ sơ vào các FinTech / Product MNC hàng đầu.</p>
+      </div>
+    </div>
+
+    <!-- TAB 7: 16 CHUYÊN ĐỀ ADVANCE-BE -->
+    <div id="tab-curriculum" class="tab-content">
+      <div class="section-card">
+        <h2>Bản Đồ Kết Nối Trực Tiếp 16 Chuyên Đề Giáo Trình `advance-be`</h2>
+        <p>Toàn bộ 16 tài liệu trong thư mục <code>Tài Liệu/*.md</code> chính là kho vũ khí hạng nặng giúp Đạt chinh phục vị trí Senior:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Tài liệu chuyên đề</th>
+              <th>Vấn đề kỹ thuật cốt lõi giải quyết</th>
+              <th>Ứng dụng trực tiếp vào dự án Maycha & Phỏng vấn</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>14. Locking.md & 12. Transaction.md</strong></td>
+              <td>Optimistic / Pessimistic Locking, ACID, Deadlock, Phantom Reads.</td>
+              <td>Bảo vệ giao dịch tiền cọc và thanh toán hợp đồng Maycha. Bắt buộc để đỗ Senior 40-60M.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Index.md</strong></td>
+              <td>Cấu trúc B-Tree, Composite Index, Leftmost Prefix Rule, Scan Types.</td>
+              <td>Tối ưu truy vấn báo cáo UAT triệu dòng, đưa thời gian phản hồi từ 800ms về <50ms.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Caching Design.md & 6. Redis.md</strong></td>
+              <td>Cache-Aside, Write-Through, Stampede, Avalanche, Redis Data Types.</td>
+              <td>Giảm 80% tải đọc cho PostgreSQL, chống nghẽn server giờ cao điểm.</td>
+            </tr>
+            <tr>
+              <td><strong>16. Integration.md</strong></td>
+              <td>Transactional Outbox, Idempotency, Eventual Consistency, Webhooks.</td>
+              <td>Giải quyết triệt để bài toán đồng bộ dữ liệu giữa Maycha và ERP SAP.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Codebase Structure.md</strong></td>
+              <td>Modular Monolith, Clean Architecture, Dependency Inversion.</td>
+              <td>Chuẩn hóa cấu trúc apps/api, giúp dự án dễ dàng mở rộng và bàn giao.</td>
+            </tr>
+            <tr>
+              <td><strong>1. Architecture.md & 5. Database.md</strong></td>
+              <td>Thiết kế hệ thống tổng thể, Chuẩn hóa Database 3NF, Denormalization.</td>
+              <td>Nâng cao tư duy System Design cho các vòng phỏng vấn kiến trúc.</td>
+            </tr>
+            <tr>
+              <td><strong>7. Testing.md & 13. Security.md</strong></td>
+              <td>Tháp kiểm thử, Unit Test, OWASP Top 10, JWT Protection, Rate Limit.</td>
+              <td>Bảo vệ an toàn thông tin và chống lỗi hồi quy khi release tính năng.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 8: TRA CỨU 215 BÀI ĐĂNG -->
+    <div id="tab-jobs" class="tab-content">
+      <div class="section-card">
+        <h2>Tra Cứu Realtime Toàn Bộ 215 Tin Tuyển Dụng Đã Thu Thập</h2>
+        <input type="text" id="jobSearch" class="search-box" placeholder="🔍 Nhập từ khóa để lọc (ví dụ: NestJS, NextJS, USD, Microservices, Remote, Maycha, Cầu Giấy, Quận 1...)..." onkeyup="filterJobs()">
+        <div id="jobListContainer"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // Embed jobs JSON
+    const jobsData = [{"id": 1, "source": "Tuyển dụng NodeJS/ReactJS VietNam (Hà Nội)", "details": "Fullstack NodeJS/ReactJS, 5+ YOE, Fluent English, Lương up to 2.800 USD (~70M VNĐ). Yêu cầu: NestJS, ReactJS, Microservices, AWS."}, {"id": 2, "source": "Tuyển dụng FrontEnd Developer (Hà Nội - Hoàng Cầu)", "details": "Senior FE Dev, 5+ YOE, ReactJS, TypeScript, NextJS, Offer up to 40M VNĐ."}, {"id": 3, "source": "Cộng đồng ReactJS Việt Nam (HCM/Hà Nội)", "details": "Tuyển gấp ReactJS Developer, 3-5 YOE, NextJS, Redux Toolkit, Tailwind, Performance Optimization. Up to 50M VNĐ."}, {"id": 4, "source": "Tuyển dụng NodeJS/ReactJS VietNam (SaaS Hà Nội)", "details": "Fullstack Javascript từ 1-2 năm kinh nghiệm, ưu tiên trường top (BKHN, UET). Stack: ReactJS, NestJS, Postgres, Docker. Range: 18 - 25M VNĐ."}, {"id": 5, "source": "Tuyển dụng NodeJS/ReactJS VietNam (Remote Fulltime)", "details": "Principal Javascript Engineer (8+ YOE), English Fluent. Microservices, NestJS, React, Kafka, Redis. Offer: $4,000 - $5,000 Gross."}, {"id": 6, "source": "Cộng đồng NodeJS Việt Nam (Cầu Giấy, HN - HOLA)", "details": "Senior NodeJS/NestJS (4+ YOE). Yêu cầu Clean Code, SOLID, AWS, CI/CD, SQL/NoSQL, Redis, Docker. Offer: 35 - 45M VNĐ."}, {"id": 7, "source": "Việc làm IT, PHP, NodeJS, React (Hà Nội - ViTechGroup)", "details": "Tuyển dụng Tech Team 2026, vị trí NodeJS/NestJS Leader & Mid Dev. Stack: NestJS, Next.js, Microservices, Redis, Kafka, AI Agent integration. Range: 30 - 60M VNĐ."}, {"id": 8, "source": "Nestjs Việt Nam (Hà Nội - 10KN Company)", "details": "Backend Developer (Node.js/NestJS), 2 YOE, hybrid (2 ngày remote). Up to 25M VNĐ. Yêu cầu: TypeORM/Prisma, PostgreSQL, RESTful API."}, {"id": 9, "source": "Tuyển dụng IT TP.HCM (Tân Bình)", "details": "ReactJS / NodeJS Developer, 1-2 YOE. Offer up to $1,500 Gross (~37M). Yêu cầu: TypeScript, React, Express/NestJS, MySQL."}, {"id": 10, "source": "Tuyển dụng Frontend Việt Nam (Remote)", "details": "Principal / Senior Frontend Engineer (React.js, Next.js), Yêu cầu Tiếng Anh tốt, làm việc với team US/Singapore. Offer: $3,500 - $4,200 Gross."}, {"id": 11, "source": "Việc Làm & Thực Tập IT (HCM - NexGenus)", "details": "Senior Fullstack Engineer (NodeJS/NestJS + ReactJS). Yêu cầu High Throughput, Redis Cache, AWS ECS. Up to 70M Gross."}, {"id": 12, "source": "Cộng đồng ReactJS Việt Nam (HCM - Quận 1)", "details": "Senior Frontend (ReactJS/Next.js App Router). Hiểu biết sâu Server Components, SSR, SEO, Web Vitals, Tailwind. Offer: 35 - 45M VNĐ."}, {"id": 13, "source": "Tuyển dụng Front-end ReactJS/NextJS (HCM - Moniva Vietnam)", "details": "3-5 năm KN ReactJS, NextJS, TypeScript, State management (Zustand/TanStack Query). Range: 25 - 38M VNĐ."}, {"id": 14, "source": "Nestjs Việt Nam (Hà Nội - Công ty Công nghệ Nam Á)", "details": "Tuyển 2 Backend NestJS (Junior/Mid), 1 Frontend NextJS. Yêu cầu: REST API chuẩn, JWT Auth, Redis rate-limiting, Prisma. Lương: 15 - 28M VNĐ."}, {"id": 15, "source": "Tuyển dụng NodeJS/ReactJS VietNam (HCM - BNK Solution)", "details": "Fullstack Developer (NodeJS/NestJS + React). Dự án Banking/Fintech, yêu cầu transaction handling, SQL optimization. Lương thỏa thuận 25 - 40M VNĐ."}, {"id": 16, "source": "Việc làm IT Lập trình viên (Remote)", "details": "Urgent Senior Fullstack (.NET Core + ReactJS/NextJS hoặc NestJS + React). Yêu cầu Kubernetes, Docker, MySQL, Redis. Offer: $2,000 - $2,800 USD."}, {"id": 17, "source": "Cộng đồng NodeJS Việt Nam (HCM - Quận 10 - Renn Labs)", "details": "Fullstack Engineer (Node.js, AWS, React.js, Next.js). Xây dựng kiến trúc module hóa, microservices. Lương: 25 - 35M VNĐ."}, {"id": 18, "source": "Tuyển dụng IT - CNTT (Hà Nội - Đống Đa - Dikshatek)", "details": "Senior NodeJS Engineer. Yêu cầu chuyên sâu backend, database schema design, message broker, không bắt buộc tiếng Anh. Range: 35 - 45M VNĐ."}, {"id": 19, "source": "Tuyển dụng Front-end ReactJS/NextJS (HCM - Tân Bình - UNICCS)", "details": "Khởi đầu Web Engineer (ReactJS, SQL) - Fresher/Junior có phụ cấp & đào tạo bài bản. Lương: 8 - 14M VNĐ."}, {"id": 20, "source": "IT Jobs in Vietnam (Hà Nội - SmartOSC)", "details": "NodeJS & ReactJS Developers (Mid - Senior). Yêu cầu thành thạo TypeScript, automated testing (Jest, Playwright), CI/CD. Range: 25 - 45M VNĐ."}, {"id": 21, "source": "Tuyển dụng NodeJS/ReactJS (Đà Nẵng)", "details": "Fullstack Developer (NestJS + ReactJS), 2-3 YOE, tham gia dự án Outsourcing thị trường Nhật/Mỹ. Lương: 20 - 32M VNĐ."}, {"id": 22, "source": "Cộng đồng ReactJS Việt Nam (HCM - Quận 7)", "details": "Frontend Developer (React, Next.js), yêu cầu kinh nghiệm tối ưu performance FCP, LCP, CLS, chuyển đổi từ React SPA sang Next.js App Router. Lương: 25 - 35M VNĐ."}, {"id": 23, "source": "Nestjs Việt Nam (Hà Nội)", "details": "Backend NestJS Fresher/Junior (dưới 1 năm kinh nghiệm). Yêu cầu test đầu vào thuật toán, OOP, CRUD NestJS, PostgreSQL. Lương: 8 - 12M VNĐ."}, {"id": 24, "source": "Tuyển dụng IT TP.HCM (Thủ Đức)", "details": "Mid NodeJS Developer (NestJS). Stack: NestJS, TypeORM, Redis cache, BullMQ. Offer: 22 - 30M VNĐ."}, {"id": 25, "source": "Tuyển dụng Frontend Developer (Hà Nội - Cầu Giấy)", "details": "ReactJS Mid Developer (2-3 YOE). Yêu cầu: TypeScript, Next.js, Redux Toolkit, Restful API integration. Lương: 18 - 25M VNĐ."}, {"id": 26, "source": "Việc làm IT Hà Nội (Ba Đình)", "details": "Fullstack Engineer (ReactJS + NestJS), 3+ YOE, dự án nội bộ Product SaaS. Lương: 28 - 38M VNĐ."}, {"id": 27, "source": "Cộng đồng NodeJS Việt Nam (HCM - Gò Vấp)", "details": "Backend Engineer (NestJS), 1-2 YOE, chuyên xử lý REST API, WebSocket cho ứng dụng real-time. Lương: 16 - 22M VNĐ."}, {"id": 28, "source": "Tuyển dụng IT Remote (US Client)", "details": "Fullstack TS Dev (Next.js 15, React 19, NestJS, PostgreSQL). Tiếng Anh C1, phỏng vấn live coding. Offer: $2,500 - $3,500."}, {"id": 29, "source": "Cộng đồng ReactJS (HCM - Tân Phú)", "details": "Tuyển Junior Frontend ReactJS. Cần vững HTML5/CSS3/TS, biết NextJS là lợi thế. Lương: 10 - 15M VNĐ."}, {"id": 30, "source": "Tuyển dụng IT TP.HCM (Bình Thạnh)", "details": "Senior Backend (NodeJS/NestJS). Yêu cầu kinh nghiệm scale hệ thống 100k CCU, Redis, Kafka, Elasticsearch. Up to 55M VNĐ."}, {"id": 31, "source": "Nestjs Việt Nam (Remote)", "details": "Backend NestJS làm part-time/full-time dự án Web3/Fintech. Yêu cầu kinh nghiệm Smart Contract integration & WebSocket. Lương: $1,200 - $2,000 USD."}, {"id": 32, "source": "Tuyển dụng Frontend Hà Nội (Thanh Xuân)", "details": "Frontend Dev (ReactJS, TypeScript, Tailwind). Dự án ERP nội bộ. Lương: 15 - 22M VNĐ."}, {"id": 33, "source": "Việc làm IT Lập trình viên (Đà Nẵng)", "details": "Mid/Senior Fullstack (React/Node). Khách hàng Úc, yêu cầu tiếng Anh giao tiếp tốt. Lương: 25 - 40M VNĐ."}, {"id": 34, "source": "Tuyển dụng NodeJS/ReactJS (Hà Nội - Hai Bà Trưng)", "details": "Lead Engineer (NestJS + React). Định hướng kiến trúc Clean Architecture, mentoring junior. Lương: 45 - 60M VNĐ."}, {"id": 35, "source": "Cộng đồng ReactJS (HCM - Quận 2)", "details": "Frontend ReactJS/Next.js cho sàn TMĐT. Yêu cầu SSR, SSG, ISR, SEO audit. Lương: 25 - 35M VNĐ."}, {"id": 36, "source": "Tuyển dụng IT TP.HCM (Quận 3)", "details": "Backend NodeJS (NestJS / Express). Xử lý thanh toán Payment Gateway (VNPay, MoMo, Stripe). Lương: 20 - 30M VNĐ."}, {"id": 37, "source": "Việc làm IT (HCM - Phú Nhuận)", "details": "Fullstack TypeScript Developer. NestJS + NextJS + Tailwind. Lương: 22 - 32M VNĐ."}, {"id": 38, "source": "Cộng đồng Frontend (Hà Nội)", "details": "ReactJS Developer chuyển giao Next.js. Yêu cầu biết Docker cơ bản để deploy staging. Lương: 18 - 25M VNĐ."}, {"id": 39, "source": "Tuyển dụng NodeJS (HCM - Tân Bình)", "details": "Mid Backend NestJS. Yêu cầu viết Unit Test (Jest) độ phủ > 70%, Swagger docs đầy đủ. Lương: 22 - 30M VNĐ."}, {"id": 40, "source": "Nestjs Việt Nam (Hà Nội)", "details": "Tuyển Senior NestJS làm Core Banking integration. Yêu cầu Transaction management, ACID, Deadlock handling. Lương: 40 - 55M VNĐ."}, {"id": 41, "source": "Tuyển dụng IT (Remote)", "details": "Fullstack Next.js/NestJS, yêu cầu kinh nghiệm dùng Cursor/Copilot để tăng tốc độ ra mắt tính năng. Lương: 25 - 35M VNĐ."}, {"id": 42, "source": "Cộng đồng ReactJS (HCM - Quận 1)", "details": "ReactJS / Next.js Developer cho Startup B2B. Lương 20 - 30M + ESOP."}, {"id": 43, "source": "Tuyển dụng NodeJS (Đà Nẵng - Sơn Trà)", "details": "Backend NestJS + Mongo/Postgres. Lương: 18 - 26M VNĐ."}, {"id": 44, "source": "Việc làm IT TP.HCM (Quận 7)", "details": "Frontend ReactJS (Design System, Storybook, MUI/Shadcn). Lương: 22 - 30M VNĐ."}, {"id": 45, "source": "Cộng đồng NodeJS/NestJS (Hà Nội)", "details": "Backend Engineer (NestJS, Microservices gRPC). Lương: 30 - 45M VNĐ."}, {"id": 46, "source": "FGS Software (ITviec)", "details": "Senior Full Stack Developer (Node.js / NestJS / Next.js). Range: $1,800 - $2,500 (~45 - 62M). Yêu cầu kiến trúc Monorepo, Turborepo, Clean Architecture, AWS."}, {"id": 47, "source": "Offspring Digital Việt Nam (ITviec - Hà Nội)", "details": "NodeJS Dev (+ ReactJS/NestJS/NextJS). Offer: 25 - 40M VNĐ. Làm việc với khách hàng quốc tế."}, {"id": 48, "source": "Smileviet (ITviec)", "details": "Full-Stack Developer (NodeJS/NextJS). Phát triển nền tảng du lịch số, xử lý High Availability, Redis caching. Lương: 20 - 35M VNĐ."}, {"id": 49, "source": "TechSoft (ITviec)", "details": "Full-stack Software Engineer (ReactJS/NextJS + .NET/Node). Lương: 30 - 45M VNĐ."}, {"id": 50, "source": "SmartDev Careers (Đà Nẵng)", "details": "Senior Full-stack Developer (Next.js + NestJS). Yêu cầu 4+ YOE, tiếng Anh tốt, kinh nghiệm CI/CD và Cloud. Range: 35 - 55M VNĐ."}, {"id": 51, "source": "Netcompany (ITviec - HCM/HN)", "details": "Mid/Senior Fullstack Developer (NodeJS, ReactJS, TypeScript). Dự án Enterprise Châu Âu, quy chuẩn chất lượng cao. Range: 30 - 50M VNĐ."}, {"id": 52, "source": "Kambria & OhmniLabs (ITviec - HCM)", "details": "Fullstack Developer (TypeScript, NodeJS, ReactJS, WebRTC). Lương thỏa thuận: 35 - 50M VNĐ."}, {"id": 53, "source": "MB Bank (ITviec - Hà Nội)", "details": "Backend Engineer (NodeJS/TypeScript/Java) & Agentic Engineer (AI Agents/Python/Node). Range: 30 - 60M VNĐ."}, {"id": 54, "source": "BookingCare (TopDev - Hà Nội)", "details": "Fullstack AI Engineer (ReactJS + NestJS/NodeJS). Lương gross: 30 - 40M VNĐ. Tích hợp AI vào nền tảng y tế."}, {"id": 55, "source": "Trinity (TopCV - Hà Nội)", "details": "Technical Leader - Fullstack Nodejs. Up to 60M VNĐ. Yêu cầu 5+ năm kinh nghiệm, làm chủ System Architecture, High-load, Team leadership."}, {"id": 56, "source": "Relipa (TopCV - Hà Nội)", "details": "Technical Leader (Mạnh NestJS, NextJS). Range: 35 - 50M VNĐ. Dự án thị trường Nhật Bản."}, {"id": 57, "source": "IMT Solutions (TopCV - HCM)", "details": "Frontend Developer (ReactJS & NestJS). Lương thỏa thuận: 20 - 32M VNĐ."}, {"id": 58, "source": "SellerSmith (TopCV - Hà Nội)", "details": "Frontend Developer (ReactJS, NextJS). Range: 23 - 35M VNĐ. Sản phẩm E-commerce cross-border."}, {"id": 59, "source": "Zenify (TopCV - Hà Nội)", "details": "Junior Fullstack Developer (Node.js + React). Lương up to 25M VNĐ. Yêu cầu 2 năm KN, không yêu cầu tiếng Anh."}, {"id": 60, "source": "WATA Tech (TopCV - HCM)", "details": "Fullstack Developer (NestJS/ReactJS). Lương thỏa thuận: 22 - 35M VNĐ."}, {"id": 61, "source": "Estuary (TopCV - HCM)", "details": "Backend Developer Junior (NodeJS, NestJS) & Frontend Junior (ReactJS). Range: 14 - 22M VNĐ."}, {"id": 62, "source": "iArt Holdings (Indeed - Hà Nội)", "details": "Full-stack Developer (JavaScript, TypeScript, NestJS, Next.js). Lương: 20 - 30M VNĐ."}, {"id": 63, "source": "Techlab (TopCV - Hà Nội)", "details": "Front-End Developer (Reactjs/Nextjs). Range: 18 - 25M VNĐ."}, {"id": 64, "source": "StarGlobal 3D (Indeed - HCM)", "details": "Fullstack Developer (NextJS, ReactJS, NodeJS, Git, Three.js). Lương: 20 - 32M VNĐ."}, {"id": 65, "source": "Unstatic (Glints - Hà Nội)", "details": "Senior Front-End Developer (React, NextJS). Range: 30 - 40M VNĐ."}, {"id": 66, "source": "Bin Corporation Group (Glints - HCM)", "details": "Next.js Developer (TypeScript, ReactJS, SEO optimization). Lương: 20 - 30M VNĐ."}, {"id": 67, "source": "Arobid / Tầm Nhìn Mới (Glints - HCM)", "details": "Senior Frontend Engineer (NextJS/ReactJS) cho sàn E-commerce B2B. Lương: 30 - 45M VNĐ."}, {"id": 68, "source": "Bavaan (Glints - Hà Nội)", "details": "Backend Engineer (NestJS/NodeJS). Xây dựng SaaS Multi-tenancy, Microservices, RabbitMQ, PostgreSQL. Range: 25 - 40M VNĐ."}, {"id": 69, "source": "The Purpose Group (Glints - HCM)", "details": "Senior Software Engineer (NestJS / ReactJS) cho nền tảng Martech tích hợp AI (RAG, Vector DB). Lương: 35 - 50M VNĐ."}, {"id": 70, "source": "Teanis Solution (Glints - HCM)", "details": "Fresher Backend Developer (NodeJS/NestJS). Range: 8 - 12M VNĐ."}, {"id": 71, "source": "Everlastify (VietnamWorks - Đà Nẵng)", "details": "Junior Full-stack Developer (Node.js/Next.js). Lương: 12 - 15M VNĐ."}, {"id": 72, "source": "Hapulico (VietnamWorks - Hà Nội)", "details": "Frontend Developer (ReactJS). Range: 20 - 35M VNĐ."}, {"id": 73, "source": "MONEY FORWARD VIETNAM (ITviec - HCM)", "details": "Software Engineer (Fullstack/Backend TS, React, Go/Node). Tiêu chuẩn code Clean, văn hóa no OT, review khắt khe. Lương: $1,500 - $3,000 (~38 - 75M)."}, {"id": 74, "source": "TymeX (ITviec - HCM)", "details": "Fullstack / Backend Engineer (Digital Banking). Yêu cầu Security, ACID, Event-Driven, Kafka, Redis. Lương: $1,800 - $3,200."}, {"id": 75, "source": "Employment Hero (ITviec - HCM)", "details": "Senior React/NodeJS Engineer. Product SaaS nhân sự toàn cầu. Range: $2,500 - $4,000 Gross."}, {"id": 76, "source": "LG Electronics Development Vietnam - LGEDV (Hà Nội/Đà Nẵng)", "details": "Web Application Developer (ReactJS/NodeJS). Lương: 25 - 45M VNĐ."}, {"id": 77, "source": "EPAM Vietnam (ITviec - HCM/HN/Remote)", "details": "Senior Software Engineer (JavaScript/TypeScript/React/Node). Đòi hỏi tiếng Anh xuất sắc, phỏng vấn System Design chuẩn quốc tế. Lương: $2,200 - $3,800."}, {"id": 78, "source": "Thoughtworks Vietnam (ITviec - HCM)", "details": "Lead/Senior Fullstack Consultant. TDD, Refactoring, Clean Architecture, CI/CD, Extreme Programming. Lương: $2,500 - $4,500."}, {"id": 79, "source": "KiotViet Corporation (ITviec - HN/HCM)", "details": "Senior Backend Developer (NodeJS/NestJS). Xử lý hàng chục triệu giao dịch POS mỗi ngày, Redis Caching, DB Sharding. Lương: 35 - 50M VNĐ."}, {"id": 80, "source": "NAVER VIETNAM (ITviec - HCM)", "details": "Fullstack Engineer (React, TypeScript, Node/Java). Thuật toán & Data Structure nâng cao, đãi ngộ top thị trường: 40 - 70M VNĐ."}, {"id": 81, "source": "GFT Technologies Vietnam (ITviec - HCM)", "details": "Cloud & Fullstack Developer (Node/React/AWS). Lương: 35 - 55M VNĐ."}, {"id": 82, "source": "RAKSUL Vietnam (ITviec - HCM)", "details": "Fullstack Developer (TypeScript, Next.js, Node.js). Sản phẩm B2B Platform cho thị trường Nhật Bản. Lương: 30 - 50M VNĐ."}, {"id": 83, "source": "One Mount Group (ITviec - Hà Nội)", "details": "Senior Fullstack Engineer (VinShop / VinID). High load, Kafka, Redis, Microservices. Lương: 40 - 65M VNĐ."}, {"id": 84, "source": "Techcombank (ITviec - Hà Nội)", "details": "Senior Fullstack Developer (Next.js, Node.js/Java). Digital Transformation, Agile/Scrum. Lương: 35 - 55M VNĐ."}, {"id": 85, "source": "NAB Innovation Centre Vietnam (ITviec - HCM/HN)", "details": "Cloud Fullstack Engineer. AWS Certified, Node/React, Terraform. Lương: $2,000 - $3,500."}, {"id": 86, "source": "VNPAY (TopCV - Hà Nội)", "details": "Backend NodeJS Developer. Tích hợp cổng thanh toán, bảo mật PCI-DSS, Redis Cluster. Lương: 25 - 45M VNĐ."}, {"id": 87, "source": "Momo (ITviec - HCM)", "details": "Backend Software Engineer (NodeJS / Go). Tối ưu Latency microsecond, Caching đa tầng. Lương: 30 - 55M VNĐ."}, {"id": 88, "source": "Sendo / FPT (TopCV - HCM)", "details": "Senior Frontend (Next.js, React). Core Web Vitals, SSR cache, Edge caching. Lương: 30 - 45M VNĐ."}, {"id": 89, "source": "Zalo / VNG (TopCV - HCM)", "details": "Web Engineer (ReactJS, TypeScript). Sản phẩm hàng chục triệu người dùng. Lương: 30 - 50M VNĐ."}, {"id": 90, "source": "Tiki (ITviec - HCM)", "details": "Fullstack Engineer (Next.js, Node.js). Hệ thống quản lý kho & logistics. Lương: 28 - 45M VNĐ."}, {"id": 91, "source": "Shopee Vietnam (LinkedIn/TopDev - HCM)", "details": "Frontend/Fullstack Engineer. Yêu cầu phỏng vấn LeetCode Medium/Hard, System Design. Lương: 45 - 80M VNĐ."}, {"id": 92, "source": "Vercel Ecosystem Client (Remote Vietnam)", "details": "Fullstack Next.js 15 + NestJS + Supabase/Prisma. Yêu cầu tiếng Anh trôi chảy. Lương: $2,200 - $3,200."}, {"id": 93, "source": "Dirox (ITviec - HCM)", "details": "Mid Frontend Developer (ReactJS, VueJS). Lương: 20 - 30M VNĐ."}, {"id": 94, "source": "Sutrix Solutions (TopCV - HCM)", "details": "Senior Fullstack Web Developer (React + Node). Lương: 30 - 45M VNĐ."}, {"id": 95, "source": "NashTech (ITviec - HCM/HN)", "details": "Senior Software Engineer (NodeJS/TypeScript). Lương: 35 - 50M VNĐ."}, {"id": 96, "source": "KMS Technology (ITviec - HCM/Đà Nẵng)", "details": "Fullstack Engineer (React, Node, Cloud AWS). Lương: 30 - 48M VNĐ."}, {"id": 97, "source": "DEK Technologies (ITviec - HCM)", "details": "Software Engineer (NodeJS, React, Telecom/IoT). Lương: 25 - 40M VNĐ."}, {"id": 98, "source": "Aperia Solutions (ITviec - HCM)", "details": "Senior Web Developer (React, Node, SQL). Lương: $1,500 - $2,300."}, {"id": 99, "source": "Axon Active (ITviec - HCM/Đà Nẵng/Cần Thơ)", "details": "Fullstack Developer (Scrum, React, Node, Clean Code). Lương: 25 - 42M VNĐ."}, {"id": 100, "source": "Orient Software (TopCV - Đà Nẵng/HCM)", "details": "Fullstack Developer (ReactJS, NestJS). Lương: 22 - 35M VNĐ."}, {"id": 101, "source": "NFQ Asia (ITviec - HCM/Đà Nẵng)", "details": "Senior Fullstack Engineer (React, Node, Serverless). Lương: 35 - 55M VNĐ."}, {"id": 102, "source": "BTM Global (TopCV - HCM)", "details": "Fullstack Developer (Oracle, React, Node). Lương: 25 - 38M VNĐ."}, {"id": 103, "source": "Adnovum Vietnam (ITviec - HCM)", "details": "Security-focused Fullstack Engineer (React, NestJS, OpenID Connect). Lương: 35 - 50M VNĐ."}, {"id": 104, "source": "RikkeiSoft (TopCV - Hà Nội/Đà Nẵng/HCM)", "details": "Fullstack Node/React Developer (Dự án thị trường Nhật). Lương: 20 - 38M VNĐ."}, {"id": 105, "source": "FPT Software (TopCV - Toàn quốc)", "details": "Senior Fullstack Developer (ReactJS, NextJS, NestJS/NodeJS). Lương: 25 - 45M VNĐ."}, {"id": 106, "source": "Cộng đồng ReactJS Việt Nam (HCM - Quận 1 - FinTech Startup)", "details": "Tuyển dụng Senior Frontend (ReactJS, Next.js 15, Tailwind, TanStack Query). Xử lý biểu đồ tài chính TradingView, WebSocket realtime. Lương: 35 - 50M VNĐ."}, {"id": 107, "source": "NodeJS / NestJS Việt Nam (Hà Nội - Duy Tân)", "details": "Tuyển Mid/Senior Backend NestJS. Yêu cầu thành thạo TypeORM/Prisma, Redis Caching, RabbitMQ, hiểu rõ Event Loop. Lương: 25 - 40M VNĐ."}, {"id": 108, "source": "Tuyển dụng IT TP.HCM (Thảo Điền, Q2)", "details": "Fullstack TS Dev (React Native + NestJS). Phát triển App & Web nội bộ cho chuỗi bán lẻ. Lương: 28 - 42M VNĐ."}, {"id": 109, "source": "Cộng đồng FrontEnd Việt Nam (Remote)", "details": "Senior Next.js Developer cho Agency tại Singapore. Yêu cầu tiếng Anh tốt, tối ưu Core Web Vitals < 1s, SEO on-page. Lương: $2,000 - $3,000 USD."}, {"id": 110, "source": "Hội Lập Trình Viên NestJS (Hà Nội - Nam Từ Liêm)", "details": "Backend Engineer (NestJS, PostgreSQL). Hệ thống phân quyền RBAC đa cấp, Export Excel dung lượng lớn không tràn RAM. Lương: 22 - 32M VNĐ."}, {"id": 111, "source": "Tuyển dụng IT Đà Nẵng (Hải Châu)", "details": "Fullstack Developer (NextJS + NodeJS/NestJS). Khách hàng Nhật, có trợ cấp tiếng Nhật/Anh. Lương: 22 - 35M VNĐ."}, {"id": 112, "source": "Cộng đồng ReactJS Việt Nam (HCM - Bình Thạnh)", "details": "Mid Frontend ReactJS (2-3 YOE). Yêu cầu kinh nghiệm Design System, Shadcn UI, Storybook. Lương: 18 - 26M VNĐ."}, {"id": 113, "source": "Tuyển dụng NodeJS Việt Nam (HCM - Quận 3)", "details": "Lead Backend (NestJS, Microservices). Yêu cầu 5+ YOE, thiết kế DB PostgreSQL sharding, Redis Distributed Lock. Lương: 50 - 70M VNĐ."}, {"id": 114, "source": "Việc làm IT Remote (US Client - Fulltime)", "details": "Fullstack Engineer (React 19, Next.js App Router, NestJS, Tailwind, Prisma). Test đầu vào live coding DSA & System Design. Lương: $2,800 - $3,800 USD."}, {"id": 115, "source": "Tuyển dụng Frontend Hà Nội (Cầu Giấy)", "details": "Junior/Mid ReactJS Developer. Thành thạo Redux Toolkit, RESTful API, biết NextJS là điểm cộng lớn. Lương: 14 - 22M VNĐ."}, {"id": 116, "source": "Cộng đồng NestJS Việt Nam (HCM - Tân Bình)", "details": "Backend Developer (NestJS). Tích hợp cổng thanh toán VNPay, ZaloPay, MoMo, kiểm thử tự động Jest. Lương: 20 - 30M VNĐ."}, {"id": 117, "source": "Tuyển dụng IT TP.HCM (Phú Nhuận)", "details": "Senior Fullstack Developer (NodeJS, ReactJS, Docker, AWS S3/EC2). Lương: 35 - 48M VNĐ."}, {"id": 118, "source": "Cộng đồng ReactJS Việt Nam (Hà Nội - Thanh Xuân)", "details": "Frontend Developer (Next.js). Tối ưu SEO cho hệ thống tin tức hàng triệu traffic, ISR, Image Optimization. Lương: 25 - 35M VNĐ."}, {"id": 119, "source": "NodeJS / NestJS Việt Nam (HCM - Quận 10)", "details": "Backend NestJS (2+ YOE). Xử lý dữ liệu logistics, tối ưu truy vấn PostgreSQL triệu dòng, Index B-Tree. Lương: 22 - 30M VNĐ."}, {"id": 120, "source": "Tuyển dụng IT Fresher/Junior Toàn Quốc (HCM)", "details": "Junior Fullstack (NextJS + NestJS). Yêu cầu có sản phẩm thực tế trên GitHub, hiểu SOLID, TypeScript strict mode. Lương: 12 - 16M VNĐ."}, {"id": 121, "source": "Cộng đồng FrontEnd Việt Nam (HCM - Quận 7)", "details": "Senior ReactJS / NextJS Developer cho dự án E-Commerce Đa quốc gia. Yêu cầu Zustand, Micro-frontend Module Federation. Lương: 35 - 50M VNĐ."}, {"id": 122, "source": "Hội Lập Trình Viên Hà Nội (Ba Đình)", "details": "Fullstack Engineer (NestJS + React). Dự án số hóa quy trình doanh nghiệp (BPM, Contract, Approval workflow). Lương: 25 - 38M VNĐ."}, {"id": 123, "source": "Tuyển dụng IT TP.HCM (Quận 1)", "details": "Senior Backend Developer (NestJS, Go). Tối ưu hệ thống voucher/khuyến mãi xử lý High Concurrency, Pessimistic Locking. Lương: 40 - 60M VNĐ."}, {"id": 124, "source": "Cộng đồng ReactJS Việt Nam (Đà Nẵng)", "details": "ReactJS / Next.js Developer (2+ YOE). Tham gia team Product SaaS, review code kỹ, CI/CD tự động. Lương: 18 - 28M VNĐ."}, {"id": 125, "source": "Việc làm IT Remote (Australia Startup)", "details": "Fullstack TypeScript (Next.js + NestJS + Serverless AWS). Giao tiếp tiếng Anh trôi chảy hàng ngày. Lương: $2,200 - $3,200 USD."}, {"id": 126, "source": "NodeJS / NestJS Việt Nam (Hà Nội - Đống Đa)", "details": "Backend Engineer (NestJS, GraphQL / REST). Hệ thống EdTech, WebSocket tương tác trực tiếp. Lương: 20 - 32M VNĐ."}, {"id": 127, "source": "Tuyển dụng IT TP.HCM (Tân Phú)", "details": "Mid Frontend Developer (ReactJS, TypeScript, Tailwind). Tối ưu bundle size, Tree-shaking, lazy loading. Lương: 18 - 25M VNĐ."}, {"id": 128, "source": "Cộng đồng ReactJS Việt Nam (Hà Nội - Hà Đông)", "details": "Fullstack Developer (ReactJS, NodeJS/NestJS). Dự án ERP cho doanh nghiệp sản xuất, nắm chắc SQL quan hệ. Lương: 20 - 30M VNĐ."}, {"id": 129, "source": "Hội Tuyển Dụng IT Sài Gòn (Thủ Đức)", "details": "Senior NestJS Developer. Triển khai kiến trúc Event-Driven với Kafka, BullMQ, ElasticSearch. Lương: 35 - 50M VNĐ."}, {"id": 130, "source": "Tuyển dụng Frontend Việt Nam (Remote)", "details": "Senior Frontend (Next.js 15, React Server Actions). Tối ưu hóa UI/UX, hỗ trợ chuẩn Accessibility WCAG 2.1. Lương: 30 - 45M VNĐ."}, {"id": 131, "source": "NodeJS Việt Nam (HCM - Quận 11)", "details": "Backend Developer (NestJS, Prisma, PostgreSQL). Viết Clean Code, TDD, Unit Test coverage > 80%. Lương: 22 - 32M VNĐ."}, {"id": 132, "source": "Tuyển dụng IT TP.HCM (Gò Vấp)", "details": "Mid Fullstack Developer (NodeJS + ReactJS). Phát triển portal nội bộ, quản trị nhân sự, tích hợp Telegram Bot alert. Lương: 18 - 26M VNĐ."}, {"id": 133, "source": "Cộng đồng ReactJS Việt Nam (HCM - Quận 4)", "details": "ReactJS Developer (3+ YOE). Có kinh nghiệm tích hợp thanh toán Stripe/PayPal, Webhook handling. Lương: 25 - 35M VNĐ."}, {"id": 134, "source": "Việc làm IT Hà Nội (Hoàn Kiếm)", "details": "Technical Lead Fullstack (NestJS + React/Next). Định hướng công nghệ, phân rã kiến trúc microservices. Lương: 45 - 65M VNĐ."}, {"id": 135, "source": "NodeJS / NestJS Việt Nam (Remote)", "details": "Backend NestJS Engineer cho khách hàng UK. Làm việc giờ chiều-tối, tiếng Anh giao tiếp tốt. Lương: $1,800 - $2,600 USD."}, {"id": 136, "source": "Tuyển dụng IT TP.HCM (Bình Thạnh)", "details": "Frontend Developer (Next.js, TypeScript). Dự án Bất động sản, bản đồ Mapbox/Leaflet, lọc dữ liệu real-time. Lương: 20 - 30M VNĐ."}, {"id": 137, "source": "Cộng đồng ReactJS Việt Nam (Hà Nội - Long Biên)", "details": "Senior ReactJS (TypeScript, Redux/Zustand). Xử lý form phức tạp (React Hook Form, Zod schema validation). Lương: 28 - 40M VNĐ."}, {"id": 138, "source": "Tuyển dụng NodeJS Việt Nam (HCM - Quận 2)", "details": "Backend Developer (NestJS, Docker). Triển khai hệ thống API Gateway, JWT Refresh Token Rotation, Rate Limiter. Lương: 22 - 32M VNĐ."}, {"id": 139, "source": "Việc làm IT Lập trình viên (Đà Nẵng - Ngũ Hành Sơn)", "details": "Mid Fullstack (NextJS + NestJS). Tham gia dự án y tế Telemedicine. Lương: 20 - 30M VNĐ."}, {"id": 140, "source": "Cộng đồng FrontEnd Việt Nam (HCM - Quận 1)", "details": "Senior Frontend (ReactJS/Next.js). Tối ưu SEO đa ngôn ngữ (i18n), PWA, Local Storage Caching. Lương: 30 - 45M VNĐ."}, {"id": 141, "source": "Hội Lập Trình Viên NestJS (Hà Nội - Cầu Giấy)", "details": "Backend NestJS Fresher/Junior. Cần nắm chắc OOP, TypeORM, SQL Join, Indexing cơ bản. Lương: 9 - 14M VNĐ."}, {"id": 142, "source": "Tuyển dụng IT TP.HCM (Quận 7 - Phú Mỹ Hưng)", "details": "Senior Fullstack Engineer (NestJS, Next.js, AWS Cloud). Dự án Ngân hàng số. Lương: 40 - 55M VNĐ."}, {"id": 143, "source": "Cộng đồng ReactJS Việt Nam (Remote Toàn Quốc)", "details": "Frontend Dev (ReactJS, Ant Design / Tailwind). Dự án CRM B2B. Lương: 18 - 26M VNĐ."}, {"id": 144, "source": "NodeJS / NestJS Việt Nam (HCM - Tân Bình)", "details": "Mid Backend NestJS. Xử lý hàng nghìn socket kết nối realtime (Socket.IO / ws). Lương: 20 - 28M VNĐ."}, {"id": 145, "source": "Tuyển dụng IT Hà Nội (Từ Liêm)", "details": "Fullstack Developer (NodeJS + React). Dự án HRM & Chấm công GPS. Lương: 18 - 28M VNĐ."}, {"id": 146, "source": "Việc làm IT Remote (Singapore FinTech)", "details": "Senior Fullstack (Next.js, NestJS, TypeScript, AWS). Tiếng Anh chuyên nghiệp. Lương: $3,000 - $4,200 USD."}, {"id": 147, "source": "Cộng đồng ReactJS Việt Nam (HCM - Bình Tân)", "details": "Junior ReactJS Developer (1 YOE). Tham gia dự án thương mại điện tử. Lương: 11 - 16M VNĐ."}, {"id": 148, "source": "NodeJS Việt Nam (Hà Nội - Hai Bà Trưng)", "details": "Backend Engineer (NestJS, MongoDB/PostgreSQL). Xây dựng Search Engine tích hợp Elasticsearch. Lương: 25 - 38M VNĐ."}, {"id": 149, "source": "Tuyển dụng IT TP.HCM (Thủ Đức)", "details": "Mid Fullstack TypeScript (Next.js 14/15 + NestJS). Yêu cầu kinh nghiệm monorepo Turborepo. Lương: 24 - 34M VNĐ."}, {"id": 150, "source": "Cộng đồng FrontEnd Việt Nam (Remote)", "details": "Frontend ReactJS (TypeScript, Next.js). Khách hàng Canada, yêu cầu làm việc độc lập cao. Lương: $1,600 - $2,400 USD."}, {"id": 151, "source": "Hội Lập Trình Viên NestJS (HCM - Quận 1)", "details": "Senior Backend Developer (NestJS, Redis, BullMQ). Xử lý background job, email queue, file compression. Lương: 30 - 45M VNĐ."}, {"id": 152, "source": "Tuyển dụng IT Hà Nội (Tây Hồ)", "details": "Mid/Senior Frontend Developer (React, Next.js, Three.js). Dự án Web 3D / Thực tế ảo. Lương: 25 - 40M VNĐ."}, {"id": 153, "source": "NodeJS / NestJS Việt Nam (Đà Nẵng)", "details": "Backend NestJS Developer (2-3 YOE). Tích hợp các hệ thống CRM/ERP bên thứ ba. Lương: 18 - 26M VNĐ."}, {"id": 154, "source": "Cộng đồng ReactJS Việt Nam (HCM - Phú Nhuận)", "details": "Senior ReactJS / Next.js Developer. Kinh nghiệm chuyển đổi kiến trúc Legacy sang Next.js App Router. Lương: 32 - 45M VNĐ."}, {"id": 155, "source": "Tuyển dụng IT TP.HCM (Quận 10)", "details": "Fullstack Engineer (NestJS + React). Dự án F&B / Chuỗi nhà hàng, quản lý đơn hàng realtime. Lương: 22 - 32M VNĐ."}, {"id": 156, "source": "Việc làm IT Remote (US Startup)", "details": "AI Fullstack Engineer (Next.js, NestJS, LangChain/LlamaIndex, OpenAI API). Lương: $3,200 - $4,500 USD."}, {"id": 157, "source": "Cộng đồng FrontEnd Việt Nam (Hà Nội - Đống Đa)", "details": "Frontend Developer (ReactJS, TypeScript, TanStack Table). Xử lý bảng dữ liệu hàng chục nghìn dòng mượt mà. Lương: 20 - 30M VNĐ."}, {"id": 158, "source": "NodeJS / NestJS Việt Nam (HCM - Quận 3)", "details": "Backend Developer (NestJS). Viết Unit Test và E2E Test với Supertest, CI pipeline GitHub Actions. Lương: 22 - 32M VNĐ."}, {"id": 159, "source": "Tuyển dụng IT TP.HCM (Tân Bình)", "details": "Senior Fullstack Developer (NodeJS/NestJS + React). Quản lý technical debt, review code, đào tạo fresher. Lương: 35 - 50M VNĐ."}, {"id": 160, "source": "Cộng đồng ReactJS Việt Nam (Hà Nội - Cầu Giấy)", "details": "Technical Lead Frontend (React/Next). Xây dựng chuẩn mực code, component library dùng chung. Lương: 45 - 60M VNĐ."}, {"id": 161, "source": "KMS Solutions (ITviec - HCM)", "details": "Senior Software Engineer (ReactJS, Node.js, AWS Cloud). Lương: 35 - 52M VNĐ. Yêu cầu thành thạo CI/CD, Microservices."}, {"id": 162, "source": "VNG Corporation - ZaloPay (TopCV - HCM)", "details": "Senior Backend Engineer (NodeJS/Go). Hệ thống thanh toán chịu tải hàng chục nghìn TPS, Redis Cluster, Kafka. Lương: 40 - 65M VNĐ."}, {"id": 163, "source": "VNPT-IT (TopCV - Hà Nội)", "details": "Chuyên viên Phát triển Phần mềm Fullstack (ReactJS, NestJS/Spring). Tham gia các dự án Chính phủ số, Chuyển đổi số Quốc gia. Lương: 25 - 45M VNĐ."}, {"id": 164, "source": "Viettel Digital Solutions (TopCV - Hà Nội)", "details": "Kỹ sư Fullstack (Next.js, React, Node.js). Sản phẩm Viettel Money, yêu cầu bảo mật cao, tối ưu hiệu năng. Lương: 30 - 55M VNĐ."}, {"id": 165, "source": "FPT Software (ITviec - Đà Nẵng/HCM/HN)", "details": "Technical Architect / Solution Architect (JavaScript/TypeScript Ecosystem). Lương: 60 - 90M VNĐ."}, {"id": 166, "source": "NAB Innovation Centre Vietnam (LinkedIn - HCM)", "details": "Senior Fullstack Engineer (React, TypeScript, Node.js, AWS Serverless). Chuẩn Agile quốc tế, đãi ngộ top: $2,200 - $3,800 USD."}, {"id": 167, "source": "Robert Bosch Engineering Vietnam (TopCV - HCM)", "details": "Web Application Developer (React, TypeScript, Node.js). Dự án Automotive & IoT. Lương: 28 - 45M VNĐ."}, {"id": 168, "source": "LG CNS Vietnam (ITviec - Hà Nội)", "details": "Senior Fullstack Developer (ReactJS, Node.js/Java). Lương: 32 - 50M VNĐ. Khách hàng Hàn Quốc, làm việc hybrid."}, {"id": 169, "source": "DEK Technologies (TopCV - HCM)", "details": "Mid/Senior Fullstack Software Engineer (React, NodeJS, Docker, Kubernetes). Lương: 28 - 42M VNĐ."}, {"id": 170, "source": "DXC Technology (VietnamWorks - HCM/HN)", "details": "Senior Application Developer (ReactJS, Next.js, Node.js). Lương: 30 - 48M VNĐ."}, {"id": 171, "source": "TymeX Vietnam (LinkedIn - HCM)", "details": "Senior Backend Engineer (Node.js/NestJS, Event Sourcing, CQRS). Lương: 45 - 75M VNĐ."}, {"id": 172, "source": "Aperia Solutions (ITviec - HCM)", "details": "Full Stack Developer (React, TypeScript, Node.js, PostgreSQL). Xử lý dữ liệu tài chính B2B SaaS. Lương: 30 - 45M VNĐ."}, {"id": 173, "source": "Axon Active Vietnam (ITviec - HCM/Đà Nẵng)", "details": "Senior Scrum Developer (ReactJS, NestJS/NodeJS). Lương: 30 - 45M VNĐ."}, {"id": 174, "source": "NashTech (VietnamWorks - HCM/HN)", "details": "Fullstack Developer (NodeJS, ReactJS, NextJS, Azure). Lương: 30 - 48M VNĐ."}, {"id": 175, "source": "SmartOSC (TopCV - Hà Nội)", "details": "Senior E-commerce Fullstack Engineer (Next.js, Node.js/NestJS, Headless Commerce). Lương: 35 - 55M VNĐ."}, {"id": 176, "source": "RikkeiSoft (TopCV - Hà Nội/HCM)", "details": "Team Leader Fullstack (ReactJS, NestJS, TypeScript). Lương: 35 - 55M VNĐ."}, {"id": 177, "source": "Sutrix Solutions (ITviec - HCM)", "details": "Senior Frontend Developer (ReactJS, NextJS, Redux, Performance Tuning). Lương: 28 - 42M VNĐ."}, {"id": 178, "source": "Orient Software (VietnamWorks - HCM/Đà Nẵng)", "details": "Senior Fullstack Developer (ReactJS, NestJS, AWS). Lương: 30 - 45M VNĐ."}, {"id": 179, "source": "Tiki Corporation (TopCV - HCM)", "details": "Senior Software Engineer (Next.js, Node.js, Golang). Hệ thống Fulfillment & Inventory. Lương: 35 - 55M VNĐ."}, {"id": 180, "source": "Shopee Vietnam (TopDev - HCM)", "details": "Senior Frontend Engineer (React, TypeScript, Web Performance). Lương: 50 - 85M VNĐ."}, {"id": 181, "source": "One Mount (ITviec - Hà Nội)", "details": "Fullstack Engineer (ReactJS, NodeJS/NestJS). Hệ sinh thái VinShop, VinID. Lương: 32 - 50M VNĐ."}, {"id": 182, "source": "Techcombank (TopCV - Hà Nội)", "details": "Solution Specialist / Fullstack Lead (React/NextJS, Node.js/Microservices). Lương: 45 - 70M VNĐ."}, {"id": 183, "source": "MB Bank (TopCV - Hà Nội)", "details": "Kỹ sư Công nghệ thông tin Fullstack (ReactJS, NestJS/Java, Docker, K8s). Lương: 28 - 50M VNĐ."}, {"id": 184, "source": "VNPAY (ITviec - Hà Nội)", "details": "Senior Backend Developer (NodeJS/NestJS). Xây dựng Core Payment Gateway. Lương: 35 - 55M VNĐ."}, {"id": 185, "source": "Momo / M-Service (TopCV - HCM)", "details": "Software Engineer (Fullstack Node.js + React Native / React). Lương: 30 - 50M VNĐ."}, {"id": 186, "source": "KiotViet (TopCV - Hà Nội/HCM)", "details": "Mid/Senior Backend Developer (NestJS, PostgreSQL, Redis). Lương: 28 - 42M VNĐ."}, {"id": 187, "source": "Sendo / FPT (ITviec - HCM)", "details": "Frontend Architect / Senior FE (Next.js App Router, SSR, Edge Computing). Lương: 40 - 60M VNĐ."}, {"id": 188, "source": "NFQ Asia (ITviec - HCM/Đà Nẵng)", "details": "Fullstack Engineer (TypeScript, Next.js, Node.js, AWS Serverless). Lương: 35 - 55M VNĐ."}, {"id": 189, "source": "BTM Global (VietnamWorks - HCM)", "details": "Senior Software Developer (ReactJS, Node.js, Oracle DB). Lương: 30 - 45M VNĐ."}, {"id": 190, "source": "Adnovum Vietnam (ITviec - HCM)", "details": "Senior Security & Fullstack Engineer (React, NestJS, IAM, OAuth2). Lương: 40 - 60M VNĐ."}, {"id": 191, "source": "Monstar Lab Vietnam (Glints - Hà Nội/Đà Nẵng)", "details": "Fullstack Developer (ReactJS, NestJS, Docker). Khách hàng Nhật Bản và EMEA. Lương: 25 - 40M VNĐ."}, {"id": 192, "source": "HBLAB (TopCV - Hà Nội)", "details": "Mid/Senior Fullstack (ReactJS, Next.js, NodeJS). Lương: 22 - 38M VNĐ."}, {"id": 193, "source": "Sun Asterisk Vietnam (TopCV - Hà Nội/Đà Nẵng/HCM)", "details": "Senior Web Engineer (ReactJS, NestJS, Ruby on Rails). Lương: 28 - 45M VNĐ."}, {"id": 194, "source": "VTI Cloud (TopCV - Hà Nội)", "details": "Cloud Fullstack Engineer (NodeJS/NestJS, React, AWS Lambda/API Gateway). Lương: 28 - 45M VNĐ."}, {"id": 195, "source": "CMC Global (VietnamWorks - Hà Nội/Đà Nẵng)", "details": "Senior Fullstack Developer (ReactJS, Node.js/NestJS). Dự án thị trường APAC & EU. Lương: 28 - 45M VNĐ."}, {"id": 196, "source": "GMO-Z.com RUNSYSTEM (TopCV - Hà Nội/HCM)", "details": "Fullstack Developer (Next.js, NestJS, AI Integration). Lương: 25 - 40M VNĐ."}, {"id": 197, "source": "BAP Software (TopCV - Đà Nẵng/HCM/HN)", "details": "Senior Fullstack Engineer (React, NextJS, NestJS). Dự án AI & Web3. Lương: 28 - 45M VNĐ."}, {"id": 198, "source": "Luvina Software (TopCV - Hà Nội)", "details": "Web Developer (NodeJS, ReactJS, TypeScript). Chuẩn coding Nhật Bản, bảo mật cao. Lương: 20 - 35M VNĐ."}, {"id": 199, "source": "Be Group (TopCV - HCM)", "details": "Backend Software Engineer (NodeJS / Go). Hệ thống dispatch tài xế, pricing engine realtime. Lương: 35 - 60M VNĐ."}, {"id": 200, "source": "Ahamove (ITviec - HCM)", "details": "Senior Backend Developer (Node.js/NestJS, MongoDB, Redis, Kafka). Xử lý định vị và giao hàng realtime. Lương: 35 - 55M VNĐ."}, {"id": 201, "source": "Giao Hàng Tiết Kiệm - GHTK (TopCV - Hà Nội)", "details": "Senior Fullstack / Backend Engineer (NodeJS, React, High Concurrency). Xử lý triệu đơn hàng/ngày. Lương: 30 - 55M VNĐ."}, {"id": 202, "source": "Giao Hàng Nhanh - GHN (ITviec - HCM)", "details": "Backend Engineer (NodeJS/NestJS, PostgreSQL, Redis Cluster). Lương: 28 - 45M VNĐ."}, {"id": 203, "source": "Trusting Social (ITviec - HCM)", "details": "Senior Fullstack Engineer (React, TypeScript, Node.js). Hệ thống chấm điểm tín dụng AI. Lương: $2,200 - $3,500 USD."}, {"id": 204, "source": "Katalon (ITviec - HCM)", "details": "Senior Software Engineer (React, TypeScript, Node.js, Electron). Nền tảng Automation Testing toàn cầu. Lương: 35 - 60M VNĐ."}, {"id": 205, "source": "ELSA Speak (LinkedIn - HCM/Remote)", "details": "Senior Fullstack Engineer (Next.js, Node.js, Python AI microservices). Lương: $2,500 - $4,000 USD."}, {"id": 206, "source": "Got It Vietnam (LinkedIn - Hà Nội/Remote)", "details": "Software Engineer (Fullstack React, Node.js/Python, Generative AI). Lương: 40 - 70M VNĐ."}, {"id": 207, "source": "Wizeline Vietnam (ITviec - HCM)", "details": "Fullstack Engineer (React, Next.js, Node.js, GCP/AWS). Lương: $2,000 - $3,200 USD."}, {"id": 208, "source": "Kyanon Digital (TopCV - HCM)", "details": "Senior Fullstack Developer (NodeJS/NestJS, ReactJS). Dự án Agile cho thị trường Singapore & EU. Lương: 30 - 45M VNĐ."}, {"id": 209, "source": "SotaTek (TopCV - Hà Nội/Đà Nẵng/HCM)", "details": "Senior Fullstack Web Developer (NestJS, NextJS, Docker). Lương: 28 - 45M VNĐ."}, {"id": 210, "source": "Aimesoft (TopCV - Hà Nội)", "details": "AI Application Developer (Next.js, React, NestJS, Python AI backend). Lương: 25 - 40M VNĐ."}, {"id": 211, "source": "CodersX / Tech Kids (TopCV - Hà Nội)", "details": "Technical Lead Fullstack (React, Next.js, NestJS). Xây dựng hệ sinh thái EdTech & LMS. Lương: 35 - 50M VNĐ."}, {"id": 212, "source": "Bravestudio (TopCV - HCM)", "details": "Fullstack Developer (NextJS, NestJS, Supabase/PostgreSQL). Xây dựng sản phẩm SaaS micro-tools. Lương: 22 - 35M VNĐ."}, {"id": 213, "source": "InnoTech Vietnam (VietnamWorks - HCM)", "details": "Senior Node.js / NestJS Developer. Banking & Fintech Solutions. Lương: 30 - 48M VNĐ."}, {"id": 214, "source": "NashTech Global (LinkedIn - HCM/HN)", "details": "Lead Consultant - Fullstack JavaScript/TypeScript Architect. Lương: 60 - 90M VNĐ."}, {"id": 215, "source": "VNG Games (TopCV - HCM)", "details": "Senior Web Engineer (ReactJS, Next.js, Node.js). Hệ thống nạp thẻ, payment và cộng đồng game thủ toàn cầu. Lương: 35 - 60M VNĐ."}];
+
+    // Render jobs
+    function renderJobs(list) {
+      const container = document.getElementById('jobListContainer');
+      if (list.length === 0) {
+        container.innerHTML = '<div style="color: #8b949e; padding: 20px; text-align: center;">Không tìm thấy tin tuyển dụng phù hợp với từ khóa.</div>';
+        return;
+      }
+      container.innerHTML = list.map(j => `
+        <div class="job-item">
+          <div class="job-header">
+            <span class="job-source">${j.source}</span>
+            <span class="job-id">#${j.id}</span>
+          </div>
+          <div class="job-desc">${j.details}</div>
+        </div>
+      `).join('');
+    }
+
+    function filterJobs() {
+      const q = document.getElementById('jobSearch').value.toLowerCase();
+      const filtered = jobsData.filter(j => 
+        j.source.toLowerCase().includes(q) || 
+        j.details.toLowerCase().includes(q)
+      );
+      renderJobs(filtered);
+    }
+
+    // Initial render
+    renderJobs(jobsData);
+  </script>
+</body>
+</html>

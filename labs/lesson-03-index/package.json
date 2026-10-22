@@ -1,0 +1,28 @@
+{
+  "name": "lesson-03-index-labs",
+  "private": true,
+  "type": "module",
+  "description": "Runnable labs for lesson 3 (Index) on the advance_be_lab Postgres (schema lab03_indexing). Needs PG_URL.",
+  "scripts": {
+    "setup": "node 00-setup-dataset.mjs",
+    "check": "node check-lab-state.mjs",
+    "reset": "node check-lab-state.mjs --reset",
+    "lab1": "node 01-when-index-helps.mjs",
+    "lab2": "node 02-btree-anatomy-and-hash.mjs",
+    "lab3": "node 03-heap-tid-hot-cluster.mjs",
+    "lab4": "node 04-write-cost-and-pk-order.mjs",
+    "lab5": "node 05-composite-order.mjs",
+    "lab6": "node 06-covering-index-only.mjs",
+    "lab7": "node 07-constraints-and-special.mjs",
+    "lab9": "node 09-index-failures.mjs",
+    "lab10": "node 10-bloat-reindex.mjs",
+    "lab11": "node 11-imdb-lesson2-revisited.mjs",
+    "homework:setup": "node homework-setup.mjs",
+    "homework:draft": "node homework-ai-draft.mjs",
+    "homework": "node homework-runner.mjs homework-theories.mine.mjs",
+    "homework:solution": "node homework-runner.mjs homework-theories.solution.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

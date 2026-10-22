@@ -1,0 +1,18 @@
+
+Chưa chạy T1, T2, T3: còn '???' hoặc giá trị không hợp lệ trong homework-theories.mine.mjs
+──────────────────────────────────────────────────────────────────────────────────────────
+  ✘ T1.predict.bothEqualFaster: Q1 (= trên cả 2 cột): index nào đọc ít trang hơn? → 'store_first' | 'status_first' | 'same'
+  ✘ T1.predict.statusOnlySeek: Q2 (chỉ status = 'TERMINATED'): index nào seek (tìm thẳng) được? → 'store_first' | 'status_first' | 'both' | 'none'
+  ✘ T1.predict.storeOnlySeek: Q3 (chỉ store_id = 42): index nào seek được? → 'store_first' | 'status_first' | 'both' | 'none'
+  ✘ T2.blanks.include: điền các cột trong INCLUDE (...), ví dụ 'code' hoặc 'code, status'
+  ✘ T2.predict.planWithout: Index (customer_id, signed_at): node quét là gì? → 'Seq Scan' | 'Index Scan' | 'Index Only Scan' | 'Bitmap Heap Scan'
+  ✘ T2.predict.planWith: Index (customer_id, signed_at) INCLUDE (...): node quét là gì? → 'Seq Scan' | 'Index Scan' | 'Index Only Scan' | 'Bitmap Heap Scan'
+  ✘ T2.predict.heapFetchesWith: Có INCLUDE: số lần phải đọc bảng (Heap Fetches)? → '0' | '>0'
+  ✘ T3.blanks.partialStatus: điền giá trị trong WHERE status = '...' của partial index
+  ✘ T3.predict.planTerminated: Index (status), truy vấn status = 'TERMINATED' (0.5%): dùng index hay đọc cả bảng? → 'index' | 'seq_scan'
+  ✘ T3.predict.planActive: Index (status), truy vấn status = 'ACTIVE' (60%): dùng index hay đọc cả bảng? → 'index' | 'seq_scan'
+  ✘ T3.predict.partialSize: Partial index so với index (status) đầy đủ? → 'about_same' | 'up_to_10x_smaller' | 'over_10x_smaller'
+Hãy DỰ ĐOÁN trước khi đo: sửa từng dòng ✘ ở trên ('???' → một lựa chọn hợp lệ), lưu file, chạy lại.
+Lý thuyết nào đã điền đủ sẽ được đo ngay, không cần điền hết cả 3 một lúc.
+
+[exit 1]

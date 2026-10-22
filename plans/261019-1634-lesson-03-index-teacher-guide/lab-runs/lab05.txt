@@ -1,0 +1,46 @@
+Lab 3.05 — Index nhiều cột: thứ tự cột quyết định truy vấn nào "seek" được, không quyết định độ cao cây (slide 23–27)
+
+A. Slide 25 với index l05_cpn = (country, province, name) — bảng users có 14,258 trang heap
+───────────────────────────────────────────────────────────────────────────────────────────
+│ Truy vấn                            │ Kế hoạch                                               │    Dòng │  Trang │   ms │
+├─────────────────────────────────────┼────────────────────────────────────────────────────────┼─────────┼────────┼──────┤
+│ Q1 province AND country             │ Bitmap Heap Scan (users) > Bitmap Index Scan (l05_cpn) │  19,924 │ 10,822 │ 12.0 │
+│ Q1 đảo thứ tự WHERE                 │ Bitmap Heap Scan (users) > Bitmap Index Scan (l05_cpn) │  19,924 │ 10,822 │ 12.4 │
+│ Q2 province                         │ Seq Scan (users)                                       │  19,924 │ 14,258 │  108 │
+│ Q2 province (ép dùng index)         │ Bitmap Heap Scan (users) > Bitmap Index Scan (l05_cpn) │  19,924 │ 12,893 │ 26.4 │
+│ Q3 name AND province                │ Index Scan (l05_cpn)                                   │       7 │  2,111 │ 11.3 │
+│ Q4 country='US' (20%)               │ Bitmap Heap Scan (users) > Bitmap Index Scan (l05_cpn) │ 200,146 │ 14,564 │ 48.4 │
+│ Q4 country='US' (20%) (ép Seq Scan) │ Seq Scan (users)                                       │ 200,146 │ 14,258 │  120 │
+│ country='SG' (0.5%)                 │ Bitmap Heap Scan (users) > Bitmap Index Scan (l05_cpn) │   4,927 │  4,203 │  5.0 │
+   => ✔ Q1 có cột đầu → seek: phần index chỉ đọc 33 / 2,102 trang lá, phần còn lại là 10,789 trang heap của 19,924 dòng nằm rải rác
+   => ✔ Đảo thứ tự điều kiện trong WHERE: cùng kế hoạch, cùng 10,822 trang (planner tự sắp lại)
+   => ✔ Q2 thiếu cột đầu: Postgres chọn Seq Scan (users); ép dùng index thì phải đọc 2,104 trang index = cả 2,102 trang lá (PG16 không có skip scan)
+   => ✔ Q3 cũng thiếu cột đầu nhưng chỉ 7 dòng: Postgres VẪN dùng index, đọc 2,111 trang ≈ toàn bộ lá — "dùng index" không có nghĩa là "seek"
+   => ✔ Q4 dùng được index nhưng không bớt trang: bản index 14,564 trang vs Seq Scan 14,258 trang; Postgres tự chọn index (Bitmap đọc heap theo thứ tự block) (48.4 vs 120 ms)
+   => ✔ country='SG' (4,927 dòng): 4,203 trang, ít hơn Seq Scan 14,258 trang — index có ích khi lọc ít dòng
+
+B. Slide 26 "cardinality cao đứng trước": (country, province, name) vs (name, province, country)
+────────────────────────────────────────────────────────────────────────────────────────────────
+│ Đo                              │ l05_cpn (country, province, name) │ l05_npc (name, province, country) │
+├─────────────────────────────────┼───────────────────────────────────┼───────────────────────────────────┤
+│ Kích thước                      │                           16.5 MB │                           16.5 MB │
+│ Số tầng của cây (level + 1)     │                                 3 │                                 3 │
+│ Trang lá                        │                             2,102 │                             2,102 │
+│ = cả 3 cột (7 dòng)             │             10 trang · Index Scan │             10 trang · Index Scan │
+│ country = 'SG' (4,927 dòng)     │    4,203 trang · Bitmap Heap Scan │    6,281 trang · Bitmap Heap Scan │
+│ name = 'Jane Nguyen' (395 dòng) │          2,499 trang · Index Scan │      394 trang · Bitmap Heap Scan │
+   => ✔ Đảo thứ tự cột: cùng 3 tầng, kích thước lệch 0.0%, cùng 10 trang cho truy vấn = cả 3 cột → cây không "nhiều nhánh hơn" nhờ cardinality
+   => ✔ Thứ tự chỉ đổi truy vấn nào seek được: country='SG' 4,203 (cpn) vs 6,281 trang (npc, quét 2,104 trang index); name='Jane Nguyen' 394 (npc) vs 2,499 trang (cpn)
+
+C. Slide 27 trên t_ab (1 triệu dòng, a: 100 giá trị, b: 1.000 giá trị), SELECT a, b — index 8.9 MB, 1,129 trang lá
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Truy vấn                       │ Index         │ Index Cond                          │ Kế hoạch        │ Dòng │ Trang │    ms │
+├────────────────────────────────┼───────────────┼─────────────────────────────────────┼─────────────────┼──────┼───────┼───────┤
+│ Q1 a > 1 AND b = 2             │ l05_ab (a, b) │ ((a > 1) AND (b = 2))               │ Index Only Scan │  910 │ 1,110 │   3.1 │
+│ Q2 a >= 1 AND b = 2            │ l05_ab (a, b) │ ((a >= 1) AND (b = 2))              │ Index Only Scan │  922 │ 1,121 │   3.0 │
+│ Q3 a BETWEEN 2 AND 8 AND b = 2 │ l05_ab (a, b) │ ((a >= 2) AND (a <= 8) AND (b = 2)) │ Index Only Scan │   54 │    83 │ 0.251 │
+│ Q1 a > 1 AND b = 2             │ l05_ba (b, a) │ ((b = 2) AND (a > 1))               │ Index Only Scan │  910 │     5 │ 0.134 │
+│ Q2 a >= 1 AND b = 2            │ l05_ba (b, a) │ ((b = 2) AND (a >= 1))              │ Index Only Scan │  922 │     5 │ 0.144 │
+│ Q3 a BETWEEN 2 AND 8 AND b = 2 │ l05_ba (b, a) │ ((b = 2) AND (a >= 2) AND (a <= 8)) │ Index Only Scan │   54 │     4 │ 0.050 │
+   => ✔ (a, b): Q1 và Q2 đều có "b = 2" trong Index Cond nhưng b không thu hẹp vùng quét — Q1 1,110 ≈ Q2 1,121 trang (98% số lá); Q3 khoảng a hẹp hơn → 83 trang
+   => ✔ (b, a): seek thẳng b = 2 rồi đọc khoảng a liền nhau trong đoạn đó → tối đa 5 trang cho cả 3 câu. Quy tắc: cột so sánh "=" trước, cột khoảng sau

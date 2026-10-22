@@ -1,0 +1,101 @@
+
+T1 · slide 26
+─────────────
+Phát biểu: Index nhiều cột: đặt cột có nhiều giá trị khác nhau (cardinality cao, ở đây store_id) lên trước thì truy vấn nhanh hơn.
+SQL (mỗi index tạo trong BEGIN … ROLLBACK, đo 1 lần khởi động + trung vị 5 lần, tính số trang):
+  CREATE INDEX hw_t1_store_first ON hw_contracts (store_id, status);   -- đo Q1–Q3, rồi ROLLBACK
+  CREATE INDEX hw_t1_status_first ON hw_contracts (status, store_id);  -- đo Q1–Q3, rồi ROLLBACK
+  Q1: SELECT * FROM hw_contracts WHERE store_id = 42 AND status = 'TERMINATED';
+  Q2: SELECT * FROM hw_contracts WHERE status = 'TERMINATED';
+  Q3: SELECT * FROM hw_contracts WHERE store_id = 42;
+Kết quả:
+│ Index              │ Truy vấn    │ Kế hoạch         │  Dòng │ Trang │ Trang index │ Cách dùng index │    ms │
+├────────────────────┼─────────────┼──────────────────┼───────┼───────┼─────────────┼─────────────────┼───────┤
+│ (store_id, status) │ Q1 (2 cột)  │ Bitmap Heap Scan │    15 │    18 │           3 │ seek            │ 0.084 │
+│ (store_id, status) │ Q2 status   │ Bitmap Heap Scan │ 2,524 │ 2,475 │         446 │ quét cả index   │   3.5 │
+│ (store_id, status) │ Q3 store_id │ Bitmap Heap Scan │ 2,495 │ 2,013 │           5 │ seek            │   2.4 │
+│ (status, store_id) │ Q1 (2 cột)  │ Index Scan       │    15 │    18 │      3 (ép) │ seek            │ 0.051 │
+│ (status, store_id) │ Q2 status   │ Bitmap Heap Scan │ 2,524 │ 2,035 │           6 │ seek            │   2.4 │
+│ (status, store_id) │ Q3 store_id │ Bitmap Heap Scan │ 2,495 │ 2,457 │         449 │ quét cả index   │   2.8 │
+  (store_id, status): 3.5 MB, level 2, 444 trang lá
+  (status, store_id): 3.5 MB, level 2, 447 trang lá
+  seek = trang index đọc < 1/2 số trang lá; quét cả index = đọc gần hết trang lá. (ép) = ép bitmap chỉ để đếm trang index.
+Dự đoán của bạn vs thực tế:
+  ✔ Q1 (= trên cả 2 cột): index nào đọc ít trang hơn? Bạn: 'same' · Đo được: 'same'
+  ✔ Q2 (chỉ status = 'TERMINATED'): index nào seek (tìm thẳng) được? Bạn: 'status_first' · Đo được: 'status_first'
+  ✔ Q3 (chỉ store_id = 42): index nào seek được? Bạn: 'store_first' · Đo được: 'store_first'
+   => KẾT LUẬN · Lý thuyết SAI: Q1: 18 vs 18 trang, level 2 = 2 → cột cardinality cao đứng trước không làm Q1 nhanh hơn. Thứ tự quyết định truy vấn nào seek được: Q2 seek với (status, store_id), Q3 seek với (store_id, status) → chọn thứ tự theo mẫu truy vấn.
+Giải thích (2–3 câu):
+  Với Q1 (= trên cả hai cột) hai thứ tự cho cây cùng level và cùng số trang: cả hai đều seek thẳng tới cụm (42, TERMINATED), nên cardinality của cột đầu không làm truy vấn nhanh hơn. Thứ tự chỉ quyết định truy vấn MỘT cột nào seek được: cột đứng đầu thì seek, cột đứng sau thì phải quét gần hết trang lá. Vì vậy chọn thứ tự theo mẫu truy vấn, không theo cardinality: cột lọc bằng = đứng trước (cột hay được lọc một mình lên đầu), rồi tới cột ORDER BY, cột lọc khoảng để sau cùng.
+
+T2 · slide 28
+─────────────
+Phát biểu: Covering index: index chứa đủ mọi cột truy vấn cần thì Postgres trả kết quả chỉ từ index, không đọc bảng.
+SQL (mỗi index tạo trong BEGIN … ROLLBACK, đo 1 lần khởi động + trung vị 5 lần, tính số trang):
+  CREATE INDEX hw_t2_idx ON hw_contracts (customer_id, signed_at);                    -- đo, rồi ROLLBACK
+  CREATE INDEX hw_t2_idx ON hw_contracts (customer_id, signed_at) INCLUDE (total);  -- đo, rồi ROLLBACK
+  SELECT signed_at, total FROM hw_contracts WHERE customer_id = 42 ORDER BY signed_at DESC LIMIT 5;
+Kết quả:
+│ Index                                    │ Kế hoạch        │ Dòng │ Trang │      Heap Fetches │ Kích thước index │    ms │
+├──────────────────────────────────────────┼─────────────────┼──────┼───────┼───────────────────┼──────────────────┼───────┤
+│ (customer_id, signed_at)                 │ Index Scan      │    5 │     8 │ đọc heap mỗi dòng │          15.1 MB │ 0.080 │
+│ (customer_id, signed_at) INCLUDE (total) │ Index Only Scan │    5 │     4 │                 0 │          23.6 MB │ 0.097 │
+  Truy vấn cần: customer_id (WHERE), signed_at (ORDER BY), signed_at + total (SELECT).
+  Visibility map: 5,666/5,666 trang all-visible (Index Only Scan chỉ bỏ qua heap ở các trang này).
+Dự đoán của bạn vs thực tế:
+  ✔ Index (customer_id, signed_at): node quét là gì? Bạn: 'Index Scan' · Đo được: 'Index Scan'
+  ✔ Index (customer_id, signed_at) INCLUDE (...): node quét là gì? Bạn: 'Index Only Scan' · Đo được: 'Index Only Scan'
+  ✔ Có INCLUDE: số lần phải đọc bảng (Heap Fetches)? Bạn: '0' · Đo được: '0'
+   => KẾT LUẬN · Lý thuyết ĐÚNG (khi bảng đã VACUUM): INCLUDE (total) → Index Only Scan, Heap Fetches 0: 8 → 4 trang; đổi lại index to hơn 15.1 MB → 23.6 MB. Trên PG cần visibility map đầy (đã VACUUM).
+Giải thích (2–3 câu):
+  Index (customer_id, signed_at) thiếu cột total nên Postgres phải đọc heap cho từng dòng (Index Scan). INCLUDE (total) đưa total vào lá của index, đủ mọi cột truy vấn cần → Index Only Scan, Heap Fetches 0, ít trang hơn, đổi lại index to hơn. Trên Postgres điều này chỉ đúng khi trang heap đã được VACUUM đánh dấu all-visible; SELECT * thì không index nào phủ được.
+
+T3 · slide 31
+─────────────
+Phát biểu: Không nên đánh index cho cột có ít giá trị khác nhau (cardinality thấp), ví dụ status.
+SQL (mỗi index tạo trong BEGIN … ROLLBACK, đo 1 lần khởi động + trung vị 5 lần, tính số trang):
+  CREATE INDEX hw_t3_full ON hw_contracts (status);                                     -- đo, rồi ROLLBACK
+  CREATE INDEX hw_t3_partial ON hw_contracts (status) WHERE status = 'TERMINATED';  -- đo, rồi ROLLBACK
+  SELECT * FROM hw_contracts WHERE status = 'TERMINATED';
+  SELECT * FROM hw_contracts WHERE status = 'ACTIVE';
+Kết quả:
+│ Index                                │ Kích thước │ status =   │ Kế hoạch         │    Dòng │ Trang │  ms │
+├──────────────────────────────────────┼────────────┼────────────┼──────────────────┼─────────┼───────┼─────┤
+│ (status)                             │     3.3 MB │ TERMINATED │ Bitmap Heap Scan │   2,524 │ 2,034 │ 2.5 │
+│ (status)                             │     3.3 MB │ ACTIVE     │ Seq Scan         │ 300,545 │ 5,666 │ 114 │
+│ (status) WHERE status = 'TERMINATED' │      40 KB │ TERMINATED │ Bitmap Heap Scan │   2,524 │ 2,033 │ 2.4 │
+  Seq Scan = đọc cả bảng: 5,666 trang.
+Dự đoán của bạn vs thực tế:
+  ✔ Index (status), truy vấn status = 'TERMINATED' (0.5%): dùng index hay đọc cả bảng? Bạn: 'index' · Đo được: 'index'
+  ✔ Index (status), truy vấn status = 'ACTIVE' (60%): dùng index hay đọc cả bảng? Bạn: 'seq_scan' · Đo được: 'seq_scan'
+  ✔ Partial index so với index (status) đầy đủ? Bạn: 'over_10x_smaller' · Đo được: 'over_10x_smaller'
+   => KẾT LUẬN · Lý thuyết ĐÚNG MỘT PHẦN: status chỉ có 4 giá trị, nhưng TERMINATED (0.5%) vẫn dùng index: 2,034 trang thay vì 5,666 (cả bảng); ACTIVE (60%) → Seq Scan. Quyết định theo tỉ lệ dòng khớp của giá trị hay hỏi; partial index WHERE status = 'TERMINATED': 40 KB (nhỏ hơn 85×).
+Giải thích (2–3 câu):
+  Điều quyết định là tỉ lệ dòng khớp của giá trị được hỏi, không phải số giá trị khác nhau của cột: TERMINATED (0.5%) dùng index và đọc ít trang hơn hẳn đọc cả bảng, còn ACTIVE (60%) thì Seq Scan rẻ hơn mọi index. Nếu ứng dụng chỉ hay hỏi giá trị hiếm, partial index WHERE status = 'TERMINATED' nhỏ hơn hàng chục lần và chỉ dòng TERMINATED mới phải ghi thêm vào index.
+
+Tổng kết
+────────
+PASS T1 · dự đoán đúng 3/3 · lý thuyết SAI · Q1 18 vs 18 trang, level 2 = 2; Q2 seek: (status, store_id); Q3 seek: (store_id, status)
+PASS T2 · dự đoán đúng 3/3 · lý thuyết ĐÚNG (khi bảng đã VACUUM) · Index Scan 8 trang → Index Only Scan 4 trang, Heap Fetches 0
+PASS T3 · dự đoán đúng 3/3 · lý thuyết ĐÚNG MỘT PHẦN · TERMINATED Bitmap Heap Scan 2,034 trang, ACTIVE Seq Scan 5,666 trang; partial 40 KB vs 3.3 MB
+
+Phần C — lỗi cài sẵn trong homework-ai-draft.mjs (đáp án)
+─────────────────────────────────────────────────────────
+T1.1 ✘ Tạo CẢ HAI index rồi mới đo; đảo thứ tự điều kiện trong WHERE không chọn được index (planner coi a AND b như b AND a). EXPLAIN cho thấy cả hai câu đều dùng idx_contracts_status_store: index "thắng" (store_id, status) không hề được dùng.
+      → Sửa: Mỗi lần chỉ có MỘT index, tạo trong BEGIN … ROLLBACK, và EXPLAIN để xác nhận index nào thực sự được dùng.
+T1.2 ✘ Mỗi câu chỉ chạy 1 lần, đo bằng Date.now(): câu đầu chạy "lạnh" (nạp catalog/index mới, trang chưa ở cache), câu sau chạy "ấm"; truy vấn chỉ ~1 ms nên độ phân giải 1 ms quyết định cả kết quả. Chạy lại là ra N× khác.
+      → Sửa: 1 lần khởi động + trung vị 5 lần (measure() trong pg-explain-kit), thứ tự chạy không được ảnh hưởng kết quả.
+T1.3 ✘ So ms thay vì số trang và độ cao cây; chỉ thử truy vấn = trên cả 2 cột, đúng loại mà thứ tự cột không quan trọng.
+      → Sửa: So EXPLAIN (ANALYZE, BUFFERS) + level (pgstatindex); thêm truy vấn chỉ status = … và chỉ store_id = … (Q2, Q3).
+T2.1 ✘ Đo SELECT *: truy vấn cần mọi cột nên không index nào "phủ" được → không thể có Index Only Scan.
+      → Sửa: Chỉ SELECT các cột cần (signed_at, total) và INCLUDE đúng các cột đó.
+T2.2 ✘ Bảng copy tắt autovacuum, vừa UPDATE xong, chỉ ANALYZE chứ không VACUUM → visibility map trống → Index Only Scan vẫn phải kiểm tra heap cho mọi dòng (Heap Fetches 5/5).
+      → Sửa: VACUUM (ANALYZE) trước khi đo (kiểm tra pg_class.relallvisible = relpages) hoặc đo trên bảng đã VACUUM.
+T2.3 ✘ Không có nhóm đối chứng: không so với index không INCLUDE, không so số trang; kết luận "vô dụng trên Postgres" từ một con số Heap Fetches.
+      → Sửa: So (customer_id, signed_at) với (customer_id, signed_at) INCLUDE (total): kế hoạch, số trang, Heap Fetches, kích thước.
+T3.1 ✘ Chỉ thử status = 'ACTIVE' (60% bảng): đọc 60% bảng thì Seq Scan rẻ hơn với bất kỳ index nào. Không thử giá trị hiếm 'TERMINATED' (0.5%), là giá trị index thực sự giúp.
+      → Sửa: Đo các giá trị mà ứng dụng thật sự hỏi (TERMINATED, DRAFT…); xem phân bố trong pg_stats.most_common_freqs.
+T3.2 ✘ Suy cho cả cột (và "mọi bảng tương tự") từ một giá trị; cardinality thấp không có nghĩa mọi giá trị đều phổ biến.
+      → Sửa: Kết luận theo từng mẫu truy vấn; nếu chỉ hỏi giá trị hiếm thì dùng partial index WHERE status = 'TERMINATED'.
+T3.3 ✘ Thời gian 1 lần Date.now() của truy vấn trả 300.545 dòng chủ yếu là thời gian chuyển dữ liệu về Node, không phải thời gian tìm dòng.
+      → Sửa: Dùng EXPLAIN (ANALYZE, BUFFERS) để đo số trang ngay trong Postgres, không tính thời gian truyền kết quả.

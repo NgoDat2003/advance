@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sổ tay Caching Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a sticky rail of the six learning stages on the left, one reading column on the right;
+   simulators break out a little wider than the text. Actor colors reuse the draw.io palette of the slides
+   (Request 1 yellow, Request 2 blue, Cache pink, DB green) so every diagram maps back to the course deck. */
+:root {
+  --bg: #f6f5f8; --surface: #ffffff; --surface-2: #efecf3; --fg: #1d1a22; --muted: #5f5968; --line: #ddd8e4;
+  --accent: #6a2c87; --accent-soft: #f2e8f7; --accent-fg: #ffffff;
+  --ok: #1d7a4c; --ok-soft: #e2f3e9; --bad: #b3261e; --bad-soft: #fbe8e6; --warn: #8f5407; --warn-soft: #fcf0da;
+  --r1-fill: #fff2cc; --r1-line: #b8901f; --r2-fill: #dae8fc; --r2-line: #4f72b3;
+  --cache-fill: #f8cecc; --cache-line: #b85450; --db-fill: #d5e8d4; --db-line: #4f8a37;
+  --code-bg: #201d26; --code-fg: #ece8f2; --code-muted: #a49cb0;
+  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131117; --surface: #1b1920; --surface-2: #24212b; --fg: #ece9f1; --muted: #a59fb0; --line: #34303d;
+    --accent: #d29be8; --accent-soft: #2f2339; --accent-fg: #1b1920;
+    --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+    --r1-fill: #3a3120; --r1-line: #d9b44f; --r2-fill: #1f2b40; --r2-line: #85a7e3;
+    --cache-fill: #3d2424; --cache-line: #dc7f7a; --db-fill: #1e321f; --db-line: #8cc277;
+    --code-bg: #0f0e13; --code-fg: #ece8f2; --code-muted: #8d869a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131117; --surface: #1b1920; --surface-2: #24212b; --fg: #ece9f1; --muted: #a59fb0; --line: #34303d;
+  --accent: #d29be8; --accent-soft: #2f2339; --accent-fg: #1b1920;
+  --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+  --r1-fill: #3a3120; --r1-line: #d9b44f; --r2-fill: #1f2b40; --r2-line: #85a7e3;
+  --cache-fill: #3d2424; --cache-line: #dc7f7a; --db-fill: #1e321f; --db-line: #8cc277;
+  --code-bg: #0f0e13; --code-fg: #ece8f2; --code-muted: #8d869a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 400 16px/1.7 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font: 800 clamp(2.4rem, 6vw, 3.6rem)/1.05 var(--font-display); letter-spacing: -0.02em; }
+h2 { font: 800 clamp(1.6rem, 3.4vw, 2.1rem)/1.15 var(--font-display); letter-spacing: -0.01em; }
+h3 { font: 700 1.2rem/1.35 var(--font-body); margin-top: 2.2rem; }
+h4 { font: 700 1rem/1.4 var(--font-body); margin-top: 1.4rem; }
+p { margin: 0.75rem 0; }
+ul, ol { margin: 0.6rem 0; padding-left: 1.3rem; }
+li { margin: 0.3rem 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.eyebrow { font: 600 0.74rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Shell ---------- */
+.shell { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; }
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 28px; }
+.rail details > summary { list-style: none; cursor: pointer; }
+.rail details > summary::-webkit-details-marker { display: none; }
+.rail-title { font: 800 1.15rem/1.2 var(--font-display); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rail-title small { font: 600 0.72rem var(--font-mono); color: var(--muted); }
+.progress { height: 6px; background: var(--surface-2); border-radius: 99px; margin: 14px 0 6px; overflow: hidden; }
+.progress > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.rail ol { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 2px; }
+.rail li { margin: 0; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; }
+.rail li a { display: grid; grid-template-columns: 26px 1fr; gap: 6px; padding: 7px 8px; border-radius: 8px; text-decoration: none; color: var(--fg); font-size: 0.92rem; line-height: 1.35; }
+.rail li a:hover { background: var(--surface-2); }
+.rail li a.active { background: var(--accent-soft); }
+.rail li a b { font: 600 0.78rem/1.6 var(--font-mono); color: var(--accent); }
+.rail li a span small { display: block; color: var(--muted); font-size: 0.76rem; }
+.rail input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.rail .sub { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 4px; font-size: 0.88rem; }
+.rail .sub a { color: var(--muted); text-decoration: none; padding: 3px 8px; }
+.rail .sub a:hover { color: var(--fg); }
+main { min-width: 0; padding-block: 28px; }
+.col { max-width: 760px; }
+.wide { max-width: 940px; }
+
+/* ---------- Hero ---------- */
+.hero { padding: 24px 0 8px; display: grid; gap: 16px; }
+.hero .lead { font-size: 1.12rem; color: var(--muted); max-width: 640px; margin: 0; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 500 0.88rem/1.4 var(--font-mono); color: var(--muted); }
+.hero-meta b { color: var(--fg); font-weight: 600; }
+.epigraph { font-style: italic; color: var(--muted); border-left: 2px solid var(--line); padding-left: 14px; margin: 4px 0 0; font-size: 0.95rem; }
+
+/* ---------- Stage headers ---------- */
+.stage { margin-top: 72px; scroll-margin-top: 16px; }
+.stage-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; align-items: end; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.stage-no { font: 800 clamp(3rem, 8vw, 4.6rem)/0.85 var(--font-display); color: var(--accent); grid-row: span 2; }
+.stage-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 0.8rem/1.4 var(--font-mono); color: var(--muted); }
+.goal { margin: 14px 0 0; font-size: 0.98rem; }
+.goal b { color: var(--accent); }
+section h3, .sub-sec { scroll-margin-top: 16px; }
+.slide-ref { font: 600 0.72rem/1 var(--font-mono); color: var(--muted); background: var(--surface-2); border-radius: 99px; padding: 4px 8px; vertical-align: middle; margin-left: 6px; white-space: nowrap; }
+
+/* ---------- Callouts ---------- */
+.callout { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; }
+.callout > .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px; }
+.callout p:first-of-type { margin-top: 4px; }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout.teacher .tag { background: var(--accent-soft); color: var(--accent); }
+.callout.warn { background: var(--warn-soft); border-color: transparent; }
+.callout.warn .tag { background: var(--surface); color: var(--warn); }
+.callout.ext { background: var(--surface-2); border-color: transparent; }
+.callout.ext .tag { background: var(--surface); color: var(--muted); }
+.callout.key { background: var(--ok-soft); border-color: transparent; }
+.callout.key .tag { background: var(--surface); color: var(--ok); }
+
+/* What / Why / When-not definition grid */
+.wwh { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px 16px; margin: 14px 0; padding: 14px 0; border-block: 1px solid var(--line); }
+.wwh dt { font: 600 0.78rem/1.7 var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.wwh dd { margin: 0; }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 0.78rem/1.4 var(--font-body); color: var(--muted); background: var(--surface-2); text-transform: uppercase; letter-spacing: 0.03em; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.good { color: var(--ok); font-weight: 600; }
+.badx { color: var(--bad); font-weight: 600; }
+
+/* ---------- Code ---------- */
+.code { position: relative; margin: 14px 0; }
+.code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 16px 16px 16px; overflow-x: auto; font: 400 0.82rem/1.6 var(--font-mono); tab-size: 2; }
+.code pre code { background: none; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+.code pre .c { color: var(--code-muted); }
+.code .copy { position: absolute; top: 8px; right: 8px; font: 600 0.72rem var(--font-mono); background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+.code .label { font: 600 0.72rem/1 var(--font-mono); color: var(--muted); margin-bottom: 6px; display: block; }
+.terminal pre { border-left: 3px solid var(--ok); }
+
+/* ---------- Actors (slide palette) ---------- */
+.actor { display: inline-block; border-radius: 6px; padding: 1px 8px; font-weight: 600; font-size: 0.88em; border: 1px solid; }
+.actor.r1 { background: var(--r1-fill); border-color: var(--r1-line); }
+.actor.r2 { background: var(--r2-fill); border-color: var(--r2-line); }
+.actor.cache { background: var(--cache-fill); border-color: var(--cache-line); }
+.actor.db { background: var(--db-fill); border-color: var(--db-line); }
+.actor.app { background: var(--surface-2); border-color: var(--line); }
+
+/* Flow strips (numbered = real execution order) */
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.flow .step { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 0.9rem; }
+.flow .step i { font: 600 0.72rem/1 var(--font-mono); font-style: normal; color: var(--muted); }
+.flow .arr { color: var(--muted); }
+.flow-label { font: 600 0.78rem var(--font-mono); color: var(--muted); min-width: 64px; }
+
+/* Where-is-cache tiers (slide 8) */
+.tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+.tier { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 4px; align-content: start; }
+.tier.hot { background: var(--cache-fill); border-color: var(--cache-line); }
+.tier.store { background: var(--db-fill); border-color: var(--db-line); }
+.tier h5 { margin: 0; font: 700 0.95rem/1.3 var(--font-body); }
+.tier .lat { font: 600 0.74rem var(--font-mono); color: var(--muted); }
+.tier p { margin: 0; font-size: 0.85rem; line-height: 1.5; }
+
+/* ---------- Widgets ---------- */
+.widget { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin: 22px 0; overflow: hidden; }
+.widget-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.widget-head h4 { margin: 0; font-size: 1rem; }
+.widget-head .eyebrow { color: var(--accent); }
+.widget-body { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.widget-body > *, .race-grid > * { min-width: 0; }
+td.nw { white-space: nowrap; }
+td code, th code { overflow-wrap: normal; white-space: nowrap; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 18px; }
+.ctl { display: grid; gap: 4px; font-size: 0.86rem; }
+.ctl label { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+.ctl label output { font: 600 0.84rem var(--font-mono); color: var(--fg); }
+.ctl input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ctl select, .ctl input[type="text"], .field { font: 400 0.92rem var(--font-body); padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 600 0.86rem/1 var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.stat .k { font-size: 0.78rem; color: var(--muted); }
+.stat .v { font: 700 1.35rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: 0.75rem; font-weight: 400; color: var(--muted); }
+.stat.bad .v { color: var(--bad); }
+.stat.good .v { color: var(--ok); }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font: 500 11px var(--font-mono); }
+.chart .lbl { fill: var(--fg); font-weight: 600; }
+
+/* Bars (horizontal) */
+.hbars { display: grid; gap: 10px; }
+.hbar { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) 64px; gap: 10px; align-items: center; font-size: 0.86rem; }
+.hbar .track { height: 18px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.hbar .fill { height: 100%; border-radius: 5px; transition: width .35s; }
+.hbar .fill.bad { background: var(--bad); }
+.hbar .fill.ok { background: var(--ok); }
+.hbar .val { font: 600 0.86rem var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Quiz ---------- */
+.quiz { margin: 26px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.quiz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.quiz-head h4 { margin: 0; }
+.quiz-score { font: 600 0.84rem var(--font-mono); color: var(--muted); }
+.q { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.q:last-child { border-bottom: 0; }
+.q-text { font-weight: 600; margin: 0 0 10px; }
+.q-opts { display: grid; gap: 6px; }
+.q-opt { text-align: left; font: 400 0.92rem/1.45 var(--font-body); padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.q-opt:hover:not(:disabled) { border-color: var(--accent); }
+.q-opt:disabled { cursor: default; }
+.q-opt.right { background: var(--ok-soft); border-color: var(--ok); }
+.q-opt.wrong { background: var(--bad-soft); border-color: var(--bad); }
+.q-explain { margin-top: 10px; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
+
+/* ---------- Details ---------- */
+details.fold { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: 10px 0; }
+details.fold > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .fold-body { padding: 4px 14px 14px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+.panel h4 { margin-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 0.8rem/1.3 var(--font-mono); padding: 4px 8px; border-radius: 6px; background: var(--surface-2); color: var(--fg); text-decoration: none; }
+a.chip:hover { background: var(--accent-soft); }
+textarea.field { min-height: 92px; resize: vertical; line-height: 1.5; }
+.slide-img { background: #ffffff; border-radius: 8px; padding: 8px; border: 1px solid var(--line); }
+.slide-img img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.scroll-x { overflow-x: auto; }
+
+/* Race player (sequence diagram) */
+.race-grid { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 16px; align-items: start; }
+.seq { display: block; width: 100%; min-width: 560px; height: auto; }
+.seq text { font: 600 12px var(--font-body); fill: var(--fg); }
+.seq .ghost { stroke: var(--line); stroke-dasharray: 4 5; }
+.race-state { display: grid; gap: 10px; }
+.state-box { border-radius: 10px; border: 1px solid; padding: 10px 12px; display: grid; gap: 2px; transition: box-shadow .25s; }
+.state-box.cache { background: var(--cache-fill); border-color: var(--cache-line); }
+.state-box.db { background: var(--db-fill); border-color: var(--db-line); }
+.state-box .eyebrow { color: var(--fg); opacity: .75; }
+.state-box b { font: 700 1.25rem/1.3 var(--font-mono); }
+.state-box.flash { box-shadow: 0 0 0 3px var(--accent); }
+.verdict { border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; font-weight: 600; }
+.verdict.ok { background: var(--ok-soft); color: var(--ok); }
+.verdict.bad { background: var(--bad-soft); color: var(--bad); }
+.narr { min-height: 3.2em; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); font-size: 0.95rem; }
+
+/* Bloom filter bits */
+.bits { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 4px; max-width: 620px; }
+.bit { aspect-ratio: 1; max-width: 100%; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; font: 600 0.62rem var(--font-mono); color: var(--muted); position: relative; }
+.bit.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.bit.probe { box-shadow: 0 0 0 2px var(--warn); }
+.bit.probe:not(.on) { background: var(--warn-soft); color: var(--warn); }
+
+/* Recap diagram (slide 41) */
+.recap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: ". app ." "el . er" "cache job db"; gap: 10px; margin: 16px 0; text-align: center; }
+.recap .node { border-radius: 10px; border: 1px solid; padding: 10px 8px; font-weight: 700; display: grid; gap: 2px; align-content: center; }
+.recap .node small { font-weight: 400; font-size: 0.78rem; color: var(--muted); }
+.recap .app { grid-area: app; background: var(--r2-fill); border-color: var(--r2-line); }
+.recap .cache { grid-area: cache; background: var(--cache-fill); border-color: var(--cache-line); box-shadow: 4px 4px 0 -1px var(--cache-fill), 4px 4px 0 0 var(--cache-line); }
+.recap .db { grid-area: db; background: var(--db-fill); border-color: var(--db-line); }
+.recap .job { grid-area: job; background: var(--r1-fill); border-color: var(--r1-line); border-radius: 999px; }
+.recap .edge { font: 600 0.78rem var(--font-mono); color: var(--muted); align-self: center; }
+.recap .edge.l { grid-area: el; }
+.recap .edge.r { grid-area: er; }
+.recap .edge.l::before { content: "↙ "; }
+.recap .edge.r::after { content: " ↘"; }
+
+@media (max-width: 760px) {
+  .race-grid { grid-template-columns: minmax(0, 1fr); }
+  .race-state { grid-template-columns: 1fr 1fr; }
+  .race-state .verdict { grid-column: 1 / -1; }
+}
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .rail { position: static; max-height: none; padding-block: 16px 0; border-bottom: 1px solid var(--line); }
+  .stage { margin-top: 56px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 15.5px; }
+  .wwh { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .wwh dd { margin-bottom: 8px; }
+  .hbar { grid-template-columns: minmax(0, 1fr) 56px; }
+  .hbar .name { grid-column: 1 / -1; }
+  .stage-head { grid-template-columns: minmax(0, 1fr); }
+  .stage-no { grid-row: auto; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="rail" aria-label="Lộ trình học">
+  <details id="railFold" open>
+    <summary class="rail-title">Lộ trình Bài 2 <small id="progressText" class="num">0/6 chặng</small></summary>
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+    <ol id="stageNav">
+      <li><a href="#chang-1"><b>01</b><span>Cache là gì, đặt ở đâu<small>Slide 1–8 · 25 phút</small></span></a><input type="checkbox" id="done-1" data-stage="1" aria-label="Đánh dấu xong chặng 1"></li>
+      <li><a href="#chang-2"><b>02</b><span>Chiến lược đọc / ghi<small>Slide 9–14 · 35 phút</small></span></a><input type="checkbox" id="done-2" data-stage="2" aria-label="Đánh dấu xong chặng 2"></li>
+      <li><a href="#chang-3"><b>03</b><span>Trận chiến lệch dữ liệu<small>Slide 15–29 · 60 phút</small></span></a><input type="checkbox" id="done-3" data-stage="3" aria-label="Đánh dấu xong chặng 3"></li>
+      <li><a href="#chang-4"><b>04</b><span>Bốn sự cố độ tin cậy<small>Slide 30–36 · 50 phút</small></span></a><input type="checkbox" id="done-4" data-stage="4" aria-label="Đánh dấu xong chặng 4"></li>
+      <li><a href="#chang-5"><b>05</b><span>Tải cao & thu hồi bộ nhớ<small>Slide 37–41 · 30 phút</small></span></a><input type="checkbox" id="done-5" data-stage="5" aria-label="Đánh dấu xong chặng 5"></li>
+      <li><a href="#chang-6"><b>06</b><span>Thực chiến: lab & bài tập<small>Slide 42–44 · 60+ phút</small></span></a><input type="checkbox" id="done-6" data-stage="6" aria-label="Đánh dấu xong chặng 6"></li>
+    </ol>
+    <nav class="sub" aria-label="Tài liệu ôn tập">
+      <a href="#phong-van">Kiểm tra cuối bài (10 câu)</a>
+      <a href="#cheat-sheet">Bảng tóm tắt 1 trang</a>
+      <a href="#ban-do-slide">Bản đồ 44 slide</a>
+    </nav>
+  </details>
+</aside>
+
+<main>
+
+<header class="hero col">
+  <p class="eyebrow">Advance Backend · Bài 2 / 16 · sau REST API Design</p>
+  <h1>Caching Design</h1>
+  <p class="lead">Học xong bài này, bạn chọn được chiến lược cache cho một API, giải thích bằng timeline vì sao "ghi DB trước, xóa cache sau", và chẩn đoán được bốn sự cố kinh điển chỉ từ triệu chứng trên dashboard.</p>
+  <div class="hero-meta">
+    <span><b>44</b> slide</span><span><b>6</b> chặng</span><span><b>~4,5</b> giờ</span><span><b>6</b> lab chạy thật</span><span><b>32</b> câu tự kiểm tra</span>
+  </div>
+  <p class="epigraph">"A man who doesn't spend time with his family can never be a real man." · Mario Puzo, The Godfather (slide 1)</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Bài 1 bạn đã dùng Redis cho Idempotency Key (<code>SET key value NX EX ttl</code>). Bài 2 dùng đúng những lệnh đó, nhưng cho một mục đích khác: đọc nhanh hơn mà không làm dữ liệu sai. Cái khó của cache không nằm ở lệnh Redis. Cái khó nằm ở <strong>thời điểm</strong>: hai request chạy chen nhau có thể để lại dữ liệu sai trong cache mà không ai báo lỗi.</p>
+  <p>Vì vậy sổ tay này đi theo đúng mạch của slide, nhưng mỗi khái niệm đều có ba thứ: giải thích <em>vì sao</em>, một mô phỏng bấm được trên trang, và một lab Node.js chạy thật trên máy bạn (đã chạy thử, số liệu trong bài là số đo thật).</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Chặng</th><th>Slide</th><th class="n">Thời gian</th><th>Bạn làm gì</th><th>Đầu ra để tự kiểm</th></tr></thead>
+      <tbody>
+        <tr><td>1. Cache là gì, đặt ở đâu</td><td class="nw">1–8</td><td class="n">25′</td><td>Đọc, chỉnh máy tính hit rate</td><td>Quiz 1: 4/4</td></tr>
+        <tr><td>2. Chiến lược đọc / ghi</td><td class="nw">9–14</td><td class="n">35′</td><td>So sánh 5 chiến lược, 4 kiểu invalidation</td><td>Quiz 2: 4/4</td></tr>
+        <tr><td>3. Trận chiến lệch dữ liệu</td><td class="nw">15–29</td><td class="n">60′</td><td>Bấm qua 6 timeline, chạy Lab 1 + 2</td><td>Tự vẽ lại timeline slide 26</td></tr>
+        <tr><td>4. Bốn sự cố độ tin cậy</td><td class="nw">30–36</td><td class="n">50′</td><td>3 mô phỏng, chạy Lab 3, 4, 5</td><td>Quiz 4: chẩn đoán 5 ca</td></tr>
+        <tr><td>5. Tải cao & thu hồi bộ nhớ</td><td class="nw">37–41</td><td class="n">30′</td><td>Mô phỏng LRU vs LFU</td><td>Quiz 5: 4/4</td></tr>
+        <tr><td>6. Thực chiến</td><td class="nw">42–44</td><td class="n">60′+</td><td>Lab 6 (Redis + IMDb), bài tập về nhà</td><td>7/7 tiêu chí PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout teacher">
+    <span class="tag">Phương pháp · slide 4</span>
+    <p>Slide 4 kể "hành trình của Dũng" với một thói quen: <strong>luôn hỏi "Nó là gì? Tại sao?"</strong>. Mỗi khái niệm dưới đây đều có ba dòng <em>Là gì / Tại sao / Khi nào không</em>. Nếu đọc xong mà bạn không tự nói lại được dòng "Tại sao", đừng đi tiếp.</p>
+  </div>
+
+  <h3>Khởi động: cache đã làm khó bạn ở đâu? <span class="slide-ref">slide 2</span></h3>
+  <p>Trước khi đọc, viết ra 1–2 lần cache gây rắc rối trong dự án của bạn (dữ liệu cũ, xóa nhầm, DB vẫn quá tải...). Cuối bài quay lại và gọi tên đúng sự cố đó. Ghi chú chỉ lưu trong trình duyệt của bạn.</p>
+  <textarea id="warmup" class="field" placeholder="Ví dụ: sửa tên cửa hàng xong, màn hình danh sách vẫn hiện tên cũ khoảng 1 phút..."></textarea>
+</section>
+
+<!-- =============================== CHẶNG 1 =============================== -->
+<section id="chang-1" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">01</span>
+    <h2>Cache là gì, đặt ở đâu</h2>
+    <div class="stage-meta"><span>Slide 1–8</span><span>25 phút</span><span>Mô phỏng: hit rate</span></div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> định nghĩa cache trong một câu, giải thích vì sao hit rate là chỉ số số một, và kể đủ các tầng cache từ trình duyệt tới database.</p>
+
+  <h3 id="s1-1">1.1. Cache là gì <span class="slide-ref">slide 6</span></h3>
+  <dl class="wwh">
+    <dt>Là gì</dt><dd>Một thành phần phần cứng hoặc phần mềm <strong>lưu tạm</strong> dữ liệu để các request sau lấy được nhanh hơn. Dữ liệu trong cache là một trong hai thứ: <strong>bản sao</strong> của dữ liệu ở nguồn (một dòng <code>users</code>), hoặc <strong>kết quả của một phép tính</strong> đã làm trước đó (top 10 phim năm 2015 sau khi join 12,8 triệu dòng).</dd>
+    <dt>Tại sao</dt><dd>Slide gọi cache là <strong>"tấm khiên của DB"</strong>. Mỗi request được cache trả lời là một request DB không phải gánh. Trong Lab 6, cùng câu "top 10 phim 2015" mất <span class="num">149 ms</span> khi đọc Postgres và <span class="num">~1 ms</span> khi đọc Redis.</dd>
+    <dt>Khi nào không</dt><dd>Dữ liệu phải đúng tuyệt đối tại từng thời điểm (số dư ví khi trừ tiền), dữ liệu ghi nhiều hơn đọc, hoặc dữ liệu mỗi người hỏi một kiểu nên không ai đọc lại.</dd>
+  </dl>
+
+  <h3 id="s1-2">1.2. Cái giá phải trả <span class="slide-ref">slide 7</span></h3>
+  <p>Slide 7 nêu hai sự đánh đổi. Hãy nhớ cả hai, vì mọi quyết định cache về sau đều là chọn điểm cân bằng giữa chúng:</p>
+  <ul>
+    <li><strong>Hiệu năng ↔ Chi phí</strong>: RAM đắt hơn đĩa nhiều lần, và cache là thêm một hệ thống phải vận hành (giám sát, failover, nâng cấp). Không ai cache cả database.</li>
+    <li><strong>Hiệu năng ↔ Tính nhất quán</strong> (slide ghi "sometime"): cache là bản sao, bản sao có thể cũ hơn bản gốc. Toàn bộ Chặng 3 nói về sự đánh đổi này.</li>
+  </ul>
+
+  <h3 id="s1-3">1.3. Hit rate: chỉ số quan trọng nhất <span class="slide-ref">slide 7</span></h3>
+  <p><strong>Hit rate = số lần tìm thấy trong cache / tổng số lần đọc.</strong> Slide khuyên dùng nguyên lý 80/20: khoảng 20% dữ liệu "nóng" (hotspot) nhận khoảng 80% lượt đọc, nên chỉ cần cache đúng phần nóng là hit rate đã cao.</p>
+  <p>Điều người mới hay bỏ lỡ: tải xuống DB tỉ lệ với <strong>(1 − hit rate)</strong>, không tỉ lệ với hit rate. Tăng từ 90% lên 99% nghe như "thêm 9%", nhưng thực tế DB nhận ít hơn <strong>10 lần</strong>. Kéo thanh trượt để thấy.</p>
+
+  <div class="widget" id="hitrate">
+    <div class="widget-head"><h4>Máy tính hit rate</h4><span class="eyebrow">Mô phỏng · slide 7</span></div>
+    <div class="widget-body">
+      <div class="controls">
+        <div class="ctl"><label for="hr-rate">Hit rate <output id="hr-rate-out">90%</output></label><input type="range" id="hr-rate" min="0" max="99.9" step="0.1" value="90"></div>
+        <div class="ctl"><label for="hr-qps">Request đọc mỗi giây <output id="hr-qps-out">2.000</output></label><input type="range" id="hr-qps" min="100" max="20000" step="100" value="2000"></div>
+        <div class="ctl"><label for="hr-db">Thời gian 1 query DB <output id="hr-db-out">149 ms</output></label><input type="range" id="hr-db" min="5" max="1000" step="1" value="149"></div>
+        <div class="ctl"><label for="hr-cache">Thời gian 1 lần đọc cache <output id="hr-cache-out">1 ms</output></label><input type="range" id="hr-cache" min="0.1" max="5" step="0.1" value="1"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Query xuống DB mỗi giây</div><div class="v" id="hr-dbqps">200</div></div>
+        <div class="stat"><div class="k">Độ trễ trung bình</div><div class="v" id="hr-avg">15,9 <small>ms</small></div></div>
+        <div class="stat"><div class="k">So với không cache</div><div class="v" id="hr-saving">giảm 10×</div></div>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">Công thức: độ trễ ≈ t<sub>cache</sub> + (1 − hit) × t<sub>DB</sub>; tải DB = (1 − hit) × QPS. Giá trị mặc định lấy từ Lab 6 trên máy bạn.</p>
+    </div>
+  </div>
+
+  <h3 id="s1-4">1.4. Cache khác Buffer <span class="slide-ref">slide 7</span></h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Cache</th><th>Buffer</th></tr></thead>
+      <tbody>
+        <tr><td>Mục đích</td><td>Phục vụ lại <strong>nhiều lần</strong> cùng một dữ liệu cho các request sau</td><td>Chỗ chứa tạm để dữ liệu <strong>được chuyển tiếp</strong> cho thành phần khác sau đó</td></tr>
+        <tr><td>Dữ liệu đọc xong thì</td><td>Vẫn ở lại cho lần đọc sau (đến khi hết TTL hoặc bị xóa)</td><td>Đi tiếp, rời khỏi buffer</td></tr>
+        <tr><td>Hình dung</td><td>Tủ lạnh: lấy ra dùng nhiều lần</td><td>Băng chuyền / hàng đợi (slide: "buffer is like a queue")</td></tr>
+        <tr><td>Ví dụ</td><td>Redis giữ <code>imdb:top10:2015</code></td><td>Write buffer của socket, batch log trước khi flush, Kafka producer batch</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s1-5">1.5. Cache nằm ở đâu trong hệ thống <span class="slide-ref">slide 8</span></h3>
+  <p>Slide 8 vẽ đường đi của một request: <span class="actor app">Client</span> → <span class="actor app">Proxy</span> (hoặc <span class="actor app">CDN</span>) → <span class="actor app">Server</span> (có một cache nhỏ cục bộ) → <span class="actor cache">Remote Cache</span> / <span class="actor db">DB</span>. Tầng nào cũng có thể cache. Càng gần người dùng càng nhanh, nhưng càng khó xóa khi dữ liệu đổi.</p>
+  <div class="tiers wide">
+    <div class="tier"><h5>Client</h5><span class="lat">~0 ms · không qua mạng</span><p>HTTP cache của trình duyệt, theo header <code>Cache-Control</code>, <code>ETag</code>. App mobile lưu bộ nhớ riêng.</p></div>
+    <div class="tier"><h5>CDN</h5><span class="lat">vài–vài chục ms</span><p>Ảnh, JS, CSS, response GET công khai. Xóa bằng purge của nhà cung cấp, chậm và có giới hạn.</p></div>
+    <div class="tier"><h5>Proxy / Gateway</h5><span class="lat">cùng mạng nội bộ</span><p>Nginx <code>proxy_cache</code>, cache ở API Gateway. Cache nguyên response theo URL.</p></div>
+    <div class="tier hot"><h5>Local cache trong Server</h5><span class="lat">nano–micro giây</span><p>Map / LRU trong RAM của tiến trình Node. Nhanh nhất, nhưng mỗi instance một bản riêng.</p></div>
+    <div class="tier hot"><h5>Remote cache</h5><span class="lat">~0,2–1 ms</span><p>Redis, Memcached. Các instance dùng chung một bản. Đây là trọng tâm của bài.</p></div>
+    <div class="tier store"><h5>DB</h5><span class="lat">ms đến giây</span><p>Nguồn sự thật. Bản thân DB cũng có cache trang dữ liệu (Postgres <code>shared_buffers</code>).</p></div>
+  </div>
+  <div class="callout teacher">
+    <span class="tag">Ghi chú của thầy</span>
+    <p>Slide 14 sẽ nói "cache có thể ở khắp nơi". Chính vì danh sách trên dài như vậy mà invalidation khó: bạn xóa đúng key trong Redis rồi, người dùng vẫn thấy dữ liệu cũ vì trình duyệt hoặc CDN còn giữ bản riêng.</p>
+  </div>
+
+  <div class="quiz" data-quiz="1"></div>
+</section>
+
+<!-- =============================== CHẶNG 2 =============================== -->
+<section id="chang-2" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">02</span>
+    <h2>Chiến lược đọc / ghi</h2>
+    <div class="stage-meta"><span>Slide 9–14</span><span>35 phút</span><span>Bảng so sánh 5 chiến lược</span></div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> vẽ lại được luồng Read-Aside, phân biệt 3 chiến lược ghi, gọi tên 4 kiểu invalidation và 5 lý do khiến invalidation khó.</p>
+
+  <h3 id="s2-1">2.1. Chiến lược đọc: Read-Aside và Read-Through <span class="slide-ref">slide 10</span></h3>
+  <p><strong>Read-Aside</strong> (còn gọi là Cache-Aside, Lazy Loading) là chiến lược phổ biến nhất. Ứng dụng tự nói chuyện với cả cache lẫn DB:</p>
+  <div class="flow"><span class="flow-label">Khi HIT</span><span class="step"><i>1</i><span class="actor app">App</span> đọc <span class="actor cache">Cache</span></span><span class="arr">→</span><span class="step"><i>2</i>Cache có dữ liệu, trả về ngay</span></div>
+  <div class="flow"><span class="flow-label">Khi MISS</span><span class="step"><i>1</i>App đọc Cache</span><span class="arr">→</span><span class="step"><i>2</i>Cache báo miss</span><span class="arr">→</span><span class="step"><i>3</i>App đọc <span class="actor db">DB</span></span><span class="arr">→</span><span class="step"><i>4</i>DB trả dữ liệu</span><span class="arr">→</span><span class="step"><i>5</i>App ghi vào Cache</span></div>
+  <div class="code"><span class="label">Read-Aside trong 6 dòng (Lab 6 dùng đúng đoạn này)</span><pre><code>async function getTopMovies(year) {
+  const cached = await redis.get(`imdb:top10:${year}`);       <span class="c">// 1-2. hỏi cache trước</span>
+  if (cached) return JSON.parse(cached);                       <span class="c">// HIT</span>
+  const rows = await queryTopMovies(year);                     <span class="c">// 3-4. MISS: đọc DB</span>
+  await redis.set(`imdb:top10:${year}`, JSON.stringify(rows), { EX: 60 }); <span class="c">// 5. ghi lại cache</span>
+  return rows;
+}</code></pre></div>
+  <p><strong>Read-Through</strong>: ứng dụng chỉ nói chuyện với cache. Khi miss, chính thư viện/hệ thống cache tự đi lấy dữ liệu từ DB (bạn đăng ký sẵn một hàm loader). Ví dụ: <code>lru-cache</code> với <code>fetchMethod</code>, hay Caffeine <code>LoadingCache</code> bên Java.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Read-Aside (slide 10)</th><th>Read-Through</th></tr></thead>
+      <tbody>
+        <tr><td>Ai đọc DB khi miss</td><td>Ứng dụng</td><td>Lớp cache (qua loader đăng ký trước)</td></tr>
+        <tr><td>Ưu điểm</td><td><span class="good">Chịu được cache sập</span>: Redis chết thì app đọc thẳng DB (chậm hơn nhưng vẫn chạy), với điều kiện code bắt lỗi cache và có timeout ngắn (node-redis mặc định xếp hàng lệnh khi mất kết nối; đặt <code>disableOfflineQueue: true</code>). Đoạn 6 dòng ở trên chưa làm việc này. <span class="good">Linh hoạt mô hình dữ liệu</span>: cache dạng gì cũng được, không cần giống bảng DB.</td><td>Code nghiệp vụ gọn, logic cache tập trung một chỗ</td></tr>
+        <tr><td>Nhược điểm</td><td><span class="badx">App phức tạp hơn</span>: mỗi chỗ đọc đều phải viết logic hit/miss. <span class="badx">Có thể lệch dữ liệu</span> với DB.</td><td>Phụ thuộc thư viện cache hỗ trợ loader; cache lỗi thì đường đọc lỗi theo nếu không có fallback</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s2-2">2.2. Chiến lược ghi: Write-Through, Write-Back, Write-Around <span class="slide-ref">slide 11</span></h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Chiến lược</th><th>Khi ghi, chuyện gì xảy ra</th><th>Được</th><th>Mất</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Write-Through</strong></td><td>Ghi vào cache, cache ghi tiếp xuống DB một cách đồng bộ. Xong cả hai mới trả lời.</td><td>Cache luôn có bản mới sau khi ghi</td><td>Ghi chậm hơn (phải chờ cả hai). Cache đầy dữ liệu có khi không ai đọc.</td></tr>
+        <tr><td><strong>Write-Back</strong> (Write-Behind)</td><td>Ghi vào cache rồi trả lời ngay; cache gom lại và ghi xuống DB sau.</td><td>Ghi cực nhanh, gom được nhiều lần ghi thành một</td><td><span class="badx">Mất dữ liệu</span> nếu cache chết trước khi kịp ghi xuống. Slide ghi chú "computer architecture": CPU cache và page cache của OS dùng kiểu này, dữ liệu nghiệp vụ hiếm khi dám dùng.</td></tr>
+        <tr><td><strong>Write-Around</strong> (theo slide)</td><td><strong>1.</strong> Ghi thẳng vào DB. <strong>2.</strong> Vô hiệu hóa (invalidate) key trong cache, có thể bất đồng bộ.</td><td>Tách rời cache và nơi lưu trữ (decoupling)</td><td>Kém hiệu quả với dữ liệu bị ghi liên tục (vừa nạp lại đã bị xóa). Có thể lệch dữ liệu.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warn">
+    <span class="tag">Cẩn thận tên gọi</span>
+    <p>Nhiều tài liệu khác định nghĩa Write-Around là "ghi DB, <em>không đụng</em> cache", và gọi cặp "ghi DB rồi xóa cache" là phần ghi của Cache-Aside. Slide này gộp bước xóa cache vào Write-Around. Khi phỏng vấn, hãy mô tả bằng hành động ("ghi DB trước rồi xóa key") thay vì chỉ nói tên, để tránh hai bên hiểu khác nhau.</p>
+  </div>
+  <div class="callout ext">
+    <span class="tag">Ví dụ Write-Back ngoài slide</span>
+    <p>Đếm lượt xem bài viết: <code>INCR post:123:views</code> trên Redis, mỗi 30 giây một job gom lại ghi xuống DB. Mất vài giây lượt xem khi Redis sập là chấp nhận được. Mất một đơn hàng thì không.</p>
+  </div>
+
+  <h3 id="s2-3">2.3. Vấn đề chung: lệch dữ liệu và Cache Invalidation <span class="slide-ref">slide 12–13</span></h3>
+  <p>Slide 13 vẽ một hình rất ngắn: <span class="actor cache">Cache: Age = 26</span> trong khi <span class="actor db">DB: Age = 27</span>. Mọi chiến lược ở trên đều có lúc rơi vào tình huống này. Cách chữa có tên là <strong>Cache Invalidation</strong>: gỡ bỏ dữ liệu trong cache khi nó không còn đúng hoặc không còn hữu ích.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Kiểu invalidation</th><th>Cơ chế</th><th>Ví dụ cụ thể</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Time-based</strong></td><td>Dữ liệu tự hết hạn sau một khoảng thời gian (TTL)</td><td><code>SET user:34 {...} EX 60</code>: sau 60 giây tự biến mất</td></tr>
+        <tr><td><strong>Command-based</strong></td><td>Code ghi dữ liệu chủ động ra lệnh cập nhật hoặc xóa key</td><td>Service cập nhật user xong gọi <code>DEL user:34</code></td></tr>
+        <tr><td><strong>Event-based</strong></td><td>Một sự kiện "dữ liệu đã đổi" kích hoạt việc xóa, người ghi không cần biết cache</td><td>Debezium đọc WAL của Postgres, phát sự kiện <code>users.updated</code>, consumer xóa key</td></tr>
+        <tr><td><strong>Group-based</strong></td><td>Xóa cả một nhóm key liên quan cùng lúc</td><td>Đổi giá sản phẩm 34 thì xóa mọi key gắn tag <code>product:34</code>, hoặc tăng version namespace <code>catalog:v7 → v8</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s2-4">2.4. Vì sao invalidation khó <span class="slide-ref">slide 14</span></h3>
+  <p>Câu nói nổi tiếng của Phil Karlton: <em>"There are only two hard things in Computer Science: cache invalidation and naming things."</em> Slide 14 chỉ ra 5 nguồn gốc của cái khó:</p>
+  <ol>
+    <li><strong>Thời điểm (Timing)</strong>: TTL bao lâu là đủ? Ngắn thì hit rate thấp, dài thì dữ liệu cũ lâu.</li>
+    <li><strong>Đồng thời (Concurrency)</strong>: race condition giữa các request ghi và đọc. Đây là cả Chặng 3.</li>
+    <li><strong>Quan hệ dữ liệu</strong>: một dòng DB đổi có thể làm sai nhiều key (chi tiết sản phẩm, danh sách theo danh mục, top bán chạy). Quên một key là có dữ liệu cũ.</li>
+    <li><strong>Cache ở khắp nơi</strong>: không như DB có một chỗ, cache nằm ở trình duyệt, CDN, proxy, từng instance, Redis (Chặng 1.5).</li>
+    <li><strong>Khó tìm nguyên nhân</strong>: dữ liệu sai do race chỉ xảy ra khi thời điểm "khớp xấu", không tái hiện theo ý muốn, không có exception nào trong log.</li>
+  </ol>
+
+  <div class="quiz" data-quiz="2"></div>
+</section>
+
+<!-- =============================== CHẶNG 3 =============================== -->
+<section id="chang-3" class="stage">
+  <div class="col">
+    <div class="stage-head">
+      <span class="stage-no">03</span>
+      <h2>Trận chiến lệch dữ liệu</h2>
+      <div class="stage-meta"><span>Slide 15–29</span><span>60 phút</span><span>6 timeline · Lab 1, Lab 2</span></div>
+    </div>
+    <p class="goal"><b>Mục tiêu:</b> tự vẽ lại được 5 timeline của slide, giải thích vì sao <strong>xóa</strong> thắng <strong>cập nhật</strong>, vì sao <strong>ghi DB trước, xóa cache sau</strong> thắng <strong>xóa trước</strong>, và vì sao vẫn cần TTL.</p>
+
+    <h3 id="s3-0">3.0. Đặt bài toán <span class="slide-ref">slide 15–18</span></h3>
+    <p>Đường đọc đã chốt là Read-Aside (slide 16: "No more deal with Read-Aside"). Giờ đào sâu đường ghi Write-Around (slide 17). Bước 2 của Write-Around là invalidate bằng lệnh, và có đúng hai lệnh để chọn (slide 18): <strong>Update</strong> (ghi đè giá trị mới vào cache) hoặc <strong>Delete</strong> (xóa key, để lần đọc sau tự nạp lại).</p>
+    <p>Kịch bản dùng xuyên suốt: <span class="actor r1">Request 1</span> và <span class="actor r2">Request 2</span> chạy song song trên hai instance khác nhau, cùng đụng vào key <code>age</code> của user 34. <strong>Tiêu chí đúng:</strong> khi mọi request đã xong, cache phải hoặc <em>trống</em>, hoặc <em>bằng DB</em>. Cache trống thì không sao: lần đọc kế tiếp sẽ nạp lại từ DB.</p>
+    <div class="callout teacher">
+      <span class="tag">Chìa khóa của cả chặng</span>
+      <p>Mỗi request ghi vào <strong>hai hệ thống khác nhau</strong> (cache và DB) bằng hai lệnh rời nhau. Không có gì đảm bảo thứ tự hai request trong cache giống thứ tự của chúng trong DB. Một request bị khựng vài chục mili giây (GC, mạng chậm, chờ lock) là đủ để thứ tự bị đảo. Mọi timeline bên dưới chỉ là các cách đảo thứ tự đó.</p>
+    </div>
+  </div>
+
+  <div class="widget wide" id="race">
+    <div class="widget-head"><h4>Máy chiếu timeline</h4><span class="eyebrow">Mô phỏng · slide 19–26</span></div>
+    <div class="widget-body">
+      <div class="btns" id="raceTabs" role="group" aria-label="Chọn kịch bản"></div>
+      <p id="raceIntro" style="margin:0"></p>
+      <div class="race-grid">
+        <div class="scroll-x"><svg id="raceSvg" class="seq" viewBox="0 0 640 380" role="img" aria-label="Sơ đồ tuần tự giữa Request 1, Request 2, Cache và DB"></svg></div>
+        <div class="race-state">
+          <div class="state-box cache"><span class="eyebrow">Cache</span><b id="stCache">–</b></div>
+          <div class="state-box db"><span class="eyebrow">DB</span><b id="stDb">–</b></div>
+          <div class="verdict" id="raceVerdict" hidden></div>
+        </div>
+      </div>
+      <div class="narr" id="raceNarr" aria-live="polite"></div>
+      <div class="btns">
+        <button class="btn" id="raceBack" type="button">← Lùi</button>
+        <button class="btn primary" id="raceNext" type="button">Bước tiếp →</button>
+        <button class="btn" id="raceAll" type="button">Chạy hết</button>
+        <button class="btn" id="raceReset" type="button">Làm lại</button>
+        <span class="muted num" id="raceStepNo" style="align-self:center;font-size:.85rem"></span>
+      </div>
+      <details class="fold" id="raceSlideFold">
+        <summary>Đối chiếu với slide gốc</summary>
+        <div class="fold-body"><div class="slide-img"><img id="raceImg" alt="Hình gốc trong slide" loading="lazy"></div><p class="muted" style="font-size:.82rem;margin-bottom:0">Ảnh lấy từ thư mục <code>Tài Liệu/assets/2_Caching_Design/</code> nên chỉ hiện khi mở file trong thư mục dự án.</p></div>
+      </details>
+    </div>
+  </div>
+
+  <div class="col">
+    <h3 id="s3-1">3.1. Lần thử 1: cập nhật cache <span class="slide-ref">slide 19–22</span></h3>
+    <p>Slide 19 hỏi: cập nhật cache <em>trước</em> hay <em>sau</em> khi ghi DB? Bấm kịch bản <strong>A</strong> và <strong>B</strong> trong máy chiếu.</p>
+    <ul>
+      <li><strong>A. Cập nhật cache trước</strong> (slide 20): R1 set cache = 1, R2 set cache = 2, R2 ghi DB = 2, rồi R1 (ghi chậm) ghi DB = 1. Kết quả cache = 2, DB = 1. Slide kết luận: <span class="badx">DB sai</span>.</li>
+      <li><strong>B. Cập nhật cache sau</strong> (slide 21): R1 ghi DB = 1, R2 ghi DB = 2, R2 set cache = 2, rồi R1 (bị khựng) set cache = 1. Kết quả DB = 2, cache = 1: <span class="badx">cache sai</span>, và sai cho tới khi hết TTL.</li>
+    </ul>
+    <p>Slide 22 chốt: <strong>trước hay sau đều không giải quyết được lệch dữ liệu</strong>. Lý do gốc: lệnh SET mang theo một <em>giá trị</em>, nên SET đến sau sẽ thắng, dù giá trị đó cũ hơn.</p>
+
+    <h3 id="s3-2">3.2. Lần thử 2: xóa cache <span class="slide-ref">slide 23</span></h3>
+    <p>Kịch bản <strong>C</strong>: cùng thứ tự xấu như B, nhưng thay SET bằng DEL. Hai lệnh DEL đến theo thứ tự nào thì cache cũng trống. DB vẫn đúng (= 2). Lần đọc kế tiếp miss, đọc DB, nạp lại 2.</p>
+    <div class="callout key">
+      <span class="tag">Vì sao xóa thắng</span>
+      <p>DEL không mang giá trị, nên thứ tự của các lệnh DEL không quan trọng (xóa rồi xóa vẫn là trống). Ta đẩy việc "nạp giá trị mới" cho lần đọc sau, và lần đọc đó lấy từ DB, nơi thứ tự ghi đã được DB sắp xếp đúng.</p>
+    </div>
+    <p>Nhưng slide 23 mới chỉ xét <em>hai request ghi</em>. Khi thêm request <em>đọc</em> (Read-Aside sẽ SET lại cache khi miss), lệnh SET lại xuất hiện. Đó là Lần thử 3.</p>
+
+    <h3 id="s3-3">3.3. Lần thử 3: Read-Aside + Write-Around xóa cache (RA+DWA) <span class="slide-ref">slide 24–28</span></h3>
+    <p>Slide 24 ghép hai luồng: phía ghi (Write-Around: <em>Update DB</em> và <em>Delete cache</em>, chưa biết thứ tự), phía đọc (Read-Aside: <em>Miss → Read DB → Write back</em>; ở slide này "Write back" nghĩa là ghi giá trị vừa đọc vào cache, không phải chiến lược Write-Back của mục 2.2). Giờ có hai lựa chọn thứ tự cho phía ghi:</p>
+    <ul>
+      <li><strong>D. Xóa cache trước, ghi DB sau</strong> (slide 25): R1 xóa cache. R2 đọc, miss, đọc DB thấy 1 (R1 chưa commit), SET cache = 1. R1 commit DB = 2. Kết quả: <span class="badx">DB đúng, cache sai</span>.</li>
+      <li><strong>E. Ghi DB trước, xóa cache sau, ca xấu</strong> (slide 26): key vừa hết hạn nên cache trống. R2 miss, đọc DB thấy 1. R1 ghi DB = 2, xóa cache (đang trống, xóa cũng như không). R2 lúc này mới SET cache = 1. Kết quả: <span class="badx">DB đúng, cache sai</span>.</li>
+      <li><strong>F. Ghi DB trước, xóa cache sau, ca thường</strong>: R1 ghi DB = 2, xóa cache. R2 miss, đọc DB thấy 2, SET cache = 2. <span class="good">Đúng.</span></li>
+    </ul>
+    <p>Slide 27 thừa nhận: <strong>cả hai thứ tự vẫn có thể lệch</strong>, và hỏi chọn cái nào, vì sao. Slide 28 trả lời: <strong>ghi DB trước, xóa cache sau</strong>, vì trong thực tế ghi cache nhanh hơn ghi DB rất nhiều, nên xác suất để cả cặp "ghi DB + xóa cache" của request ghi lọt vào giữa "đọc DB" và "ghi cache" của request đọc là rất thấp.</p>
+
+    <h4>So sánh "cửa sổ nguy hiểm" của hai thứ tự</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>D. Xóa trước, ghi DB sau</th><th>E. Ghi DB trước, xóa sau</th></tr></thead>
+        <tbody>
+          <tr><td>Điều kiện để sai</td><td>Có <strong>bất kỳ</strong> request đọc nào rơi vào khoảng từ lúc xóa đến lúc DB commit</td><td>Key <strong>đang vắng</strong> sẵn, <strong>và</strong> request đọc lấy snapshot trước commit, <strong>và</strong> SET cache sau khi xóa</td></tr>
+          <tr><td>Cửa sổ dài bằng</td><td>Toàn bộ thời gian ghi DB (thường chậm nhất: lock, WAL, fsync) cộng thời gian đọc DB</td><td>Chỉ khoảng thời gian đọc DB của request đọc (cộng thời gian nó bị khựng, nếu có)</td></tr>
+          <tr><td>Khi key đang có sẵn trong cache</td><td>Vẫn sai được: chính lệnh xóa tạo ra cú miss</td><td><span class="good">Không thể sai trong mô hình 1 primary, READ COMMITTED</span>: request đọc chỉ miss sau khi xóa, mà xóa diễn ra sau commit. Nếu đọc từ read replica bị trễ, request vẫn có thể đọc dòng cũ.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="s3-4">3.4. Đo xác suất thay vì tin lời <span class="slide-ref">slide 27–28</span></h3>
+    <p>Đúng tinh thần lab Bài 1 của bạn (đo bằng <code>EXPLAIN ANALYZE</code> thay vì đoán), hãy đo. Mô phỏng dưới đây cho một request đọc chạm một request ghi tại thời điểm ngẫu nhiên, lặp 20.000 lần, đếm số lần cache bị kẹt giá trị cũ. Lab 2 làm đúng việc này trên event loop thật của Node.</p>
+  </div>
+
+  <div class="widget wide" id="mc">
+    <div class="widget-head"><h4>Phòng thí nghiệm xác suất: xóa trước vs xóa sau</h4><span class="eyebrow">Mô phỏng · Lab 2</span></div>
+    <div class="widget-body">
+      <div class="controls">
+        <div class="ctl"><label for="mc-w">Thời gian ghi DB <output id="mc-w-out">8 ms</output></label><input type="range" id="mc-w" min="1" max="50" step="1" value="8"></div>
+        <div class="ctl"><label for="mc-r">Thời gian đọc DB <output id="mc-r-out">2 ms</output></label><input type="range" id="mc-r" min="0.5" max="20" step="0.5" value="2"></div>
+        <div class="ctl"><label for="mc-pc">Request đọc bị khựng (GC, mạng) <output id="mc-pc-out">2%</output></label><input type="range" id="mc-pc" min="0" max="10" step="0.5" value="2"></div>
+        <div class="ctl"><label for="mc-ps">Mỗi lần khựng kéo dài <output id="mc-ps-out">30 ms</output></label><input type="range" id="mc-ps" min="0" max="100" step="5" value="30"></div>
+        <div class="ctl"><label for="mc-s">Hai request lệch nhau trong khoảng <output id="mc-s-out">±50 ms</output></label><input type="range" id="mc-s" min="10" max="200" step="5" value="50"></div>
+      </div>
+      <div class="hbars" id="mcBars"></div>
+      <div class="btns"><button class="btn primary" type="button" id="mcRun">Chạy lại 20.000 lần</button></div>
+      <p class="muted" style="margin:0;font-size:.85rem">Cột phải là ước lượng bằng công thức ở dưới. Lab 2 trên máy bạn (ghi 8 ms, đọc 2 ms, khựng 2% × 30 ms, ±50 ms) cho lý thuyết 10,6% · 2,6% · 8,0% · 0%; mỗi lần chạy 1.000 lượt lệch khoảng ±2 điểm %.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <p>Với khoảng lệch ±S (độ rộng 2S), xác suất sai xấp xỉ <em>độ dài cửa sổ nguy hiểm ÷ 2S</em>:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Trạng thái key lúc ghi</th><th>Xóa trước, ghi DB sau</th><th>Ghi DB trước, xóa sau</th></tr></thead>
+        <tbody>
+          <tr><td>Đang vắng (vừa hết TTL)</td><td>(t<sub>ghi</sub> + t<sub>đọc</sub> + khựng) ÷ 2S</td><td>(t<sub>đọc</sub> + khựng) ÷ 2S</td></tr>
+          <tr><td>Đang có giá trị cũ</td><td>t<sub>ghi</sub> ÷ 2S</td><td class="good">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Hai điều rút ra. Thứ nhất, xóa sau loại bỏ hẳn <em>thời gian ghi DB</em> khỏi cửa sổ, mà ghi DB thường là bước chậm nhất. Thứ hai, với key nóng (gần như luôn có trong cache), xóa sau gần như không bao giờ sai. Phần còn lại chủ yếu là lúc thời gian đọc DB của request đọc trùm lên commit + xóa của request ghi (2,0 trong 2,6 điểm %); khựng chỉ kéo dài cửa sổ đó (0,6 điểm %).</p>
+
+    <h3 id="s3-5">3.5. Giảm thiểu phần rủi ro còn lại <span class="slide-ref">slide 29</span></h3>
+    <p>Slide 29 hỏi: làm sao giảm tác hại? Trả lời: <strong>đặt TTL ngắn cho dữ liệu trong cache</strong>. TTL không ngăn được race, nhưng đặt trần cho thời gian dữ liệu sai tồn tại. Có TTL 60 giây nghĩa là trường hợp xấu nhất, người dùng thấy dữ liệu cũ tối đa 60 giây, thay vì mãi mãi.</p>
+    <div class="callout ext">
+      <span class="tag">Mở rộng ngoài slide · để đọc thêm khi đã vững phần trên</span>
+      <ul>
+        <li><strong>Delayed double delete</strong>: ghi DB, xóa cache, chờ một khoảng (lớn hơn thời gian đọc DB + set cache), xóa thêm lần nữa để dọn giá trị cũ vừa bị request đọc nạp lại. Đổi lại: thêm một lần miss và một tác vụ hẹn giờ.</li>
+        <li><strong>Lease</strong> (bài báo Memcache của Facebook): khi miss, cache phát cho request đọc một token; nếu key bị xóa trong lúc đó, token mất hiệu lực và lệnh SET với token cũ bị từ chối. Giải quyết đúng ca E, đồng thời giảm thundering herd.</li>
+        <li><strong>Version / compare-and-set</strong>: lưu kèm version của dòng DB trong cache, chỉ cho SET nếu version mới hơn bản đang có.</li>
+      </ul>
+    </div>
+
+    <div class="callout key">
+      <span class="tag">Lab 1 + Lab 2 · chạy ngay</span>
+      <p>Tái hiện slide 20, 21, 23, 25, 26 trên event loop thật, rồi đo xác suất. Không cần Redis, không cần cài thư viện.</p>
+    </div>
+    <div class="code terminal"><span class="label">PowerShell</span><pre><code>cd "D:\học\advance-be\labs\lesson-02-caching"
+npm run lab1
+npm run lab2</code></pre></div>
+    <div class="code"><span class="label">Kết quả đo trên máy bạn (trích)</span><pre><code>[Slide 25] XÓA CACHE TRƯỚC rồi ghi DB — R1 ghi age=2, R2 đọc
+  14.9ms  R1 DEL cache
+  15.1ms  R1 bắt đầu ghi DB age=2 (mất 60ms)
+  24.6ms  R2 MISS cache -> đọc DB
+  37.5ms  R2 đọc DB xong, thấy age=1
+  38.0ms  R2 SET cache age=1
+  77.8ms  R1 COMMIT DB age=2
+   => KẾT QUẢ: Cache = 1 | DB = 2  ->  LỆCH DỮ LIỆU ✘
+
+│ đang vắng (vừa hết TTL) │ Xóa cache trước             │ 124/1000 │ 12.4% │
+│ đang vắng (vừa hết TTL) │ Ghi DB trước, xóa cache sau │  30/1000 │  3.0% │
+│ đang có giá trị cũ      │ Xóa cache trước             │  93/1000 │  9.3% │
+│ đang có giá trị cũ      │ Ghi DB trước, xóa cache sau │   0/1000 │  0.0% │</code></pre></div>
+    <p><strong>Câu hỏi sau lab:</strong> mở <code>02-delete-first-vs-delete-later.mjs</code>, đổi <code>dbWriteMs</code> từ 8 lên 40. Dòng nào tăng mạnh, dòng nào gần như đứng yên? Giải thích bằng bảng cửa sổ nguy hiểm ở trên.</p>
+
+    <div class="quiz" data-quiz="3"></div>
+  </div>
+</section>
+
+<!-- =============================== CHẶNG 4 =============================== -->
+<section id="chang-4" class="stage">
+  <div class="col">
+    <div class="stage-head">
+      <span class="stage-no">04</span>
+      <h2>Bốn sự cố độ tin cậy</h2>
+      <div class="stage-meta"><span>Slide 30–36</span><span>50 phút</span><span>3 mô phỏng · Lab 3, 4, 5</span></div>
+    </div>
+    <p class="goal"><b>Mục tiêu:</b> nhìn triệu chứng là gọi đúng tên sự cố (No Atomicity, Avalanche, Breakdown, Penetration) và kê đúng "thuốc" cho từng bệnh.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sự cố</th><th>Cái gì hỏng</th><th>Phạm vi</th><th>Triệu chứng</th><th>Thuốc chính</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#s4-1">No Atomicity</a></td><td>Ghi DB xong, xóa cache thất bại</td><td>Một vài key</td><td>Dữ liệu cũ tồn tại tối đa bằng TTL còn lại</td><td>Retry, đọc binlog/WAL</td></tr>
+          <tr><td><a href="#s4-2">Avalanche</a></td><td>Cả cache sập, hoặc hàng loạt key hết hạn cùng lúc</td><td>Toàn bộ</td><td>DB quá tải đột ngột, theo giờ tròn hoặc khi Redis chết</td><td>HA cluster, rate limit, TTL + jitter</td></tr>
+          <tr><td><a href="#s4-3">Breakdown</a></td><td>Đúng một key nóng hết hạn</td><td>Một key</td><td>Hàng nghìn query giống hệt nhau cùng lúc</td><td>Mutex / singleflight, không cho hết hạn + làm mới nền</td></tr>
+          <tr><td><a href="#s4-4">Penetration</a></td><td>Hỏi dữ liệu không tồn tại ở đâu cả</td><td>Key không có thật</td><td>Nhiều request trả 404 nhưng vẫn chạm DB</td><td>Cache giá trị rỗng, validate, Bloom filter</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="s4-1">4.1. Problem 01: No Atomicity <span class="slide-ref">slide 31–32</span></h3>
+    <p><strong>Bối cảnh trong slide:</strong> khách hàng X đổi tuổi từ 33 lên 34 và phàn nàn phải một lúc sau mới thấy. Hệ thống dùng Read-Aside + Write-Around, profile của X đang nằm trong cache.</p>
+    <div class="flow"><span class="step"><i>1</i><span class="actor app">App</span> Update <span class="actor db">DB</span> age = 34 <span class="good">✓</span></span><span class="arr">→</span><span class="step"><i>2</i>Invalidate <span class="actor cache">Cache</span> <span class="badx">✗ timeout</span></span><span class="arr">→</span><span class="step">Cache giữ 33 cho tới khi hết TTL</span></div>
+    <p><strong>Nguyên nhân:</strong> hai bước ghi vào hai hệ thống không nằm trong một transaction, nên không có tính nguyên tử (atomicity). Bước 1 thành công không kéo theo bước 2 thành công.</p>
+    <dl class="wwh">
+      <dt>Retry</dt><dd>Thử xóa lại với backoff. Chắc hơn: đẩy lệnh xóa vào hàng đợi (BullMQ, RabbitMQ) để worker xóa lại tới khi thành công. <code>DEL</code> là thao tác idempotent (Bài 1), xóa 1 lần hay 5 lần kết quả như nhau, nên retry an toàn về tính đúng. Lưu ý: nếu lỗi gốc là Redis sập thì BullMQ (cũng chạy trên Redis) sập theo; khi đó dùng bảng outbox trong Postgres hoặc CDC.</dd>
+      <dt>Đọc binlog</dt><dd>Slide gọi là "subscribe to binlog of DB". Một tiến trình riêng đọc nhật ký thay đổi của DB (binlog của MySQL qua Canal / Debezium; WAL của Postgres qua logical replication / Debezium) và xóa key tương ứng. Ưu điểm: chỉ xóa khi DB <em>thật sự</em> commit, và code nghiệp vụ không cần biết tới cache.</dd>
+      <dt>Lưới cuối</dt><dd>TTL ngắn (slide 29) vẫn là lớp bảo hiểm cuối khi mọi cơ chế trên đều trượt.</dd>
+    </dl>
+
+    <h3 id="s4-2">4.2. Problem 02: Cache Avalanche (tuyết lở) <span class="slide-ref">slide 33–34</span></h3>
+    <p>Slide trình bày hai nguyên nhân dẫn tới cùng một hậu quả: lượng lớn request cùng lúc rơi thẳng xuống DB và DB sập.</p>
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Nguyên nhân 1: cache sập (slide 33)</h4>
+        <ul>
+          <li><strong>Cache cluster, High Availability</strong>: Redis Sentinel hoặc Redis Cluster có replica, một node chết thì node khác lên thay.</li>
+          <li><strong>Rate limit / Circuit breaker</strong>: khi cache mất, chặn bớt hoặc trả lỗi nhanh để bảo vệ DB thay vì để DB chết theo.</li>
+          <li><strong>Cache recovery</strong>: bật persistence (RDB/AOF) để khởi động lại có sẵn dữ liệu, và warm-up cache trước khi nhận traffic.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Nguyên nhân 2: hết hạn đồng loạt (slide 34)</h4>
+        <p style="margin-top:4px">Deploy lúc 08:00 nạp 100.000 key cùng TTL 3600 giây, đúng 09:00 cả 100.000 key cùng hết hạn.</p>
+        <ul>
+          <li><strong>Rải đều thời điểm hết hạn</strong>: TTL = giá trị gốc + một khoảng ngẫu nhiên (jitter).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="widget wide" id="aval">
+    <div class="widget-head"><h4>Thời điểm hết hạn của 100.000 key</h4><span class="eyebrow">Mô phỏng · slide 34 · Lab 4</span></div>
+    <div class="widget-body">
+      <div class="controls">
+        <div class="ctl"><label for="av-j">Jitter TTL <output id="av-j-out">0%</output></label><input type="range" id="av-j" min="0" max="30" step="1" value="0"></div>
+      </div>
+      <div class="scroll-x"><svg id="avSvg" class="chart" viewBox="0 0 640 220" role="img" aria-label="Biểu đồ số key hết hạn theo phút"></svg></div>
+      <div class="stats">
+        <div class="stat bad" id="avPeakBox"><div class="k">Key hết hạn mỗi giây lúc đỉnh (≈ miss nếu key được đọc liên tục)</div><div class="v" id="avPeak">100.000</div></div>
+        <div class="stat"><div class="k">Khoảng thời gian rải đều</div><div class="v" id="avSpread">1 <small>giây</small></div></div>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">Lab 4 trên máy bạn: TTL cố định cho đỉnh 100.000 miss/giây; TTL ± 10% cho đỉnh khoảng 175–190 miss/giây tùy lần chạy, giảm khoảng 530–580 lần.</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="code"><span class="label">Một dòng đổi được tất cả</span><pre><code><span class="c">// Trước: mọi key nạp cùng lúc sẽ hết hạn cùng lúc</span>
+await redis.set(key, value, { EX: 3600 });
+<span class="c">// Sau: lệch ngẫu nhiên ±10%</span>
+const ttl = 3600 + Math.floor((Math.random() * 2 - 1) * 360); <span class="c">// 3240–3960 s, giống Lab 4</span>
+await redis.set(key, value, { EX: ttl });</code></pre></div>
+
+    <h3 id="s4-3">4.3. Problem 03: Cache Breakdown <span class="slide-ref">slide 35</span></h3>
+    <p>Một key <strong>nóng</strong> (slide vẽ <code>k1</code> bị gạch) hết hạn. Trong vài trăm mili giây trước khi có ai nạp lại, mọi request đọc key đó đều miss và cùng chạy cùng một query xuống DB. Tiếng Anh còn gọi hiện tượng này là <em>cache stampede</em>, <em>thundering herd</em> hay <em>dog-piling</em>. Khác Avalanche ở chỗ chỉ cần <strong>đúng một key</strong>.</p>
+    <dl class="wwh">
+      <dt>Không đặt TTL</dt><dd>Với dữ liệu nóng, không cho hết hạn. Nhưng khi dữ liệu đổi, xóa key nóng sẽ gây lại đúng cú miss hàng loạt này, còn để nhiều nơi ghi đè trực tiếp lại mở ra race của kịch bản A/B. Vì vậy chỉ để <em>một</em> nơi làm mới key (job nền hoặc người giữ khóa). Biến thể hay dùng là <em>logical expiration</em>: lưu thời điểm hết hạn bên trong value, quá hạn thì vẫn trả giá trị cũ cho mọi người trong lúc một request duy nhất đi làm mới.</dd>
+      <dt>Job nền</dt><dd>Một background job cập nhật cache định kỳ, hoặc trước khi key hết hạn, nên người dùng không bao giờ gặp cú miss.</dd>
+      <dt>Lock / Mutex</dt><dd>Khi miss, chỉ một request được nạp lại; những request khác chờ kết quả của nó. Trong một tiến trình gọi là <em>singleflight</em>; giữa nhiều instance dùng khóa phân tán trên Redis.</dd>
+    </dl>
+  </div>
+
+  <div class="widget wide" id="stampede">
+    <div class="widget-head"><h4>Khi key nóng hết hạn: hàng đợi ở DB</h4><span class="eyebrow">Mô phỏng · slide 35 · Lab 3, Lab 6</span></div>
+    <div class="widget-body">
+      <div class="controls">
+        <div class="ctl"><label for="sp-n">Request cùng lúc <output id="sp-n-out">500</output></label><input type="range" id="sp-n" min="10" max="2000" step="10" value="500"></div>
+        <div class="ctl"><label for="sp-q">Thời gian 1 query <output id="sp-q-out">80 ms</output></label><input type="range" id="sp-q" min="10" max="1000" step="10" value="80"></div>
+        <div class="ctl"><label for="sp-p">Kết nối trong pool DB <output id="sp-p-out">10</output></label><input type="range" id="sp-p" min="1" max="50" step="1" value="10"></div>
+      </div>
+      <div class="btns" role="group" aria-label="Cách xử lý">
+        <button class="btn" type="button" id="spNone" aria-pressed="true">Không bảo vệ</button>
+        <button class="btn" type="button" id="spLock" aria-pressed="false">Mutex / singleflight</button>
+      </div>
+      <div class="stats">
+        <div class="stat" id="spQBox"><div class="k">Query xuống DB</div><div class="v" id="spQ">500</div></div>
+        <div class="stat"><div class="k">p50 người dùng chờ</div><div class="v" id="spP50">2.080 <small>ms</small></div></div>
+        <div class="stat" id="spP99Box"><div class="k">p99 người dùng chờ</div><div class="v" id="spP99">4.000 <small>ms</small></div></div>
+      </div>
+      <div class="scroll-x"><svg id="spSvg" class="chart" viewBox="0 0 640 150" role="img" aria-label="Các query xếp hàng trên các kết nối của pool"></svg></div>
+      <p class="muted" style="margin:0;font-size:.85rem">Mỗi ô là một query, mỗi hàng là một kết nối pool, trục ngang là thời gian. Mô hình này còn lạc quan: Lab 6 cho thấy 10 query nặng chạy song song làm mỗi query chậm đi khoảng 4 lần (149 ms lúc chạy một mình).</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Đo thật trên máy bạn</th><th class="n">Query xuống DB</th><th class="n">p50</th><th class="n">p99</th></tr></thead>
+        <tbody>
+          <tr><td>Lab 3 · 500 request, query 80 ms, pool 10 · không bảo vệ</td><td class="n">500</td><td class="n">2.084 ms</td><td class="n badx">4.008 ms</td></tr>
+          <tr><td>Lab 3 · singleflight trong tiến trình</td><td class="n">1</td><td class="n">80 ms</td><td class="n good">80 ms</td></tr>
+          <tr><td>Lab 6 · 100 request, Postgres IMDb thật · không bảo vệ</td><td class="n">100</td><td class="n">3.699 ms</td><td class="n badx">6.606 ms</td></tr>
+          <tr><td>Lab 6 · khóa phân tán Redis</td><td class="n">1</td><td class="n">135 ms</td><td class="n good">136 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="code"><span class="label">Khóa phân tán bằng Redis (rút gọn từ Lab 6)</span><pre><code>const token = randomUUID();
+<span class="c">// NX: chỉ đặt nếu chưa có ai giữ khóa. PX: khóa tự hết hạn nếu người giữ chết giữa chừng.</span>
+const acquired = await redis.set(`lock:${key}`, token, { NX: true, PX: 10_000 });
+if (acquired) {
+  try {
+    const again = await redis.get(key);          <span class="c">// double-check: có thể ai đó vừa nạp xong</span>
+    if (again) return JSON.parse(again);
+    const rows = await queryTopMovies(year);
+    await redis.set(key, JSON.stringify(rows), { EX: ttlWithJitter(60) });
+    return rows;
+  } finally {
+    <span class="c">// Chỉ xóa khóa nếu vẫn là của mình (so token), làm nguyên tử bằng Lua</span>
+    await redis.eval(RELEASE_LOCK_LUA, { keys: [`lock:${key}`], arguments: [token] });
+  }
+}
+<span class="c">// Không giành được khóa: chờ 50 ms rồi đọc lại cache; quá 8 giây thì đọc thẳng DB.</span>
+<span class="c">// Nếu người giữ khóa treo, mọi người chờ cùng hết hạn và cùng đọc DB: cộng jitter vào thời hạn chờ.</span>
+<span class="c">// Khóa này chỉ để tiết kiệm công nạp lại; nó không đảm bảo tính đúng của dữ liệu.</span></code></pre></div>
+    <div class="callout warn">
+      <span class="tag">Bốn lỗi hay gặp khi tự viết khóa</span>
+      <ul>
+        <li>Khóa không có TTL: tiến trình giữ khóa chết thì khóa kẹt vĩnh viễn.</li>
+        <li>Thả khóa bằng <code>DEL</code> trần: nếu khóa đã hết hạn và người khác vừa giữ, bạn xóa nhầm khóa của họ. Phải so token.</li>
+        <li>Quên double-check sau khi giành được khóa: nạp lại DB dù người trước đã nạp xong.</li>
+        <li>Singleflight trong tiến trình chỉ gom được request <em>trong cùng instance</em>. Chạy 8 instance thì vẫn có 8 query; cần khóa phân tán nếu 8 query đó vẫn quá nặng.</li>
+      </ul>
+    </div>
+
+    <h3 id="s4-4">4.4. Problem 04: Cache Penetration (xuyên thủng) <span class="slide-ref">slide 36</span></h3>
+    <p>Dữ liệu được hỏi <strong>không có trong cache và cũng không có trong DB</strong>. Read-Aside chỉ ghi lại cache khi đọc được thứ gì đó, nên với id không tồn tại, request nào cũng miss cache rồi miss DB. Kẻ tấn công lợi dụng điều này để bắn hàng loạt id rác, DB gánh toàn bộ.</p>
+    <dl class="wwh">
+      <dt>Giá trị mặc định</dt><dd>Cache luôn kết quả "không có" (slide ví dụ giá trị 0; thực tế hay dùng một marker như <code>__NULL__</code>) với TTL ngắn, 30–60 giây. Khi bản ghi đó được tạo thật, nhớ xóa marker, nếu không bản ghi mới sẽ "vô hình" cho tới khi marker hết hạn.</dd>
+      <dt>Validate</dt><dd>Chặn ngay ở cửa API những id sai định dạng: mã sân bay phải là 3 chữ cái, <code>tconst</code> IMDb phải khớp <code>^tt\d{7,8}$</code>.</dd>
+      <dt>Bloom filter</dt><dd>Cấu trúc xác suất trả lời "<strong>chắc chắn không có</strong>" hoặc "<strong>có thể có</strong>". Không bao giờ nói nhầm "không có" với dữ liệu có thật, nên an toàn để đặt trước cache.</dd>
+    </dl>
+  </div>
+
+  <div class="widget wide" id="bloom">
+    <div class="widget-head"><h4>Bloom filter 32 bit, 3 hàm băm</h4><span class="eyebrow">Mô phỏng · slide 36 · Lab 5</span></div>
+    <div class="widget-body">
+      <p style="margin:0">Filter đã chứa mã các sân bay <code>SGN HAN DAD CXR PQC</code>. Thêm một mã: 3 bit ở 3 vị trí băm được bật lên. Kiểm tra một mã: chỉ cần một trong 3 bit đang tắt là chắc chắn mã đó chưa từng được thêm.</p>
+      <div class="bits" id="bloomBits" aria-label="Mảng bit của Bloom filter"></div>
+      <div class="btns" style="align-items:center">
+        <input type="text" id="bloomInput" class="field" style="max-width:160px" value="VII" maxlength="12" aria-label="Mã cần thêm hoặc kiểm tra">
+        <button class="btn primary" type="button" id="bloomCheck">Kiểm tra</button>
+        <button class="btn" type="button" id="bloomAdd">Thêm vào filter</button>
+        <button class="btn" type="button" id="bloomFp">Tìm một dương tính giả</button>
+        <button class="btn" type="button" id="bloomReset">Làm lại</button>
+      </div>
+      <div class="narr" id="bloomMsg" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Lab 5 · 10.000 request id không tồn tại</th><th>Read-Aside thường</th><th>Cache giá trị rỗng</th><th>Bloom + cache rỗng</th></tr></thead>
+        <tbody>
+          <tr><td>Lặp lại đúng 1 id</td><td class="n badx">10.000</td><td class="n good">1</td><td class="n good">0</td></tr>
+          <tr><td>Mỗi lần một id ngẫu nhiên</td><td class="n badx">10.000</td><td class="n badx">10.000</td><td class="n good">39</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Bài học từ bảng: <strong>cache giá trị rỗng chỉ chặn được id lặp lại</strong>. Kẻ tấn công đổi id mỗi lần thì cache rỗng vô dụng, và lại còn nhồi đầy cache bằng rác. Lúc đó cần validate + Bloom filter. Filter của Lab 5 tốn 59 KB cho 50.000 id, thiết kế cho 1% dương tính giả, k = 7. Lab đo được khoảng 0,4–0,6% vì id tuần tự làm trùng bit; với dữ liệu thật hãy kỳ vọng khoảng 1%. Âm tính giả: 0.</p>
+    <div class="callout ext">
+      <span class="tag">Giới hạn của Bloom filter</span>
+      <p>Không xóa được phần tử (muốn xóa phải dùng Counting Bloom hoặc Cuckoo filter). Mỗi khi DB thêm id mới phải thêm vào filter, nếu không id mới sẽ bị chặn nhầm. Trên Redis có sẵn lệnh <code>BF.ADD</code> / <code>BF.EXISTS</code> (module RedisBloom, có trong Redis Stack và Redis 8).</p>
+    </div>
+
+    <div class="callout key">
+      <span class="tag">Lab 3, 4, 5 · chạy ngay</span>
+      <p>Mỗi lab chạy dưới 5 giây, không cần cài gì.</p>
+    </div>
+    <div class="code terminal"><span class="label">PowerShell</span><pre><code>npm run lab3   <span class="c"># Breakdown: 500 query vs 1 query</span>
+npm run lab4   <span class="c"># Avalanche: đỉnh 100.000 miss/giây vs ~190</span>
+npm run lab5   <span class="c"># Penetration: cache rỗng vs Bloom filter</span></code></pre></div>
+
+    <div class="quiz" data-quiz="4"></div>
+  </div>
+</section>
+
+<!-- =============================== CHẶNG 5 =============================== -->
+<section id="chang-5" class="stage">
+  <div class="col">
+    <div class="stage-head">
+      <span class="stage-no">05</span>
+      <h2>Tải cao & thu hồi bộ nhớ</h2>
+      <div class="stage-meta"><span>Slide 37–41</span><span>30 phút</span><span>Mô phỏng LRU vs LFU</span></div>
+    </div>
+    <p class="goal"><b>Mục tiêu:</b> xử lý được hot key và large key, chọn đúng chính sách thu hồi bộ nhớ cho Redis, vẽ lại kiến trúc tổng kết của slide 41.</p>
+
+    <h3 id="s5-1">5.1. Problem 05: Hot Keys <span class="slide-ref">slide 37–38</span></h3>
+    <p>Slide 38 vẽ một ứng dụng và ba node cache, nhưng toàn bộ traffic dồn vào node đầu tiên vì <code>key34</code> và <code>key88</code> nằm ở đó. Trong Redis Cluster, mỗi key thuộc đúng một slot trên một node, nên một key cực nóng làm một node quá tải trong khi các node khác rảnh.</p>
+    <dl class="wwh">
+      <dt>Nhân bản key</dt><dd>Chép key nóng thành nhiều bản (<code>product:34#0</code> … <code>product:34#7</code>) để chúng rơi vào các slot khác nhau trên nhiều node. Khi đọc, chọn ngẫu nhiên một bản. Cái giá: khi ghi phải xóa/cập nhật <em>tất cả</em> bản sao.</dd>
+      <dt>Local cache</dt><dd>Giữ key nóng ngay trong RAM của từng instance (tầng "Server" ở slide 8), TTL vài giây. Phần lớn lượt đọc không còn đi tới Redis. Cái giá: mỗi instance có thể lệch nhau tới đúng TTL đó.</dd>
+    </dl>
+
+    <h3 id="s5-2">5.2. Problem 06: Large Key <span class="slide-ref">slide 39</span></h3>
+    <p>Giá trị của một key quá lớn (ví dụ cả danh sách 50.000 sản phẩm trong một chuỗi JSON). Redis xử lý lệnh trên một luồng chính, nên đọc, ghi hay xóa một value vài MB sẽ bắt mọi lệnh khác phải xếp hàng chờ; ngoài ra còn tốn băng thông mạng và làm lệch bộ nhớ giữa các node.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Giải pháp (slide 39)</th><th>Làm thế nào</th></tr></thead>
+        <tbody>
+          <tr><td>Nén (Compress)</td><td>gzip / brotli / snappy trước khi SET. Đổi CPU lấy RAM và băng thông.</td></tr>
+          <tr><td>Chia nhỏ (Split)</td><td>Tách thành nhiều key (<code>catalog:page:1..n</code>) hoặc dùng Hash để chỉ lấy field cần.</td></tr>
+          <tr><td>TTL dài hơn cho key lớn</td><td>Dựng lại key lớn rất tốn, nên tránh để nó hết hạn và bị dựng lại thường xuyên.</td></tr>
+          <tr><td>Giới hạn số lượng key lớn</td><td>Đặt ngưỡng kích thước, quét định kỳ bằng <code>redis-cli --bigkeys</code> hoặc <code>MEMORY USAGE key</code>.</td></tr>
+          <tr><td>Chọn đúng nơi lưu</td><td>File, ảnh, báo cáo lớn thuộc về object storage (S3, MinIO) + CDN, không thuộc về Redis.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:.9rem">Mẹo vận hành: xóa key lớn bằng <code>UNLINK</code> thay cho <code>DEL</code>; <code>UNLINK</code> giải phóng bộ nhớ ở luồng nền nên không chặn các lệnh khác.</p>
+
+    <h3 id="s5-3">5.3. Cache Replacement: khi cache hết bộ nhớ <span class="slide-ref">slide 40</span></h3>
+    <ul>
+      <li><strong>LRU (Least Recently Used)</strong>: bỏ key <em>lâu nhất chưa được dùng</em>. Slide gắn với hot keys: thứ vừa được đọc thì giữ lại.</li>
+      <li><strong>LFU (Least Frequently Used)</strong>: bỏ key <em>ít được dùng nhất</em>. Slide gắn với hot tweets: tweet được đọc hàng triệu lần không bị đẩy ra chỉ vì vừa có một đợt đọc lướt qua nhiều tweet khác.</li>
+      <li><strong>LRU + LFU</strong>: kết hợp cả hai (ví dụ W-TinyLFU của thư viện Caffeine, ARC) để vừa thích nghi nhanh vừa giữ được thứ phổ biến lâu dài.</li>
+    </ul>
+  </div>
+
+  <div class="widget wide" id="evict">
+    <div class="widget-head"><h4>LRU vs LFU trên cùng một chuỗi truy cập</h4><span class="eyebrow">Mô phỏng · slide 40</span></div>
+    <div class="widget-body">
+      <div class="controls">
+        <div class="ctl"><label for="ev-seq">Chuỗi truy cập (cách nhau bởi dấu cách)</label><input type="text" id="ev-seq" value="A A A B C D A E F A"></div>
+        <div class="ctl"><label for="ev-cap">Sức chứa cache</label><select id="ev-cap"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+      </div>
+      <div class="btns">
+        <button class="btn" type="button" data-preset="A A A B C D A E F A|3">Ví dụ 1: key nóng bị một đợt quét lướt qua</button>
+        <button class="btn" type="button" data-preset="A A A A B B C C D D C D|2">Ví dụ 2: xu hướng đổi theo thời gian</button>
+      </div>
+      <div class="grid-2" id="evOut"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p>Ví dụ 1: LFU thắng vì A rất phổ biến, đợt B C D E F chỉ ghé một lần. Ví dụ 2: LRU thắng vì A từng nổi nhưng đã hết thời; LFU vẫn ôm A vì bộ đếm cao (gọi là "ô nhiễm cache"). Redis xử lý điểm yếu này bằng cách cho bộ đếm LFU giảm dần theo thời gian.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Redis <code>maxmemory-policy</code></th><th>Hành vi khi đầy bộ nhớ</th></tr></thead>
+        <tbody>
+          <tr><td><code>noeviction</code> (mặc định)</td><td>Không bỏ key nào; lệnh ghi trả lỗi OOM. Dùng cho Redis làm nơi lưu chính, <span class="badx">không hợp</span> cho cache thuần.</td></tr>
+          <tr><td><code>allkeys-lru</code></td><td>Bỏ key lâu chưa dùng nhất trong toàn bộ key. Lựa chọn an toàn cho cache thuần.</td></tr>
+          <tr><td><code>allkeys-lfu</code></td><td>Bỏ key ít dùng nhất. Hợp khi có tập key phổ biến ổn định.</td></tr>
+          <tr><td><code>volatile-lru</code> / <code>volatile-lfu</code> / <code>volatile-ttl</code></td><td>Chỉ bỏ trong số key có TTL (theo LRU / LFU / sắp hết hạn trước). Key không đặt TTL (cấu hình, bản ghi cần giữ) sẽ không bao giờ bị thu hồi; hợp khi Redis vừa làm cache vừa giữ loại dữ liệu đó.</td></tr>
+          <tr><td><code>allkeys-random</code> / <code>volatile-random</code></td><td>Bỏ ngẫu nhiên.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:.9rem">Redis không chạy LRU/LFU chính xác mà lấy mẫu ngẫu nhiên vài key (<code>maxmemory-samples</code>, mặc định 5) rồi bỏ key tệ nhất trong mẫu; đủ gần đúng mà rẻ hơn nhiều.</p>
+
+    <h3 id="s5-4">5.4. Tổng kết kiến trúc <span class="slide-ref">slide 41</span></h3>
+    <div class="recap">
+      <div class="node app">Application</div>
+      <div class="edge l">Read Aside</div>
+      <div class="edge r">Write Around</div>
+      <div class="node cache">Cache cluster<small>key nhỏ, TTL ngắn</small></div>
+      <div class="node db">DB</div>
+      <div class="node job">Job nền<small>làm mới key nóng, xóa lại key lỗi</small></div>
+    </div>
+    <ol>
+      <li><strong>Đánh giá mẫu truy cập dữ liệu trước</strong>: đọc nhiều hay ghi nhiều, phần nóng là gì, chấp nhận cũ bao lâu.</li>
+      <li><strong>Cặp phổ biến: Read-Aside + Write-Around</strong> (ghi DB trước, xóa cache sau).</li>
+      <li>Cache chạy dạng <strong>cluster</strong> (chống Avalanche), key <strong>nhỏ</strong> (chống Large Key), TTL <strong>ngắn có jitter</strong> (lưới an toàn cho lệch dữ liệu, chống hết hạn đồng loạt).</li>
+      <li><strong>Job nền</strong> làm mới key nóng (chống Breakdown) và xử lý lại các lần xóa thất bại (chống No Atomicity).</li>
+      <li>Invalidation khó vì <strong>thời điểm, đồng thời, cache ở khắp nơi</strong>; hãy đo hit rate, độ trễ, số key bị thu hồi và dung lượng bộ nhớ.</li>
+    </ol>
+
+    <div class="quiz" data-quiz="5"></div>
+  </div>
+</section>
+
+<!-- =============================== CHẶNG 6 =============================== -->
+<section id="chang-6" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">06</span>
+    <h2>Thực chiến: lab & bài tập</h2>
+    <div class="stage-meta"><span>Slide 42–44</span><span>60+ phút</span><span>Redis + Postgres IMDb thật</span></div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> chạy Read-Aside và khóa chống stampede trên Redis + Postgres thật, rồi tự viết local cache sân bay đạt 6/6 tiêu chí.</p>
+
+  <h3 id="s6-1">6.1. Chuẩn bị môi trường</h3>
+  <p>Mọi thứ đã sẵn trên máy bạn sau buổi này: thư mục lab <code>labs/lesson-02-caching</code> (đã <code>npm install</code>), container Redis <code>advance-be-redis</code> ở cổng 6379, và Postgres <code>advance_be_lab</code> ở cổng 5433 với 12,8 triệu phim IMDb bạn đã nạp ở lab Bài 1 (container <code>quan_ly_hop_dong-postgres-1</code>; dừng thì chạy <code>docker start quan_ly_hop_dong-postgres-1</code>).</p>
+  <div class="code terminal"><span class="label">PowerShell · kiểm tra và khởi động lại khi cần</span><pre><code>docker ps --filter name=advance-be-redis          <span class="c"># Redis còn chạy không?</span>
+docker start advance-be-redis                       <span class="c"># nếu đã dừng</span>
+<span class="c"># Chưa có container thì tạo mới:</span>
+docker run -d --name advance-be-redis -p 6379:6379 redis:7.4-alpine
+
+cd "D:\học\advance-be\labs\lesson-02-caching"
+$env:PG_URL = "postgres://postgres:&lt;mật-khẩu&gt;@localhost:5433/advance_be_lab"</code></pre></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Lab</th><th>Slide</th><th>Chứng minh điều gì</th><th>Lệnh</th><th class="n">Chạy</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>19–23</td><td>Update cache lệch, Delete cache nhất quán</td><td><code>npm run lab1</code></td><td class="n">&lt;1 s</td></tr>
+        <tr><td>2</td><td>24–29</td><td>Xóa trước vs xóa sau: timeline + xác suất</td><td><code>npm run lab2</code></td><td class="n">~11 s</td></tr>
+        <tr><td>3</td><td>35</td><td>Breakdown: 500 query → 1 query nhờ singleflight</td><td><code>npm run lab3</code></td><td class="n">~4 s</td></tr>
+        <tr><td>4</td><td>34</td><td>Avalanche: jitter hạ đỉnh tải ~530–580 lần</td><td><code>npm run lab4</code></td><td class="n">&lt;1 s</td></tr>
+        <tr><td>5</td><td>36</td><td>Penetration: cache rỗng vs Bloom filter</td><td><code>npm run lab5</code></td><td class="n">&lt;1 s</td></tr>
+        <tr><td>6</td><td>10, 35</td><td>Read-Aside + khóa phân tán trên Redis + Postgres thật</td><td><code>npm run lab6</code></td><td class="n">~7 s</td></tr>
+        <tr><td>BTVN</td><td>43</td><td>Local cache sân bay, 6 tiêu chí tự kiểm</td><td><code>npm run homework</code></td><td class="n">&lt;1 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s6-2">6.2. Lab 6: Read-Aside và stampede trên dữ liệu thật</h3>
+  <p>Truy vấn được cache là "Top 10 phim của một năm có ít nhất 10.000 lượt vote": join <code>lab_imdb.titles</code> (12,8 triệu dòng) với <code>lab_imdb.ratings</code>. Bảng <code>ratings</code> chưa có index trên <code>num_votes</code>, nên Postgres phải quét song song toàn bảng: một truy vấn đủ đắt để thấy rõ giá trị của cache.</p>
+  <div class="code terminal"><span class="label">Kết quả đã chạy trên máy bạn</span><pre><code>PHẦN 1 — Read-Aside: "Top 10 phim năm 2015" (join titles 12,8 triệu dòng x ratings)
+  Lần 1: MISS -> Postgres     149.36 ms
+          #1 = Thani Oruvan (8.4★, 24536 votes)
+  Lần 2: HIT  -> Redis          1.24 ms
+  Lần 3: HIT  -> Redis          0.85 ms
+
+PHẦN 2 — Cache Breakdown: 100 request cùng lúc ngay khi key vừa hết hạn (pool Postgres = 10)
+│ Không bảo vệ        │ 100 │ p50 3699 │ p99 6606 │
+│ Khóa phân tán Redis │   1 │ p50  135 │ p99  136 │</code></pre></div>
+  <p><strong>Trả lời sau khi chạy</strong> (tự viết ra giấy trước khi mở đáp án):</p>
+  <ol>
+    <li>Không bảo vệ: 10 đợt × 149 ms lẽ ra chỉ khoảng 1,5 giây. Vì sao p99 thực tế là 6,6 giây?</li>
+    <li>Chạy lại với <code>$env:USERS = 300</code>. Con số nào tăng, con số nào gần như đứng yên?</li>
+    <li>Nếu cập nhật rating của một phim năm 2015, cần xóa những key nào? Đây là khó khăn nào ở slide 14?</li>
+  </ol>
+  <details class="fold"><summary>Đáp án gợi ý</summary><div class="fold-body">
+    <ol>
+      <li>10 truy vấn nặng chạy cùng lúc tranh nhau CPU và I/O (mỗi truy vấn còn tự xin thêm worker song song), nên mỗi truy vấn chậm đi khoảng 4 lần, khoảng 660 ms thay vì 149 ms. Stampede không chỉ làm request xếp hàng mà còn làm chính DB chậm đi với mọi người khác.</li>
+      <li>Không bảo vệ: số query và p99 tăng gần tuyến tính theo số người dùng. Có khóa: vẫn 1 query, p99 gần như không đổi.</li>
+      <li>Ít nhất <code>imdb:top10:2015</code>, và mọi key khác có chứa phim đó (trang chi tiết phim, top theo thể loại...). Đây là "quan hệ dữ liệu" (slide 14), xử lý gọn bằng group-based invalidation.</li>
+    </ol>
+  </div></details>
+  <div class="code terminal"><span class="label">Soi Redis bằng tay (liên quan Chặng 5)</span><pre><code>docker exec -it advance-be-redis redis-cli
+SCAN 0 MATCH imdb:* COUNT 100        <span class="c"># liệt kê key; tránh KEYS * trên production vì nó chặn Redis</span>
+TTL imdb:top10:2015                  <span class="c"># còn sống bao nhiêu giây (-2 = đã hết hạn)</span>
+MEMORY USAGE imdb:top10:2015         <span class="c"># key này tốn bao nhiêu byte</span>
+CONFIG GET maxmemory-policy          <span class="c"># máy bạn: noeviction (mặc định)</span>
+CONFIG GET maxmemory                 <span class="c"># máy bạn: 0 = không giới hạn RAM</span></code></pre></div>
+
+  <h3 id="bai-tap">6.3. Bài tập về nhà <span class="slide-ref">slide 43</span></h3>
+  <div class="panel">
+    <h4>Đề bài (slide 43)</h4>
+    <ul>
+      <li>Cài đặt <strong>local cache</strong>: nội dung là <strong>danh sách sân bay (Code, Name)</strong>, có <strong>TTL</strong>.</li>
+      <li>Được phép dùng thư viện. Không cần DB nguồn (dùng danh sách cố định giả lập độ trễ).</li>
+      <li>Chiến lược đọc: <strong>Read-Aside</strong>.</li>
+    </ul>
+  </div>
+  <h4>Tiêu chí để tự chấm (giống hệt self-check của lời giải mẫu)</h4>
+  <ol>
+    <li>Lần đọc đầu MISS và gọi nguồn; lần sau HIT, không gọi nguồn.</li>
+    <li>Mã không tồn tại trả <code>null</code> và không gọi lại nguồn.</li>
+    <li>Input rác (<code>'; DROP TABLE--</code>) bị chặn trước khi chạm cache.</li>
+    <li>Hết TTL thì MISS và nạp lại.</li>
+    <li>50 request đồng thời ngay khi vừa hết hạn chỉ gọi nguồn <strong>1 lần</strong>.</li>
+    <li>Có hàm <code>invalidate()</code> để dùng sau khi danh sách đổi (Write-Around).</li>
+    <li>Gọi <code>invalidate()</code> đúng lúc một lần nạp đang chạy: kết quả cũ của lần nạp đó không được ghi vào cache (kịch bản E thu nhỏ trong một tiến trình).</li>
+  </ol>
+  <div class="callout teacher">
+    <span class="tag">Gợi ý trước khi xem lời giải</span>
+    <ul>
+      <li>Danh sách sân bay nhỏ và đổi rất chậm: cache <em>cả danh sách</em> dưới một key, đánh index theo code. Khi đó mã không tồn tại chỉ là tra Map, không bao giờ chạm nguồn, tức Cache Penetration tự biến mất với tập dữ liệu này.</li>
+      <li>Tiêu chí 5 là Cache Breakdown thu nhỏ: giữ <em>Promise</em> đang chạy và cho mọi người chờ chung.</li>
+      <li>Muốn kiểm TTL mà không phải chờ thật, truyền hàm <code>now()</code> vào constructor để test tự "tua" đồng hồ.</li>
+      <li>Muốn dùng thư viện: <code>lru-cache</code> có sẵn <code>ttl</code> và <code>max</code>. Lưu ý <code>fetchMethod</code> của nó biến cache thành <em>Read-Through</em>; đề yêu cầu Read-Aside nên hãy tự gọi <code>get</code> / <code>set</code>.</li>
+    </ul>
+  </div>
+  <p>Viết bản của bạn vào <code>labs/lesson-02-caching/homework-airport-cache.mine.ts</code>, chạy bằng <code>node homework-airport-cache.mine.ts</code> (Node 22.18+ tự bỏ kiểu TypeScript). Xong rồi mới mở lời giải.</p>
+  <details class="fold"><summary>Lời giải mẫu (TypeScript, đã chạy: 7/7 PASS)</summary><div class="fold-body">
+    <div class="code"><span class="label">labs/lesson-02-caching/homework-airport-cache.solution.ts</span><pre><code>// Homework (slide 43) — reference solution. Try it yourself first, then compare.
+// Local in-process cache for the list of airports (code, name) with TTL, Read-Aside, no source DB.
+// Run: node homework-airport-cache.solution.ts   (Node 22.18+ strips the TypeScript types by itself)
+
+export interface Airport {
+  code: string;
+  name: string;
+}
+
+/** Minimal in-process cache: every entry carries its own expiry time. Knows nothing about airports. */
+export class TtlCache&lt;V&gt; {
+  private readonly entries = new Map&lt;string, { value: V; expiresAt: number }&gt;();
+  private readonly now: () =&gt; number;
+
+  constructor(now: () =&gt; number = Date.now) {
+    this.now = now;
+  }
+
+  get(key: string): V | undefined {
+    const entry = this.entries.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt &lt;= this.now()) {
+      this.entries.delete(key); // lazy expiry: an expired entry is removed when someone touches it
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  set(key: string, value: V, ttlMs: number): void {
+    this.entries.set(key, { value, expiresAt: this.now() + ttlMs });
+  }
+
+  delete(key: string): void {
+    this.entries.delete(key);
+  }
+}
+
+const LIST_KEY = 'airports:all';
+
+/**
+ * Read-Aside: the service asks the cache first; on a miss it loads from the source and writes the result back.
+ * The whole list is small, so it is cached as one entry and indexed by code. Looking up an unknown code
+ * then never reaches the source, which also closes the Cache Penetration hole for this dataset.
+ */
+export class AirportService {
+  private readonly cache: TtlCache&lt;Map&lt;string, Airport&gt;&gt;;
+  private readonly loadAirports: () =&gt; Promise&lt;Airport[]&gt;;
+  private readonly ttlMs: number;
+  private inFlight: Promise&lt;Map&lt;string, Airport&gt;&gt; | null = null;
+  // Bumped by invalidate(). A load that started before the bump must not write its (now stale) result:
+  // that would be scenario E from the lesson (read old data, cache it after the delete) inside one process.
+  private generation = 0;
+  readonly stats = { hits: 0, misses: 0, loads: 0 };
+
+  constructor(loadAirports: () =&gt; Promise&lt;Airport[]&gt;, options: { ttlMs?: number; now?: () =&gt; number } = {}) {
+    this.loadAirports = loadAirports;
+    this.ttlMs = options.ttlMs ?? 10 * 60_000;
+    this.cache = new TtlCache(options.now);
+  }
+
+  async list(): Promise&lt;Airport[]&gt; {
+    return [...(await this.index()).values()];
+  }
+
+  async findByCode(rawCode: string): Promise&lt;Airport | null&gt; {
+    const code = rawCode.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code)) return null; // validate input before touching cache or source
+    return (await this.index()).get(code) ?? null;
+  }
+
+  /** Call after the airport list changes (Write-Around: update the source, then delete the cache entry). */
+  invalidate(): void {
+    this.generation++;
+    this.cache.delete(LIST_KEY);
+    this.inFlight = null; // callers arriving after the change must not join a load that read the old data
+  }
+
+  private async index(): Promise&lt;Map&lt;string, Airport&gt;&gt; {
+    const cached = this.cache.get(LIST_KEY);
+    if (cached) {
+      this.stats.hits++;
+      return cached;
+    }
+    this.stats.misses++;
+    // Singleflight: concurrent misses share one load instead of all hitting the source (Cache Breakdown).
+    if (!this.inFlight) {
+      const pending: Promise&lt;Map&lt;string, Airport&gt;&gt; = this.loadIndex().finally(() =&gt; {
+        if (this.inFlight === pending) this.inFlight = null; // never clear a newer load started after invalidate()
+      });
+      this.inFlight = pending;
+    }
+    return this.inFlight;
+  }
+
+  private async loadIndex(): Promise&lt;Map&lt;string, Airport&gt;&gt; {
+    this.stats.loads++;
+    const startedAt = this.generation;
+    const rows = await this.loadAirports();
+    const index = new Map(rows.map((airport) =&gt; [airport.code, airport] as const));
+    if (startedAt === this.generation) {
+      const jitter = Math.floor(Math.random() * this.ttlMs * 0.1); // spread expiries (Cache Avalanche)
+      this.cache.set(LIST_KEY, index, this.ttlMs + jitter);
+    }
+    return index;
+  }
+}</code></pre></div>
+    <div class="code terminal"><span class="label">npm run homework</span><pre><code>PASS  Lần đầu MISS (103.4ms), lần sau HIT (0.046ms)
+PASS  Mã không tồn tại trả null và không gọi lại nguồn
+PASS  Input rác bị chặn bởi validate, trước cả khi chạm cache
+PASS  Hết TTL thì MISS và nạp lại
+PASS  50 request đồng thời khi vừa hết hạn chỉ nạp nguồn 1 lần
+PASS  invalidate() xóa entry, lần đọc sau nạp lại
+PASS  invalidate() giữa lúc đang nạp: kết quả cũ không bị ghi vào cache
+stats: { hits: 2, misses: 55, loads: 6 }</code></pre></div>
+    <p>Để ý dòng stats: 55 lần miss nhưng chỉ 6 lần nạp. 50 request đồng thời đều miss, nhưng cùng chờ một lần nạp duy nhất.</p>
+  </div></details>
+
+  <h3 id="s6-4">6.4. Áp vào dự án NestJS của bạn</h3>
+  <ul>
+    <li><strong>Xóa cache sau khi transaction commit</strong>, không phải bên trong transaction. Xóa trong transaction rồi mới commit chính là kịch bản D (xóa trước, ghi DB sau) trá hình: request khác đọc DB trước commit và nạp lại giá trị cũ.</li>
+    <li><code>CacheInterceptor</code> của <code>@nestjs/cache-manager</code> cache response GET theo URL: đó là Read-Aside ở tầng HTTP. Cẩn thận: key mặc định chỉ là URL, nên với route cần đăng nhập, response của user A có thể bị trả cho user B; dùng <code>trackBy</code> riêng hoặc không gắn interceptor cho route theo user. Việc xóa key khi dữ liệu đổi vẫn là của bạn. Kiểm tra đơn vị TTL theo phiên bản <code>cache-manager</code> đang dùng (bản 4 tính giây, bản 5 trở đi tính mili giây).</li>
+    <li>Đặt tên key có cấu trúc <code>miền:thực-thể:id</code> (<code>store:list:v1</code>, <code>contract:123</code>) để dễ xóa theo nhóm và dễ quét bằng <code>SCAN</code>.</li>
+    <li>Dữ liệu danh mục ít đổi (cửa hàng, thương hiệu, bảng giá chuẩn): Read-Aside, TTL dài vừa phải + jitter, xóa key sau khi lưu. Báo cáo nặng nhiều người cùng mở: thêm khóa chống stampede.</li>
+  </ul>
+</section>
+
+<!-- =============================== KIỂM TRA CUỐI =============================== -->
+<section id="phong-van" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">✓</span>
+    <h2>Kiểm tra cuối bài</h2>
+    <div class="stage-meta"><span>10 câu kiểu phỏng vấn</span><span>30 phút</span></div>
+  </div>
+  <p>Trả lời thành tiếng hoặc viết ra trong 2 phút mỗi câu, rồi mới mở đáp án. Đạt khi nói được ý chính của ít nhất 8/10 câu mà không nhìn lại bài.</p>
+  <div id="examList"></div>
+</section>
+
+<!-- =============================== CHEAT SHEET =============================== -->
+<section id="cheat-sheet" class="stage wide">
+  <div class="col">
+    <div class="stage-head">
+      <span class="stage-no">≡</span>
+      <h2>Bảng tóm tắt 1 trang</h2>
+      <div class="stage-meta"><span>Ôn trong 5 phút</span></div>
+    </div>
+  </div>
+  <div class="grid-2" style="margin-top:16px">
+    <div class="panel"><h4>Đọc</h4><p><strong>Read-Aside</strong>: GET cache → miss → đọc DB → SET cache với TTL + jitter. Cache sập vẫn đọc được DB.</p></div>
+    <div class="panel"><h4>Ghi</h4><p><strong>Ghi DB trước → commit → DEL key</strong>. Không SET cache khi ghi. Không xóa trước khi ghi DB.</p></div>
+    <div class="panel"><h4>Vì sao vẫn cần TTL</h4><p>Xóa sau vẫn sai khi key đang vắng và request đọc lấy dữ liệu trước commit nhưng SET sau DEL, khi đọc từ replica bị trễ, hoặc khi DEL thất bại. TTL đặt trần cho thời gian sai.</p></div>
+    <div class="panel"><h4>No Atomicity</h4><p>DB ✓ cache ✗ → retry qua queue (DEL idempotent), đọc binlog/WAL, TTL làm lưới.</p></div>
+    <div class="panel"><h4>Avalanche</h4><p>Cache sập → cluster HA, rate limit / circuit breaker, persistence + warm-up. Hết hạn đồng loạt → TTL + jitter.</p></div>
+    <div class="panel"><h4>Breakdown</h4><p>Một key nóng hết hạn → mutex / singleflight, không cho hết hạn + job làm mới nền.</p></div>
+    <div class="panel"><h4>Penetration</h4><p>Key không tồn tại → cache giá trị rỗng TTL ngắn (chỉ chặn id lặp), validate input, Bloom filter.</p></div>
+    <div class="panel"><h4>Hot key / Large key</h4><p>Hot: nhân bản key ra nhiều node, local cache TTL ngắn. Large: nén, chia nhỏ, TTL dài hơn, đưa blob sang S3, xóa bằng <code>UNLINK</code>.</p></div>
+    <div class="panel"><h4>Thu hồi bộ nhớ</h4><p>LRU theo độ mới, LFU theo độ phổ biến. Cache thuần: đặt <code>maxmemory</code> + <code>allkeys-lru</code>/<code>allkeys-lfu</code>; mặc định <code>noeviction</code>.</p></div>
+    <div class="panel"><h4>Lệnh Redis hay dùng</h4><p><code>SET k v EX 60</code> · <code>SET lock t NX PX 10000</code> · <code>DEL</code> / <code>UNLINK</code> · <code>TTL</code> · <code>SCAN</code> · <code>MEMORY USAGE</code> · <code>--bigkeys</code> · <code>--hotkeys</code> (cần policy LFU)</p></div>
+    <div class="panel"><h4>Chỉ số phải đo</h4><p>Hit rate, p99 độ trễ, số query xuống DB, số key bị thu hồi (evicted_keys), bộ nhớ đã dùng.</p></div>
+    <div class="panel"><h4>Câu chốt phỏng vấn</h4><p>"Read-Aside + ghi DB rồi xóa cache, TTL ngắn có jitter làm lưới an toàn, khóa cho key nóng, Bloom/validate cho key rác."</p></div>
+  </div>
+</section>
+
+<!-- =============================== BẢN ĐỒ SLIDE =============================== -->
+<section id="ban-do-slide" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">44</span>
+    <h2>Bản đồ 44 slide</h2>
+    <div class="stage-meta"><span>Mỗi slide nằm ở đâu trong sổ tay</span></div>
+  </div>
+  <p>Bấm một slide để nhảy tới phần giải thích của nó. Không slide nào bị bỏ qua.</p>
+  <div class="chips" id="slideMap"></div>
+
+  <h3 id="tham-khao">Tài liệu tham khảo <span class="slide-ref">slide 42</span></h3>
+  <ul>
+    <li>Redis · Cache Invalidation: <a href="https://redis.com/glossary/cache-invalidation/" target="_blank" rel="noopener">redis.com/glossary/cache-invalidation</a> (trong slide)</li>
+    <li>Lu Pan · Cache invalidation really is one of the hardest problems in computer science: <a href="https://blog.the-pans.com/cache-invalidation/" target="_blank" rel="noopener">blog.the-pans.com/cache-invalidation</a> (trong slide)</li>
+    <li>Nishtala và cộng sự · Scaling Memcache at Facebook, NSDI 2013 (lease, thundering herd): <a href="https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala" target="_blank" rel="noopener">usenix.org</a></li>
+    <li>Redis docs · Key eviction: <a href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">redis.io/docs/latest/develop/reference/eviction</a></li>
+  </ul>
+
+  <h3 id="tiep-theo">Tiếp theo: Bài 3 Index <span class="slide-ref">ngoài slide</span></h3>
+  <p>Lab 6 để lại một manh mối: truy vấn top 10 mất 149 ms vì Postgres phải <em>Parallel Seq Scan</em> toàn bảng <code>ratings</code> (không có index trên <code>num_votes</code>), rồi tra khóa chính của <code>titles</code> khoảng 3.000 lần trong vòng nested loop. Cache che được sự chậm đó cho người đọc thứ hai trở đi, nhưng người đọc đầu tiên và mỗi lần hết hạn vẫn chịu đủ. Bài 3 sẽ thêm index và đo lại bằng <code>EXPLAIN (ANALYZE, BUFFERS)</code>: cache và index giải hai bài toán khác nhau, đừng dùng cái này để thay cái kia.</p>
+  <p class="muted" style="font-size:.85rem">Nguồn: <code>Tài Liệu/2. Caching Design.pdf</code> (44 slide) và bản <code>.md</code> đi kèm; số liệu đo trên máy bạn ngày 16/10/2026 bằng các lab trong <code>labs/lesson-02-caching</code>.</p>
+</section>
+
+</main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const fmt = (n, d = 0) => Number(n).toLocaleString('vi-VN', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked: progress just is not remembered */ } },
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  /* ---------- Progress rail ---------- */
+  const boxes = $$('#stageNav input[type="checkbox"]');
+  const paintProgress = () => {
+    const done = boxes.filter((b) => b.checked).length;
+    $('#progressBar').style.width = `${(done / boxes.length) * 100}%`;
+    $('#progressText').textContent = `${done}/${boxes.length} chặng`;
+  };
+  boxes.forEach((b) => {
+    b.checked = store.get(`l2-done-${b.dataset.stage}`) === '1';
+    b.addEventListener('change', () => { store.set(`l2-done-${b.dataset.stage}`, b.checked ? '1' : '0'); paintProgress(); });
+  });
+  paintProgress();
+  if (window.matchMedia('(max-width: 980px)').matches) $('#railFold').open = false;
+  const navLinks = $$('#stageNav a');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        navLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === `#${e.target.id}`));
+      });
+    }, { rootMargin: '-35% 0px -60% 0px' });
+    $$('section.stage[id^="chang-"]').forEach((s) => io.observe(s));
+  }
+
+  const warm = $('#warmup');
+  warm.value = store.get('l2-warmup') ?? '';
+  warm.addEventListener('input', () => store.set('l2-warmup', warm.value));
+
+  /* ---------- Copy buttons ---------- */
+  $$('.code pre').forEach((pre) => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Sao chép';
+    btn.addEventListener('click', () => {
+      const text = pre.innerText;
+      const done = () => { btn.textContent = 'Đã chép'; setTimeout(() => { btn.textContent = 'Sao chép'; }, 1400); };
+      const fallback = () => { const range = document.createRange(); range.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); btn.textContent = 'Đã chọn, nhấn Ctrl+C'; };
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+    });
+    pre.parentElement.appendChild(btn);
+  });
+
+  /* ---------- Hit rate calculator ---------- */
+  const bindOut = (id, f) => { const el = $(`#${id}`); const out = $(`#${id}-out`); const paint = () => { out.textContent = f(+el.value); }; el.addEventListener('input', paint); paint(); return el; };
+  const hr = ['hr-rate', 'hr-qps', 'hr-db', 'hr-cache'];
+  bindOut('hr-rate', (v) => `${fmt(v, 1)}%`);
+  bindOut('hr-qps', (v) => fmt(v));
+  bindOut('hr-db', (v) => `${fmt(v)} ms`);
+  bindOut('hr-cache', (v) => `${fmt(v, 1)} ms`);
+  const paintHit = () => {
+    const h = +$('#hr-rate').value / 100, qps = +$('#hr-qps').value, tdb = +$('#hr-db').value, tc = +$('#hr-cache').value;
+    $('#hr-dbqps').textContent = fmt((1 - h) * qps);
+    $('#hr-avg').innerHTML = `${fmt(tc + (1 - h) * tdb, 1)} <small>ms</small>`;
+    const x = 1 / Math.max(1 - h, 0.001);
+    $('#hr-saving').textContent = h === 0 ? 'như không cache' : `DB nhận ít hơn ${fmt(x, x < 10 ? 1 : 0)}×`;
+  };
+  hr.forEach((id) => $(`#${id}`).addEventListener('input', paintHit));
+  paintHit();
+
+  /* ---------- Race player ---------- */
+  const IMG = '../T%C3%A0i%20Li%E1%BB%87u/assets/2_Caching_Design/';
+  const SCEN = [
+    { id: 'A', name: 'A · Update cache trước', slide: 20, img: 'page_20_img_01.png', init: { cache: '0', db: '0' },
+      intro: 'Hai request cùng đổi age. Mỗi request SET cache trước rồi mới ghi DB. R1 ghi DB chậm vì phải chờ lock.',
+      steps: [
+        { who: 'r1', to: 'cache', label: 'SET age=1', cache: '1', say: 'R1 ghi giá trị của nó vào cache trước.' },
+        { who: 'r2', to: 'cache', label: 'SET age=2', cache: '2', say: 'R2 tới sau, ghi đè cache = 2. Tới đây vẫn hợp lý vì R2 là request mới hơn.' },
+        { who: 'r2', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R2 ghi DB nhanh và commit age = 2.' },
+        { who: 'r1', to: 'db', label: 'UPDATE age=1', db: '1', say: 'R1 chờ lock xong mới commit, ghi đè DB = 1. Thứ tự trong DB (R2 rồi R1) ngược với thứ tự trong cache (R1 rồi R2).' },
+      ],
+      verdict: { ok: false, text: 'Cache = 2, DB = 1. Slide 20: DB sai, giá trị cuối cùng trong DB không phải của request mới nhất.' } },
+    { id: 'B', name: 'B · Update cache sau', slide: 21, img: 'page_21_img_01.png', init: { cache: '0', db: '0' },
+      intro: 'Đảo thứ tự: ghi DB trước rồi mới SET cache. R1 bị khựng (GC pause) ngay trước khi SET cache.',
+      steps: [
+        { who: 'r1', to: 'db', label: 'UPDATE age=1', db: '1', say: 'R1 commit DB = 1.' },
+        { who: 'r2', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R2 commit DB = 2. DB đúng thứ tự: R2 là request mới nhất.' },
+        { who: 'r2', to: 'cache', label: 'SET age=2', cache: '2', say: 'R2 SET cache = 2. Cache và DB đang khớp.' },
+        { who: 'r1', to: 'cache', label: 'SET age=1', cache: '1', say: 'R1 tỉnh lại sau cú khựng và SET cache = 1, ghi đè giá trị mới bằng giá trị cũ.' },
+      ],
+      verdict: { ok: false, text: 'DB = 2, Cache = 1. Slide 21: cache sai, và sai cho tới khi key hết TTL.' } },
+    { id: 'C', name: 'C · Xóa cache', slide: 23, img: 'page_23_img_01.png', init: { cache: '0', db: '0' },
+      intro: 'Cùng thứ tự xấu như B, nhưng sau khi ghi DB mỗi request XÓA key thay vì SET.',
+      steps: [
+        { who: 'r1', to: 'db', label: 'UPDATE age=1', db: '1', say: 'R1 commit DB = 1.' },
+        { who: 'r2', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R2 commit DB = 2.' },
+        { who: 'r2', to: 'cache', label: 'DEL age', cache: null, say: 'R2 xóa key.' },
+        { who: 'r1', to: 'cache', label: 'DEL age', cache: null, say: 'R1 tỉnh lại và xóa lần nữa. Xóa thứ đã trống vẫn là trống, nên thứ tự không còn quan trọng.' },
+        { who: 'r2', to: 'db', label: 'đọc sau: SELECT → 2', say: 'Một lần đọc kế tiếp: cache trống nên miss, đọc DB thấy 2.' },
+        { who: 'r2', to: 'cache', label: 'SET age=2', cache: '2', say: 'Nạp lại cache = 2 từ DB.' },
+      ],
+      verdict: { ok: true, text: 'DB = 2, cache trống rồi được nạp lại đúng 2. Slide 23: DB đúng, không còn dữ liệu sai trong cache.' } },
+    { id: 'D', name: 'D · RA+DWA: xóa trước', slide: 25, img: 'page_25_img_01.png', init: { cache: '1', db: '1' },
+      intro: 'Thêm request đọc. R1 (ghi) xóa cache rồi mới ghi DB = 2, việc ghi mất khá lâu. R2 (đọc) dùng Read-Aside.',
+      steps: [
+        { who: 'r1', to: 'cache', label: 'DEL age', cache: null, say: 'R1 xóa key trước.' },
+        { who: 'r2', to: 'cache', label: 'GET → MISS', say: 'R2 đọc cache: trống, miss.' },
+        { who: 'r2', to: 'db', label: 'SELECT → 1', say: 'R2 đọc DB. R1 chưa commit nên R2 thấy giá trị cũ 1.' },
+        { who: 'r2', to: 'cache', label: 'SET age=1', cache: '1', say: 'R2 làm đúng Read-Aside: nạp giá trị vừa đọc vào cache. Nhưng đó là giá trị cũ.' },
+        { who: 'r1', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R1 lúc này mới commit DB = 2. Không còn ai xóa cache nữa.' },
+      ],
+      verdict: { ok: false, text: 'DB = 2, Cache = 1. Slide 25: DB đúng, cache sai. Cửa sổ nguy hiểm dài bằng toàn bộ thời gian R1 ghi DB.' } },
+    { id: 'E', name: 'E · RA+DWA: xóa sau, ca xấu', slide: 26, img: 'page_26_img_01.png', init: { cache: null, db: '1' },
+      intro: 'Phía ghi đổi sang ghi DB trước, xóa sau. Nhưng key vừa hết TTL nên cache đang trống, và R2 bị khựng sau khi đọc DB.',
+      steps: [
+        { who: 'r2', to: 'cache', label: 'GET → MISS', say: 'R2 đọc cache: trống vì key vừa hết hạn.' },
+        { who: 'r2', to: 'db', label: 'SELECT → 1', say: 'R2 đọc DB thấy 1, rồi bị khựng (GC pause).' },
+        { who: 'r1', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R1 commit DB = 2.' },
+        { who: 'r1', to: 'cache', label: 'DEL age', cache: null, say: 'R1 xóa key. Cache đang trống nên lệnh xóa không có tác dụng gì.' },
+        { who: 'r2', to: 'cache', label: 'SET age=1', cache: '1', say: 'R2 tỉnh lại và SET cache bằng giá trị cũ nó đã đọc.' },
+      ],
+      verdict: { ok: false, text: 'DB = 2, Cache = 1 (slide 26). Cần đủ 3 điều kiện: key đang vắng, R2 đọc DB trước commit, R2 SET sau khi R1 xóa. Hiếm hơn ca D nhiều.' } },
+    { id: 'F', name: 'F · RA+DWA: xóa sau, ca thường', slide: 28, img: 'page_28_img_01.png', init: { cache: '1', db: '1' },
+      intro: 'Thứ tự slide 28 khuyên dùng, trong trường hợp thường gặp nhất: key đang có trong cache.',
+      steps: [
+        { who: 'r1', to: 'db', label: 'UPDATE age=2', db: '2', say: 'R1 commit DB = 2. Trong vài mili giây này ai đọc cũng thấy cache = 1: cũ nhưng chỉ thoáng qua.' },
+        { who: 'r1', to: 'cache', label: 'DEL age', cache: null, say: 'R1 xóa key.' },
+        { who: 'r2', to: 'cache', label: 'GET → MISS', say: 'R2 đọc cache: miss vì key vừa bị xóa.' },
+        { who: 'r2', to: 'db', label: 'SELECT → 2', say: 'R2 đọc DB: commit đã xong nên thấy 2.' },
+        { who: 'r2', to: 'cache', label: 'SET age=2', cache: '2', say: 'R2 nạp cache = 2.' },
+      ],
+      verdict: { ok: true, text: 'DB = 2, Cache = 2. Key có sẵn thì request đọc chỉ miss sau lệnh xóa, mà xóa đến sau commit, nên không thể nạp giá trị cũ.' } },
+  ];
+  const LANES = { r1: { x: 80, name: 'Request 1', fill: 'var(--r1-fill)', line: 'var(--r1-line)' }, r2: { x: 230, name: 'Request 2', fill: 'var(--r2-fill)', line: 'var(--r2-line)' }, cache: { x: 400, name: 'Cache', fill: 'var(--cache-fill)', line: 'var(--cache-line)' }, db: { x: 560, name: 'DB', fill: 'var(--db-fill)', line: 'var(--db-line)' } };
+  const ROW0 = 92, ROWH = 46;
+  let scen = SCEN[0], cur = 0;
+  const tabs = $('#raceTabs');
+  SCEN.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = s.name; b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+    b.addEventListener('click', () => { scen = s; cur = 0; $$('button', tabs).forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderRace(); });
+    tabs.appendChild(b);
+  });
+  const stateAt = (n) => {
+    const st = { ...scen.init };
+    scen.steps.slice(0, n).forEach((s) => { if ('cache' in s) st.cache = s.cache; if ('db' in s) st.db = s.db; });
+    return st;
+  };
+  let lastState = null;
+  function renderRace() {
+    const svg = $('#raceSvg');
+    const h = ROW0 + scen.steps.length * ROWH + 10;
+    svg.setAttribute('viewBox', `0 0 640 ${h}`);
+    let g = '<defs>';
+    ['r1', 'r2'].forEach((k) => { g += `<marker id="ah-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:${LANES[k].line}"/></marker>`; });
+    g += '</defs>';
+    Object.values(LANES).forEach((l) => {
+      g += `<line x1="${l.x}" y1="50" x2="${l.x}" y2="${h - 6}" style="stroke:var(--line)" stroke-width="2" stroke-dasharray="3 5"/>`;
+      g += `<rect x="${l.x - 58}" y="8" width="116" height="38" rx="8" style="fill:${l.fill};stroke:${l.line}" stroke-width="1.5"/>`;
+      g += `<text x="${l.x}" y="32" text-anchor="middle">${l.name}</text>`;
+    });
+    scen.steps.forEach((s, i) => {
+      const y = ROW0 + i * ROWH;
+      const a = LANES[s.who], b = LANES[s.to];
+      if (i >= cur) {
+        g += `<line class="ghost" x1="${a.x}" y1="${y}" x2="${b.x}" y2="${y}" stroke-width="1.5"/>`;
+        g += `<text x="${(a.x + b.x) / 2}" y="${y - 7}" text-anchor="middle" style="fill:var(--muted)">?</text>`;
+        return;
+      }
+      const isLast = i === cur - 1;
+      g += `<line x1="${a.x}" y1="${y}" x2="${b.x - 4}" y2="${y}" style="stroke:${a.line}" stroke-width="${isLast ? 3.5 : 2.5}" marker-end="url(#ah-${s.who})" opacity="${isLast ? 1 : 0.7}"/>`;
+      const w = Math.max(74, s.label.length * 7.4 + 18), mx = (a.x + b.x) / 2;
+      g += `<rect x="${mx - w / 2}" y="${y - 25}" width="${w}" height="20" rx="5" style="fill:${a.fill};stroke:${a.line}" stroke-width="${isLast ? 1.5 : 1}"/>`;
+      g += `<text x="${mx}" y="${y - 11}" text-anchor="middle">${esc(s.label)}</text>`;
+      g += `<text x="16" y="${y + 4}" style="fill:var(--muted);font:600 11px var(--font-mono)">${i + 1}</text>`;
+    });
+    svg.innerHTML = g;
+    const st = stateAt(cur);
+    const show = (v) => (v === null || v === undefined ? 'trống' : `age = ${v}`);
+    $('#stCache').textContent = show(st.cache);
+    $('#stDb').textContent = show(st.db);
+    if (lastState && lastState.scen === scen.id) {
+      if (lastState.cache !== st.cache) flash('.state-box.cache');
+      if (lastState.db !== st.db) flash('.state-box.db');
+    }
+    lastState = { scen: scen.id, ...st };
+    $('#raceIntro').innerHTML = `<strong>Slide ${scen.slide}.</strong> ${esc(scen.intro)}`;
+    $('#raceNarr').textContent = cur === 0 ? 'Đoán trước: kết thúc kịch bản này cache và DB có khớp nhau không? Rồi bấm "Bước tiếp".' : `Bước ${cur}: ${scen.steps[cur - 1].say}`;
+    const v = $('#raceVerdict');
+    v.hidden = cur < scen.steps.length;
+    v.className = `verdict ${scen.verdict.ok ? 'ok' : 'bad'}`;
+    v.textContent = `${scen.verdict.ok ? '✔ Nhất quán' : '✘ Lệch dữ liệu'}. ${scen.verdict.text}`;
+    $('#raceStepNo').textContent = `${cur}/${scen.steps.length}`;
+    $('#raceBack').disabled = cur === 0;
+    $('#raceNext').disabled = cur === scen.steps.length;
+    const img = $('#raceImg');
+    img.hidden = false;
+    img.src = IMG + scen.img;
+    img.alt = `Slide ${scen.slide} trong tài liệu gốc`;
+  }
+  const flash = (sel) => { const el = $(sel); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 600); };
+  $('#raceImg').addEventListener('error', (e) => { e.target.hidden = true; });
+  $('#raceNext').addEventListener('click', () => { if (cur < scen.steps.length) { cur++; renderRace(); } });
+  $('#raceBack').addEventListener('click', () => { if (cur > 0) { cur--; renderRace(); } });
+  $('#raceAll').addEventListener('click', () => { cur = scen.steps.length; renderRace(); });
+  $('#raceReset').addEventListener('click', () => { cur = 0; renderRace(); });
+  renderRace();
+
+  /* ---------- Monte Carlo: delete first vs delete later ---------- */
+  bindOut('mc-w', (v) => `${fmt(v)} ms`);
+  bindOut('mc-r', (v) => `${fmt(v, 1)} ms`);
+  bindOut('mc-pc', (v) => `${fmt(v, 1)}%`);
+  bindOut('mc-ps', (v) => `${fmt(v)} ms`);
+  bindOut('mc-s', (v) => `±${fmt(v)} ms`);
+  // Writer starts at t=0. Reader starts at t=off. Cache ops take ~0 ms; the DB read snapshot is taken when it starts.
+  function staleOnce(strategy, present, w, r, stall, off) {
+    const del = strategy === 'first' ? 0 : w;
+    const commit = w;
+    if (present && off < del) return false;          // reader hits the old value before the delete; the delete then clears it
+    const snapshotOld = off < commit;                   // reader's DB read started before the writer committed
+    const setAt = off + r + stall;
+    return snapshotOld && setAt > del;                  // old value written after the delete stays until TTL
+  }
+  function estimate(strategy, present, w, r, pc, ps, S) {
+    const len = (a, b) => Math.max(0, Math.min(b, S) - Math.max(a, -S)) / (2 * S);
+    if (strategy === 'first') return present ? len(0, w) : (1 - pc) * len(-r, w) + pc * len(-r - ps, w);
+    return present ? 0 : (1 - pc) * len(w - r, w) + pc * len(w - r - ps, w);
+  }
+  function runMc() {
+    const w = +$('#mc-w').value, r = +$('#mc-r').value, pc = +$('#mc-pc').value / 100, ps = +$('#mc-ps').value, S = +$('#mc-s').value;
+    const N = 20000;
+    const rows = [];
+    for (const present of [false, true]) {
+      for (const strategy of ['first', 'later']) {
+        let stale = 0;
+        for (let i = 0; i < N; i++) {
+          const off = (Math.random() * 2 - 1) * S;
+          const stall = Math.random() < pc ? ps : 0;
+          if (staleOnce(strategy, present, w, r, stall, off)) stale++;
+        }
+        rows.push({ present, strategy, p: stale / N, est: estimate(strategy, present, w, r, pc, ps, S) });
+      }
+    }
+    const max = Math.max(0.01, ...rows.map((x) => x.p));
+    $('#mcBars').innerHTML = rows.map((x) => `
+      <div class="hbar">
+        <span class="name">${x.present ? 'Key có sẵn' : 'Key đang vắng'} · ${x.strategy === 'first' ? '<strong>xóa trước</strong>' : '<strong>ghi DB trước, xóa sau</strong>'}</span>
+        <span class="track"><span class="fill ${x.strategy === 'first' ? 'bad' : 'ok'}" style="width:${(x.p / max) * 100}%"></span></span>
+        <span class="val">${fmt(x.p * 100, 1)}%<br><small class="muted">≈${fmt(x.est * 100, 1)}%</small></span>
+      </div>`).join('');
+  }
+  ['mc-w', 'mc-r', 'mc-pc', 'mc-ps', 'mc-s'].forEach((id) => $(`#${id}`).addEventListener('change', runMc));
+  $('#mcRun').addEventListener('click', runMc);
+  runMc();
+
+  /* ---------- Avalanche histogram ---------- */
+  bindOut('av-j', (v) => `${fmt(v)}%`);
+  function paintAval() {
+    const j = +$('#av-j').value / 100, N = 100000, BASE = 3600, LO = 2520, HI = 4680, BUCKET = 60;
+    const perMin = new Array((HI - LO) / BUCKET).fill(0);
+    const perSec = new Map();
+    for (let i = 0; i < N; i++) {
+      const t = Math.floor(BASE * (1 + (Math.random() * 2 - 1) * j));
+      perSec.set(t, (perSec.get(t) ?? 0) + 1);
+      const b = Math.min(perMin.length - 1, Math.max(0, Math.floor((t - LO) / BUCKET)));
+      perMin[b]++;
+    }
+    const peak = Math.max(...perSec.values());
+    $('#avPeak').textContent = fmt(peak);
+    $('#avPeakBox').className = `stat ${peak > 2000 ? 'bad' : 'good'}`;
+    const spread = Math.round(2 * j * BASE);
+    $('#avSpread').innerHTML = spread < 2 ? '1 <small>giây</small>' : `${fmt(spread / 60, spread < 600 ? 1 : 0)} <small>phút</small>`;
+    const W = 640, H = 220, L = 74, R = 24, T = 14, B = 34, pw = W - L - R, ph = H - T - B;
+    const maxB = Math.max(...perMin);
+    const bw = pw / perMin.length;
+    let g = `<line x1="${L}" y1="${T + ph}" x2="${W - R}" y2="${T + ph}" style="stroke:var(--line)"/>`;
+    g += `<text x="${L - 8}" y="${T + 10}" text-anchor="end">${fmt(maxB)}</text><text x="${L - 8}" y="${T + 24}" text-anchor="end">key/phút</text><text x="${L - 8}" y="${T + ph}" text-anchor="end">0</text>`;
+    perMin.forEach((c, i) => {
+      const bh = maxB ? (c / maxB) * ph : 0;
+      if (c > 0) g += `<rect x="${L + i * bw + 1}" y="${T + ph - bh}" width="${bw - 2}" height="${bh}" rx="2" style="fill:${peak > 2000 ? 'var(--bad)' : 'var(--accent)'}"/>`;
+    });
+    for (let t = LO; t <= HI; t += 360) {
+      const x = L + ((t - LO) / (HI - LO)) * pw;
+      const hh = 8 + Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60);
+      g += `<line x1="${x}" y1="${T + ph}" x2="${x}" y2="${T + ph + 4}" style="stroke:var(--muted)"/><text x="${x}" y="${H - 12}" text-anchor="middle" class="${t === 3600 ? 'lbl' : ''}">${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</text>`;
+    }
+    $('#avSvg').innerHTML = g;
+  }
+  $('#av-j').addEventListener('input', paintAval);
+  paintAval();
+
+  /* ---------- Stampede ---------- */
+  bindOut('sp-n', (v) => fmt(v));
+  bindOut('sp-q', (v) => `${fmt(v)} ms`);
+  bindOut('sp-p', (v) => fmt(v));
+  let lockMode = false;
+  function paintStampede() {
+    const N = +$('#sp-n').value, q = +$('#sp-q').value, P = +$('#sp-p').value;
+    const waves = Math.ceil(N / P);
+    const at = (idx) => (Math.floor(idx / P) + 1) * q;
+    const queries = lockMode ? 1 : N;
+    const p50 = lockMode ? q : at(Math.floor(0.5 * N));
+    const p99 = lockMode ? q : at(Math.min(N - 1, Math.floor(0.99 * N)));
+    $('#spQ').textContent = fmt(queries);
+    $('#spP50').innerHTML = `${fmt(p50)} <small>ms</small>`;
+    $('#spP99').innerHTML = `${fmt(p99)} <small>ms</small>`;
+    $('#spQBox').className = `stat ${lockMode ? 'good' : 'bad'}`;
+    $('#spP99Box').className = `stat ${p99 > 1000 ? 'bad' : 'good'}`;
+    const W = 640, H = 150, L = 40, R = 10, T = 8, B = 26, pw = W - L - R, ph = H - T - B;
+    const total = waves * q, lanes = Math.min(P, 20), lh = ph / lanes;
+    let g = `<text x="${L - 6}" y="${T + 10}" text-anchor="end">pool</text>`;
+    const cells = lockMode ? 1 : N;
+    const stride = Math.max(1, Math.ceil(waves / 120));
+    for (let i = 0; i < cells; i++) {
+      const lane = i % P, wave = Math.floor(i / P);
+      if (lane >= lanes || wave % stride) continue;
+      const x = L + (wave * q / total) * pw, w = Math.max(1, (q * stride / total) * pw - 1);
+      g += `<rect x="${x}" y="${T + lane * lh + 1}" width="${w}" height="${Math.max(1, lh - 2)}" rx="1.5" style="fill:${lockMode ? 'var(--ok)' : 'var(--bad)'}" opacity="${lockMode ? 1 : 0.85}"/>`;
+    }
+    g += `<line x1="${L}" y1="${T + ph}" x2="${W - R}" y2="${T + ph}" style="stroke:var(--line)"/>`;
+    g += `<text x="${L}" y="${H - 8}">0 ms</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${fmt(total)} ms</text>`;
+    if (P > lanes) g += `<text x="${W - R}" y="${T + 10}" text-anchor="end">hiển thị 20/${P} kết nối</text>`;
+    $('#spSvg').innerHTML = g;
+  }
+  ['sp-n', 'sp-q', 'sp-p'].forEach((id) => $(`#${id}`).addEventListener('input', paintStampede));
+  $('#spNone').addEventListener('click', () => { lockMode = false; $('#spNone').setAttribute('aria-pressed', 'true'); $('#spLock').setAttribute('aria-pressed', 'false'); paintStampede(); });
+  $('#spLock').addEventListener('click', () => { lockMode = true; $('#spLock').setAttribute('aria-pressed', 'true'); $('#spNone').setAttribute('aria-pressed', 'false'); paintStampede(); });
+  paintStampede();
+
+  /* ---------- Bloom filter ---------- */
+  const M = 32, K = 3, SEED_ITEMS = ['SGN', 'HAN', 'DAD', 'CXR', 'PQC'];
+  const fnv = (str, seed) => { let h = (0x811c9dc5 ^ seed) >>> 0; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0; return h >>> 0; };
+  const positions = (item) => { const h1 = fnv(item, 0), h2 = (fnv(item, 0x5bd1e995) | 1) >>> 0; return Array.from({ length: K }, (_, i) => (h1 + i * h2) % M); };
+  let bits, added;
+  const resetBloom = () => { bits = new Array(M).fill(false); added = new Set(); SEED_ITEMS.forEach(addItem); paintBits([]); $('#bloomMsg').textContent = 'Filter đang chứa 5 mã sân bay. Nhập một mã rồi bấm "Kiểm tra".'; };
+  function addItem(item) { positions(item).forEach((p) => { bits[p] = true; }); added.add(item); }
+  function paintBits(probe) {
+    $('#bloomBits').innerHTML = bits.map((on, i) => `<span class="bit ${on ? 'on' : ''} ${probe.includes(i) ? 'probe' : ''}" title="bit ${i}">${i}</span>`).join('');
+  }
+  const norm = () => $('#bloomInput').value.trim().toUpperCase();
+  function check(item) {
+    if (!item) return;
+    const ps = positions(item);
+    paintBits(ps);
+    const allOn = ps.every((p) => bits[p]);
+    const where = `Vị trí băm của <code>${esc(item)}</code>: ${ps.join(', ')}.`;
+    let verdict;
+    if (!allOn) verdict = '<strong class="good">Chắc chắn KHÔNG có.</strong> Có ít nhất một bit đang tắt. Request bị chặn ngay, không chạm cache hay DB.';
+    else if (added.has(item)) verdict = '<strong>Có thể có</strong>, và thực tế đúng là có. Request đi tiếp vào cache / DB.';
+    else verdict = '<strong class="badx">Có thể có, nhưng thật ra chưa từng thêm: dương tính giả.</strong> Cả 3 bit đều đã bị các mã khác bật. Request lọt xuống cache / DB một lần, tốn chút tài nguyên nhưng không sai dữ liệu.';
+    $('#bloomMsg').innerHTML = `${where} ${verdict}`;
+  }
+  $('#bloomCheck').addEventListener('click', () => check(norm()));
+  $('#bloomAdd').addEventListener('click', () => { const it = norm(); if (!it) return; addItem(it); paintBits(positions(it)); $('#bloomMsg').innerHTML = `Đã thêm <code>${esc(it)}</code>: bật các bit ${positions(it).join(', ')}. Không có cách nào "tắt" lại mà không làm hỏng mã khác dùng chung bit.`; });
+  $('#bloomFp').addEventListener('click', () => {
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const start = Math.floor(Math.random() * 26 ** 3);
+    for (let n = 0; n < 26 ** 3; n++) {
+      const v = (start + n) % 26 ** 3;
+      const code = A[Math.floor(v / 676)] + A[Math.floor(v / 26) % 26] + A[v % 26];
+      if (!added.has(code) && positions(code).every((p) => bits[p])) { $('#bloomInput').value = code; check(code); return; }
+    }
+    $('#bloomMsg').textContent = 'Không tìm thấy dương tính giả nào với các bit hiện tại.';
+  });
+  $('#bloomReset').addEventListener('click', resetBloom);
+  $('#bloomInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') check(norm()); });
+  resetBloom();
+
+  /* ---------- LRU vs LFU ---------- */
+  function simulate(seq, cap, policy) {
+    const cache = new Map();
+    let hits = 0;
+    const rows = seq.map((k, t) => {
+      let evicted = '';
+      const hit = cache.has(k);
+      if (hit) { const e = cache.get(k); e.freq++; e.last = t; hits++; }
+      else {
+        if (cache.size >= cap) {
+          let victim = null;
+          for (const [key, e] of cache) {
+            if (!victim) { victim = [key, e]; continue; }
+            const v = victim[1];
+            const worse = policy === 'LRU' ? e.last < v.last : (e.freq < v.freq || (e.freq === v.freq && e.last < v.last));
+            if (worse) victim = [key, e];
+          }
+          cache.delete(victim[0]); evicted = victim[0];
+        }
+        cache.set(k, { freq: 1, last: t });
+      }
+      const content = [...cache.entries()].map(([key, e]) => (policy === 'LFU' ? `${key}·${e.freq}` : key)).join(' ');
+      return { k, hit, evicted, content };
+    });
+    return { rows, hits };
+  }
+  function paintEvict() {
+    const seq = $('#ev-seq').value.trim().toUpperCase().split(/\s+/).filter(Boolean).slice(0, 40);
+    const cap = +$('#ev-cap').value;
+    $('#evOut').innerHTML = ['LRU', 'LFU'].map((policy) => {
+      const { rows, hits } = simulate(seq, cap, policy);
+      return `<div class="panel" style="padding:0;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--surface-2)"><strong>${policy}${policy === 'LFU' ? ' <small class="muted">(key·số lần dùng)</small>' : ''}</strong><span class="num"><strong>${hits}</strong>/${seq.length} hit</span></div>
+        <div class="scroll-x"><table><thead><tr><th class="n">#</th><th>Đọc</th><th>Kết quả</th><th>Trong cache</th><th>Bị bỏ</th></tr></thead><tbody>
+        ${rows.map((r, i) => `<tr><td class="n">${i + 1}</td><td><code>${esc(r.k)}</code></td><td class="${r.hit ? 'good' : 'badx'}">${r.hit ? 'hit' : 'miss'}</td><td style="font-family:var(--font-mono);font-size:.82rem">${esc(r.content)}</td><td>${r.evicted ? `<code>${esc(r.evicted)}</code>` : ''}</td></tr>`).join('')}
+        </tbody></table></div></div>`;
+    }).join('');
+  }
+  $('#ev-seq').addEventListener('input', paintEvict);
+  $('#ev-cap').addEventListener('change', paintEvict);
+  $$('[data-preset]').forEach((b) => b.addEventListener('click', () => { const [s, c] = b.dataset.preset.split('|'); $('#ev-seq').value = s; $('#ev-cap').value = c; paintEvict(); }));
+  paintEvict();
+
+  /* ---------- Quizzes ---------- */
+  const QUIZ = {
+    1: [
+      { q: 'Hệ thống nhận 2.000 lượt đọc/giây. Hit rate tăng từ 90% lên 99%. Tải đọc xuống DB thay đổi thế nào?', o: ['Giảm khoảng 9%', 'Giảm 10 lần: từ 200 xuống 20 query/giây', 'Không đổi, chỉ độ trễ giảm', 'Giảm một nửa'], a: 1, e: 'Tải DB = (1 − hit) × QPS: 10% × 2.000 = 200, còn 1% × 2.000 = 20. Vì vậy hit rate là chỉ số quan trọng nhất (slide 7).' },
+      { q: 'Câu nào mô tả đúng buffer theo slide 7?', o: ['Buffer giữ dữ liệu để phục vụ lại nhiều lần', 'Buffer là chỗ chứa tạm để dữ liệu được chuyển tiếp cho thành phần khác, giống một hàng đợi', 'Buffer chính là cache nằm trong RAM', 'Buffer luôn phải có TTL'], a: 1, e: 'Cache để đọc lại nhiều lần; buffer để dữ liệu đi qua rồi rời đi ("buffer is like a queue").' },
+      { q: 'Dữ liệu nào hợp để cache nhất?', o: ['Số dư ví ngay lúc trừ tiền', 'Danh sách sân bay và top 10 phim theo năm', 'Log sự kiện vừa ghi', 'Kết quả tìm kiếm mỗi người gõ một kiểu khác nhau'], a: 1, e: 'Đọc nhiều, đổi ít, nhiều người hỏi cùng một thứ (hotspot). Số dư ví cần đúng tuyệt đối; log hiếm khi đọc lại; tìm kiếm cá nhân hit rate thấp.' },
+      { q: 'Bạn chạy 4 instance NestJS, mỗi instance có local cache trong RAM. Rủi ro lớn nhất là gì?', o: ['Chậm hơn Redis', 'Mỗi instance giữ một bản riêng, xóa key ở một instance không xóa ở 3 instance còn lại', 'Không đặt được TTL', 'Không lưu được object JSON'], a: 1, e: 'Local cache nhanh nhất nhưng không chia sẻ. Đây là một ví dụ của "cache ở khắp nơi" (slide 14). Dùng TTL rất ngắn hoặc cơ chế phát lệnh xóa tới mọi instance.' },
+    ],
+    2: [
+      { q: 'Redis bỗng sập. Chiến lược đọc nào vẫn phục vụ được người dùng (chậm hơn) mà không cần sửa code?', o: ['Read-Through', 'Read-Aside, nếu code bắt lỗi cache, có timeout ngắn và app đọc thẳng DB', 'Write-Back', 'Không chiến lược nào'], a: 1, e: 'Slide 10: ưu điểm của Read-Aside là "tolerate cache failures", vì chính app biết đường đi tới DB.' },
+      { q: 'Rủi ro nghiêm trọng nhất của Write-Back là gì?', o: ['Đọc chậm', 'Mất dữ liệu đã báo thành công nếu cache chết trước khi kịp ghi xuống DB', 'Tốn nhiều kết nối DB', 'Không dùng được TTL'], a: 1, e: 'Write-Back trả lời ngay sau khi ghi cache. Dữ liệu chưa xuống DB mà cache chết là mất hẳn.' },
+      { q: 'Đổi giá sản phẩm 34 làm sai 3 key: product:34, category:7:list, home:top-sellers. Đây là khó khăn nào ở slide 14?', o: ['Timing', 'Quan hệ dữ liệu (data relationships)', 'Cache != buffer', 'Large key'], a: 1, e: 'Một thay đổi ở DB ảnh hưởng nhiều key dẫn xuất. Giải bằng group-based invalidation (tag, namespace version).' },
+      { q: 'Vì sao Write-Around (theo slide) kém hiệu quả với dữ liệu bị ghi liên tục?', o: ['Vì phải ghi hai lần vào DB', 'Vì mỗi lần ghi lại xóa cache, lần đọc sau luôn miss, hit rate thấp', 'Vì Redis không xóa được key', 'Vì phải dùng transaction'], a: 1, e: 'Slide 11: "Inefficient for frequently updated data". Key vừa nạp lại đã bị xóa.' },
+    ],
+    3: [
+      { q: 'Vì sao DEL thắng SET khi hai request ghi chạy đồng thời (slide 23)?', o: ['DEL nhanh hơn SET', 'DEL không mang giá trị, nên thứ tự các lệnh DEL không quan trọng; giá trị mới được nạp lại từ DB', 'DEL tự động khóa key', 'Redis xử lý DEL trước SET'], a: 1, e: 'SET đến sau thắng dù mang giá trị cũ. Hai DEL theo thứ tự nào cũng cho cache trống, và DB là nơi đã sắp đúng thứ tự ghi.' },
+      { q: 'Với "xóa cache trước, ghi DB sau", cửa sổ nguy hiểm dài bằng gì?', o: ['Thời gian một lệnh DEL', 'Toàn bộ thời gian ghi DB (từ lúc xóa tới lúc commit)', 'Bằng TTL', 'Bằng 0'], a: 1, e: 'Bất kỳ request đọc nào rơi vào khoảng xóa → commit đều miss, đọc giá trị cũ và nạp lại (slide 25). Nếu key vốn đang vắng thì cửa sổ dài thêm đúng bằng thời gian đọc DB (xem bảng cửa sổ nguy hiểm).' },
+      { q: '"Ghi DB trước, xóa cache sau" chỉ để lại dữ liệu sai khi nào?', o: ['Mỗi khi có request đọc', 'Key đang vắng, request đọc lấy snapshot trước commit và SET cache sau khi xóa', 'Khi DB chậm', 'Không bao giờ'], a: 1, e: 'Đủ ba điều kiện như slide 26. Vì ghi cache nhanh hơn ghi DB rất nhiều, xác suất thấp (slide 28).' },
+      { q: 'TTL ngắn (slide 29) giúp được gì?', o: ['Ngăn hoàn toàn race condition', 'Giới hạn thời gian dữ liệu sai còn tồn tại trong cache', 'Tăng hit rate', 'Thay thế việc xóa cache'], a: 1, e: 'TTL không ngăn race, nhưng đặt trần: xấu nhất dữ liệu sai sống bằng TTL.' },
+      { q: 'Lab 2: key "đang có giá trị cũ" + "ghi DB trước, xóa sau" cho 0%. Vì sao?', o: ['Do may mắn', 'Request đọc chỉ miss sau khi key bị xóa, mà xóa đến sau commit, nên nó luôn đọc được giá trị mới', 'Do Lab 2 không có request đọc', 'Do TTL'], a: 1, e: 'Muốn nạp giá trị cũ phải miss trước commit. Key có sẵn thì trước lệnh xóa ai đọc cũng hit, không ai nạp gì cả.' },
+    ],
+    4: [
+      { q: '08:00 deploy nạp 100.000 key với TTL 3600 giây. Đúng 09:00, CPU của DB lên 100% khoảng một phút. Đây là gì?', o: ['Cache Breakdown', 'Cache Avalanche (hết hạn đồng loạt)', 'Cache Penetration', 'No Atomicity'], a: 1, e: 'Nhiều key cùng hết hạn một lúc (slide 34). Thuốc: TTL + jitter.' },
+      { q: 'Flash sale: một key flashsale:today hết hạn, 5.000 request cùng lúc chạy cùng một query. Đây là gì?', o: ['Avalanche', 'Breakdown', 'Penetration', 'Large key'], a: 1, e: 'Đúng một key nóng hết hạn (slide 35). Thuốc: mutex / singleflight, hoặc không cho hết hạn + job làm mới.' },
+      { q: 'Log có hàng chục nghìn GET /movies/tt-random-xxxx trả 404, QPS của DB tăng vọt. Đây là gì?', o: ['Penetration', 'Avalanche', 'Hot key', 'Breakdown'], a: 0, e: 'Dữ liệu không tồn tại ở cả cache lẫn DB (slide 36). Id ngẫu nhiên thì cache rỗng vô dụng; cần validate + Bloom filter.' },
+      { q: 'Khách đổi tuổi 33 → 34, khoảng 60 giây sau mới thấy. Log có "Redis timeout on DEL user:34". Đây là gì?', o: ['No Atomicity', 'Avalanche', 'Penetration', 'Large key'], a: 0, e: 'Ghi DB xong nhưng xóa cache thất bại (slide 32). Dữ liệu cũ sống đúng bằng TTL. Thuốc: retry qua queue, đọc binlog/WAL.' },
+      { q: 'Redis master chết, replica chưa kịp lên, mọi request đổ xuống DB và DB sập. Thuốc nào KHÔNG giúp cho ca này?', o: ['Redis Sentinel / Cluster có replica', 'Circuit breaker bảo vệ DB', 'Bloom filter', 'Persistence + warm-up khi khởi động lại'], a: 2, e: 'Đây là Avalanche do cache sập (slide 33). Bloom filter chữa Penetration, không liên quan.' },
+    ],
+    5: [
+      { q: 'Cache LRU sức chứa 2, chuỗi đọc A B A C. Khi đọc C, key nào bị bỏ?', o: ['A', 'B', 'C', 'Không key nào'], a: 1, e: 'Sau A B A, key lâu chưa dùng nhất là B. Thử ngay trong mô phỏng ở trên.' },
+      { q: 'Một tweet viral được đọc liên tục. Một đợt đọc lướt qua hàng nghìn tweet cũ (mỗi tweet một lần) chạy qua. Chính sách nào giữ được tweet viral?', o: ['LRU', 'LFU', 'Random', 'noeviction'], a: 1, e: 'LFU nhìn số lần dùng, đợt đọc lướt mỗi key chỉ 1 lần nên không đẩy được tweet phổ biến (slide 40: hot tweets).' },
+      { q: 'Redis dùng cấu hình mặc định (máy bạn: maxmemory 0, policy noeviction) làm cache thuần. Chuyện gì xảy ra khi RAM máy hết?', o: ['Redis tự bỏ key cũ', 'Không có giới hạn nên Redis dùng hết RAM; nếu đặt maxmemory mà vẫn noeviction thì lệnh ghi bị lỗi OOM', 'Redis tự nén dữ liệu', 'Redis chuyển dữ liệu xuống đĩa'], a: 1, e: 'Cache thuần nên đặt maxmemory và allkeys-lru hoặc allkeys-lfu.' },
+      { q: 'Một key chứa JSON 5 MB được đọc mỗi giây. Vấn đề chính là gì?', o: ['Không đặt được TTL', 'Mỗi lần đọc/ghi/xóa chiếm luồng xử lý lệnh của Redis lâu, các lệnh khác phải chờ; tốn băng thông', 'Redis không lưu được giá trị trên 1 MB', 'Không thể dùng LRU'], a: 1, e: 'Large key (slide 39): nén, chia nhỏ, chuyển blob sang S3, xóa bằng UNLINK.' },
+    ],
+  };
+  $$('.quiz[data-quiz]').forEach((box) => {
+    const n = box.dataset.quiz, qs = QUIZ[n];
+    let score = 0, answered = 0;
+    box.innerHTML = `<div class="quiz-head"><h4>Tự kiểm tra Chặng ${n}</h4><span class="quiz-score num">0/${qs.length}</span></div>` +
+      qs.map((x, i) => {
+        // Shuffle the display order so the right answer is not always in the same slot; data-j keeps the original index.
+        const order = x.o.map((_, j) => j).sort(() => Math.random() - 0.5);
+        return `<div class="q" data-i="${i}"><p class="q-text">${i + 1}. ${esc(x.q)}</p><div class="q-opts">${order.map((j) => `<button type="button" class="q-opt" data-j="${j}">${esc(x.o[j])}</button>`).join('')}</div></div>`;
+      }).join('');
+    $$('.q', box).forEach((qel) => {
+      const x = qs[+qel.dataset.i];
+      $$('.q-opt', qel).forEach((btn) => btn.addEventListener('click', () => {
+        const j = +btn.dataset.j;
+        $$('.q-opt', qel).forEach((b) => { b.disabled = true; if (+b.dataset.j === x.a) b.classList.add('right'); });
+        if (j === x.a) score++; else btn.classList.add('wrong');
+        answered++;
+        const ex = document.createElement('div');
+        ex.className = 'q-explain';
+        ex.innerHTML = `<strong>${j === x.a ? 'Đúng.' : 'Chưa đúng.'}</strong> ${esc(x.e)}`;
+        qel.appendChild(ex);
+        $('.quiz-score', box).textContent = `${score}/${qs.length}${answered === qs.length ? (score === qs.length ? ' · đạt' : ' · đọc lại phần sai') : ''}`;
+      }));
+    });
+  });
+
+  /* ---------- Final exam ---------- */
+  const EXAM = [
+    ['Cache-Aside (Read-Aside) hoạt động thế nào? Ưu và nhược?', 'App đọc cache; miss thì đọc DB rồi ghi lại cache với TTL. Ưu: cache sập vẫn đọc được DB, cache dạng dữ liệu nào cũng được, chỉ cache thứ thật sự được đọc. Nhược: logic nằm trong app, lần đầu luôn miss, có thể lệch với DB nên cần chiến lược invalidation.'],
+    ['Khi cập nhật dữ liệu, vì sao xóa cache thay vì cập nhật cache?', 'SET mang theo giá trị: hai request ghi đồng thời có thể tới cache và DB theo thứ tự khác nhau, nên giá trị cũ có thể thắng (slide 20–21). DEL không mang giá trị, thứ tự không quan trọng; lần đọc sau nạp từ DB, nơi thứ tự ghi đã đúng. Thêm: tính lại giá trị cho cache có thể tốn mà chưa chắc có ai đọc.'],
+    ['Xóa cache trước hay ghi DB trước? Chứng minh.', 'Ghi DB trước, xóa sau. Xóa trước: cửa sổ nguy hiểm bằng cả thời gian ghi DB, request đọc nào rơi vào đều nạp giá trị cũ, kể cả khi key đang có sẵn. Xóa sau: phải đủ ba điều kiện (key vắng, đọc trước commit, SET sau DEL), cửa sổ chỉ cỡ thời gian đọc DB, và key có sẵn thì không thể sai. Với tham số của Lab 2, lý thuyết cho 10,6% / 2,6% / 8,0% / 0%.'],
+    ['Ghi DB trước xóa sau vẫn có thể sai. Bạn xử lý thế nào?', 'TTL ngắn có jitter để giới hạn thời gian sai; retry lệnh DEL qua queue (DEL idempotent); đọc binlog/WAL (Debezium) để xóa đúng lúc commit; delayed double delete; lease hoặc version để từ chối SET cũ. Chọn mức theo việc nghiệp vụ chịu được dữ liệu cũ bao lâu.'],
+    ['Phân biệt Avalanche, Breakdown, Penetration.', 'Avalanche: rất nhiều key (hoặc cả cache) mất cùng lúc → HA cluster, rate limit / circuit breaker, TTL + jitter. Breakdown: đúng một key nóng hết hạn → mutex / singleflight, không TTL + làm mới nền. Penetration: key không tồn tại ở đâu cả → cache giá trị rỗng, validate, Bloom filter.'],
+    ['Thiết kế khóa chống stampede bằng Redis. Lỗi hay gặp?', 'SET lock token NX PX; giành được thì double-check cache, nạp DB, SET cache, rồi thả khóa bằng Lua so token. Không giành được thì chờ và đọc lại cache, có timeout và đường lui đọc thẳng DB. Lỗi: khóa không TTL, DEL nhầm khóa của người khác, quên double-check, TTL khóa ngắn hơn thời gian nạp, nghĩ singleflight trong một tiến trình là đủ cho nhiều instance.'],
+    ['Bloom filter hoạt động thế nào? Nhược điểm?', 'Mảng m bit và k hàm băm. Thêm: bật k bit. Kiểm tra: một bit tắt thì chắc chắn không có; tất cả bật thì có thể có. Không có âm tính giả, có dương tính giả, không xóa được phần tử, phải thêm id mới vào filter mỗi khi DB thêm dữ liệu. Lab 5: 59 KB cho 50.000 id, dương tính giả đo được 0,39%.'],
+    ['Hot key xử lý thế nào?', 'Phát hiện bằng metrics hoặc redis-cli --hotkeys (cần policy LFU). Nhân bản key thành nhiều bản ở nhiều node và đọc ngẫu nhiên; thêm local cache TTL vài giây trong từng instance. Cái giá: phải xóa mọi bản sao khi ghi, các instance có thể lệch nhau bằng TTL local.'],
+    ['LRU khác LFU thế nào? Redis làm cache thuần nên cấu hình gì?', 'LRU bỏ key lâu chưa dùng, thích nghi nhanh khi xu hướng đổi. LFU bỏ key ít dùng, giữ được thứ phổ biến lâu dài nhưng cần giảm dần bộ đếm. Cache thuần: đặt maxmemory và allkeys-lru hoặc allkeys-lfu; mặc định maxmemory 0 thì Redis dùng tới hết RAM, còn nếu đã đặt maxmemory mà vẫn noeviction thì lệnh ghi lỗi khi đầy.'],
+    ['Thiết kế cache cho GET /movies/top?year=2015.', 'Key imdb:top10:{year}. Read-Aside, TTL 60 giây + jitter. Ghi rating: commit rồi DEL key năm của phim đó và các key liên quan. Query 149 ms nhiều người cùng đọc nên thêm khóa chống stampede. Validate year trong khoảng hợp lệ để chống penetration. Đo hit rate, p99, số query xuống DB, evicted_keys. Và thêm index cho ratings (Bài 3): cache không thay được index.'],
+  ];
+  $('#examList').innerHTML = EXAM.map(([q, a], i) => `<details class="fold"><summary>${i + 1}. ${esc(q)}</summary><div class="fold-body"><p>${esc(a)}</p></div></details>`).join('');
+
+  /* ---------- Slide map ---------- */
+  const SLIDES = [
+    [1, 'Mở đầu', '#cach-hoc'], [2, 'Thách thức cache của bạn', '#cach-hoc'], [3, 'Outline', '#cach-hoc'], [4, 'Hành trình của Dũng', '#cach-hoc'],
+    [5, 'Cache Introduction', '#chang-1'], [6, 'Cache là gì', '#s1-1'], [7, 'Trade-off, hit rate, buffer', '#s1-2'], [8, 'Cache ở đâu', '#s1-5'],
+    [9, 'Cache Strategies', '#chang-2'], [10, 'Read strategies', '#s2-1'], [11, 'Write strategies', '#s2-2'], [12, 'Vấn đề chung?', '#s2-3'],
+    [13, 'Data inconsistency', '#s2-3'], [14, 'Vì sao invalidation khó', '#s2-4'], [15, 'Giải bài toán lệch dữ liệu', '#s3-0'], [16, 'Chốt Read-Aside', '#s3-0'],
+    [17, 'Đào Write-Around', '#s3-0'], [18, 'Update hay Delete', '#s3-0'], [19, 'Lần thử 1: update cache', '#s3-1'], [20, 'Update cache trước', '#s3-1'],
+    [21, 'Update cache sau', '#s3-1'], [22, 'Kết luận lần thử 1', '#s3-1'], [23, 'Lần thử 2: xóa cache', '#s3-2'], [24, 'Lần thử 3: RA+DWA', '#s3-3'],
+    [25, 'Xóa cache trước', '#s3-3'], [26, 'Xóa cache sau', '#s3-3'], [27, 'Chọn thứ tự nào?', '#s3-4'], [28, 'Đáp án: DB trước', '#s3-4'],
+    [29, 'TTL ngắn', '#s3-5'], [30, 'Challenges', '#chang-4'], [31, 'Reliability', '#chang-4'], [32, 'No Atomicity', '#s4-1'],
+    [33, 'Avalanche: cache sập', '#s4-2'], [34, 'Avalanche: hết hạn đồng loạt', '#s4-2'], [35, 'Breakdown', '#s4-3'], [36, 'Penetration', '#s4-4'],
+    [37, 'High traffic', '#chang-5'], [38, 'Hot keys', '#s5-1'], [39, 'Large key', '#s5-2'], [40, 'Cache replacement', '#s5-3'],
+    [41, 'Recap', '#s5-4'], [42, 'References', '#tham-khao'], [43, 'Homework', '#bai-tap'], [44, 'Thank you', '#tiep-theo'],
+  ];
+  $('#slideMap').innerHTML = SLIDES.map(([n, t, href]) => `<a class="chip" href="${href}"><b>${n}</b> ${esc(t)}</a>`).join('');
+})();
+</script>
+</body>
+</html>

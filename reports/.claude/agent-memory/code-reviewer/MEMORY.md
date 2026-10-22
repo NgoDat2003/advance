@@ -1,0 +1,1 @@
+- [Lesson guide review method](lesson-guide-review-method.md) — lab-runs diff script, read-only psql checks, recurring defect classes in lesson guides

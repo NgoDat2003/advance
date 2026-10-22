@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Idempotency Key & Redis Lifecycle Architecture",
+    "description": "Chuẩn mực kiến trúc chống trừ tiền và tạo trùng hợp đồng 2 lần trong NestJS",
+    "theme": "dark",
+    "preset": "signal-flow"
+  },
+  "participants": [
+    { "id": "fe", "label": "Frontend (Next.js)", "role": "client" },
+    { "id": "interceptor", "label": "Idempotency Interceptor", "role": "gateway" },
+    { "id": "redis", "label": "Redis Cache (Locks & TTL)", "role": "cache" },
+    { "id": "service", "label": "Order / Contract Service", "role": "service" },
+    { "id": "db", "label": "PostgreSQL Database", "role": "database" }
+  ],
+  "messages": [
+    { "from": "fe", "to": "interceptor", "label": "POST /payments (Header: x-idempotency-key, Body JSON)", "kind": "sync-call" },
+    { "from": "interceptor", "to": "interceptor", "label": "1. Validate DTO & Calculate SHA256(Body)", "kind": "self-call" },
+    { "from": "interceptor", "to": "redis", "label": "2. SET idemp:key PENDING NX EX 60", "kind": "sync-call" },
+    { "from": "redis", "to": "interceptor", "label": "Acquired Lock = TRUE (Key mới toanh)", "kind": "return" },
+    { "from": "interceptor", "to": "service", "label": "3. Cho phép chạy vào Service nghiệp vụ", "kind": "sync-call" },
+    { "from": "service", "to": "db", "label": "Mở Transaction: Tạo hợp đồng & trừ tiền cọc", "kind": "sync-call" },
+    { "from": "db", "to": "service", "label": "Transaction COMMIT Thành công", "kind": "return" },
+    { "from": "service", "to": "interceptor", "label": "Response: { orderId: 149, code: 'HD-01' }", "kind": "return" },
+    { "from": "interceptor", "to": "redis", "label": "4. SET idemp:key COMPLETED EX 86400 (Lưu kèm hash & response)", "kind": "async-signal" },
+    { "from": "interceptor", "to": "fe", "label": "201 Created (Kèm kết quả thanh toán mới)", "kind": "return" },
+    { "from": "fe", "to": "interceptor", "label": "[LẶP LẠI]: User bấm đúp / Lag mạng gửi lại cùng key", "kind": "sync-call" },
+    { "from": "interceptor", "to": "redis", "label": "Tra cứu idemp:key trong Redis", "kind": "sync-call" },
+    { "from": "redis", "to": "interceptor", "label": "Status = COMPLETED + Saved SHA256 + Saved Response", "kind": "return" },
+    { "from": "interceptor", "to": "interceptor", "label": "So khớp: SHA256(Body) == Saved SHA256 -> KHỚP 100%!", "kind": "self-call" },
+    { "from": "interceptor", "to": "fe", "label": "200 OK: Trả ngay kết quả cũ (Không trừ tiền lần 2!)", "kind": "return" }
+  ]
+}

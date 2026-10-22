@@ -1,0 +1,25 @@
+﻿                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Limit (actual rows=10 loops=1)
+   Buffers: shared hit=72331 read=30217
+   ->  Sort (actual rows=10 loops=1)
+         Sort Key: r.average_rating DESC, r.num_votes DESC
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=72331 read=30217
+         ->  Nested Loop (actual rows=373 loops=1)
+               Buffers: shared hit=72325 read=30217
+               ->  Seq Scan on ratings r (actual rows=18310 loops=1)
+                     Filter: (num_votes >= 10000)
+                     Rows Removed by Filter: 1702950
+                     Buffers: shared hit=1222 read=9770
+               ->  Index Scan using titles_pkey on titles t (actual rows=0 loops=18310)
+                     Index Cond: ((tconst)::text = (r.tconst)::text)
+                     Filter: ((start_year = 2015) AND ((title_type)::text = 'movie'::text))
+                     Rows Removed by Filter: 1
+                     Buffers: shared hit=71103 read=20447
+ Planning:
+   Buffers: shared hit=263 read=5 dirtied=1
+ Planning Time: 7.241 ms
+ Execution Time: 1266.202 ms
+(21 rows)
+

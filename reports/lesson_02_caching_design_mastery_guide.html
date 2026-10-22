@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BÀI 2: CACHING DESIGN - TÀI LIỆU CHUYÊN SÂU CẤP ENTERPRISE</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --purple: #a78bfa;
+      --code-bg: #030712;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 24px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+    .badge-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 10px;
+      border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .b-blue { background: #0284c7; color: #fff; }
+    .b-purple { background: #7c3aed; color: #fff; }
+    .b-green { background: #059669; color: #fff; }
+    .b-yellow { background: #d97706; color: #fff; }
+    h1 { font-size: 28px; color: #fff; margin-bottom: 8px; font-weight: 800; }
+    .quote-box {
+      background: rgba(30, 41, 59, 0.5); border-left: 4px solid var(--accent);
+      padding: 12px 16px; border-radius: 0 8px 8px 0; font-style: italic; color: #cbd5e1;
+      margin: 14px 0; font-size: 14px;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--card-border); margin-bottom: 24px; overflow-x: auto; }
+    .tab-btn {
+      background: none; border: none; color: var(--text-muted);
+      padding: 12px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s;
+    }
+    .tab-btn:hover { color: #fff; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Cards & Typography */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    h2 { font-size: 20px; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; }
+    h3 { font-size: 16px; color: var(--accent); margin: 20px 0 10px 0; font-weight: 700; }
+    p { margin-bottom: 14px; font-size: 14.5px; }
+    ul, ol { margin-left: 20px; margin-bottom: 14px; font-size: 14.5px; }
+    li { margin-bottom: 6px; }
+
+    /* Visual Diagram Boxes (Thay thế ảnh bên ngoài bằng CSS/SVG tự vẽ) */
+    .diag-box {
+      background: #090d16; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 20px; margin: 16px 0; text-align: center;
+    }
+    .diag-title { font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 14px; letter-spacing: 0.5px; }
+    
+    .diag-flow {
+      display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 16px 0;
+    }
+    .node {
+      padding: 12px 18px; border-radius: 8px; font-weight: 700; font-size: 13px;
+      min-width: 120px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .node-app { background: #1e3a8a; border: 1px solid #3b82f6; color: #bfdbfe; }
+    .node-cache { background: #064e3b; border: 1px solid #10b981; color: #a7f3d0; }
+    .node-db { background: #701a75; border: 1px solid #d946ef; color: #f5d0fe; }
+    .node-fail { background: #7f1d1d; border: 1px solid #ef4444; color: #fecaca; }
+    .arrow { color: #64748b; font-weight: 800; font-size: 16px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+    th, td { border: 1px solid var(--card-border); padding: 12px 14px; text-align: left; }
+    th { background: #1f2937; color: #fff; font-weight: 700; }
+    tr:nth-child(even) { background: #0f172a; }
+
+    /* Interactive Simulator */
+    .sim-card {
+      background: #1e1b4b; border: 1px solid #4338ca; border-radius: 12px;
+      padding: 22px; margin-bottom: 24px;
+    }
+    .sim-title { font-size: 16px; font-weight: 700; color: #e0e7ff; margin-bottom: 14px; }
+    .sim-btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .sim-btn {
+      background: #312e81; border: 1px solid #6366f1; color: #e0e7ff;
+      padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .sim-btn:hover { background: #4338ca; border-color: #818cf8; }
+    .sim-console {
+      background: #090d16; border: 1px solid #312e81; border-radius: 8px;
+      padding: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px; min-height: 120px; color: #a5b4fc; white-space: pre-wrap;
+    }
+
+    /* Code Block */
+    pre {
+      background: var(--code-bg); border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 16px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px; color: #e5e7eb; margin: 14px 0;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, monospace; color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge-group">
+        <span class="badge b-purple">ADVANCE BACKEND ARCHITECTURE</span>
+        <span class="badge b-blue">LESSON 02: CACHING DESIGN</span>
+        <span class="badge b-green">ENTERPRISE GRADE STUDY MONOGRAPH</span>
+        <span class="badge b-yellow">44 SLIDES COMPLETE RECONCILIATION</span>
+      </div>
+      <h1>Giáo Trình Chuyên Sâu: Thiết Kế Hệ Thống Caching (Caching Design)</h1>
+      <div class="subtitle">Tài liệu phân tích bản chất, chiến lược đọc/ghi, giải quyết bất đồng bộ dữ liệu và hóa giải Tứ Đại Thảm Họa Caching.</div>
+      
+      <div class="quote-box">
+        “A man who doesn't spend time with his family can never be a real man.” — Mario Puzo, The Godfather (Slide mở đầu bài học).<br/>
+        <strong>Thông điệp của Người Thầy:</strong> "Trong kỹ thuật hệ thống, nếu bạn không dành thời gian thấu hiểu bản chất tầng sâu của dữ liệu, bạn sẽ không bao giờ trở thành một Senior Architect thực thụ."
+      </div>
+    </header>
+
+    <!-- INTERACTIVE SIMULATOR -->
+    <div class="sim-card">
+      <div class="sim-title">🧪 PHÒNG THÍ NGHIỆM TƯƠNG TÁC: BẤM ĐỂ TÁI HIỆN CÁC HIỆN TƯỢNG CACHING</div>
+      <div class="sim-btn-group">
+        <button class="sim-btn" onclick="sim(1)">1. Read-Aside (Hit vs Miss)</button>
+        <button class="sim-btn" onclick="sim(2)">2. Cache Avalanche (Tuyết lở)</button>
+        <button class="sim-btn" onclick="sim(3)">3. Cache Stampede (Đàn bò giẫm đạp)</button>
+        <button class="sim-btn" onclick="sim(4)">4. Cache Penetration (Xuyên thủng DB)</button>
+        <button class="sim-btn" onclick="sim(5)">5. Race Condition: Update DB trước hay xóa Cache trước?</button>
+      </div>
+      <div class="sim-console" id="simOutput">// Bấm vào 1 trong các nút phía trên để mô phỏng sự cố và cách giải quyết...</div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="tab('ch1')">📚 1. Tổng Quan & Bản Chất</button>
+      <button class="tab-btn" onclick="tab('ch2')">🔄 2. Chiến Lược Đọc / Ghi</button>
+      <button class="tab-btn" onclick="tab('ch3')">⚖️ 3. Bất Đồng Bộ Dữ Liệu</button>
+      <button class="tab-btn" onclick="tab('ch4')">🚨 4. Tứ Đại Căn Bệnh Cache</button>
+      <button class="tab-btn" onclick="tab('ch5')">🔥 5. Hot Keys, Large Keys & Thuật Toán</button>
+      <button class="tab-btn" onclick="tab('ch6')">🎯 6. Thực Chiến Maycha & Bài Tập</button>
+    </div>
+
+    <!-- CHƯƠNG 1 -->
+    <div id="ch1" class="tab-pane active">
+      <div class="card">
+        <h2>Chương 1: Tổng Quan, Đánh Đổi & Bản Chất Của Caching</h2>
+        
+        <h3>1.1. Cache là gì? Tấm khiên bảo vệ Database (Shield for DB)</h3>
+        <p>Cache là một thành phần phần cứng hoặc phần mềm dùng để lưu trữ tạm thời các dữ liệu thường xuyên được truy cập, giúp phục vụ các yêu cầu tương lai nhanh hơn gấp hàng chục đến hàng trăm lần.</p>
+        <p>Dữ liệu trong Cache gồm 2 loại:</p>
+        <ul>
+          <li><strong>Bản sao dữ liệu từ nguồn gốc (A copy from DB):</strong> Giảm tải đọc cho Database.</li>
+          <li><strong>Kết quả của một phép tính toán phức tạp (Computation Result):</strong> Ví dụ: Bảng tổng kết doanh thu lũy tiến của chuỗi Maycha, kết quả tổng hợp sau khi join 5 bảng.</li>
+        </ul>
+
+        <div class="diag-box">
+          <div class="diag-title">Mô hình: Cache đóng vai trò Tấm Khiên (Shield) chắn trước Database</div>
+          <div class="diag-flow">
+            <div class="node node-app">Client / App</div>
+            <div class="arrow">── 1. Hỏi trước ──▶</div>
+            <div class="node node-cache">⚡ REDIS CACHE (0.1ms)</div>
+            <div class="arrow">── 2. Chỉ khi Miss mới xuống ──▶</div>
+            <div class="node node-db">🐘 POSTGRESQL (20ms)</div>
+          </div>
+        </div>
+
+        <h3>1.2. Hai Sự Đánh Đổi Bắt Buộc (The Inevitable Trade-offs)</h3>
+        <ul>
+          <li><strong>Performance vs Cost (Hiệu năng vs Chi phí):</strong> Bộ nhớ RAM (Redis) đắt hơn ổ cứng SSD từ 10 đến 20 lần. Không ai có thể cache toàn bộ database vào RAM.</li>
+          <li><strong>Performance vs Consistency (Hiệu năng vs Tính nhất quán):</strong> Càng muốn đọc nhanh thì nguy cơ đọc phải dữ liệu cũ (Stale Data) càng cao. Bạn phải chấp nhận <em>Eventual Consistency</em> (Nhất quán cuối cùng).</li>
+        </ul>
+
+        <h3>1.3. Chỉ số Hit Rate & Nguyên lý Pareto 80/20</h3>
+        <p><strong>Cache Hit Rate</strong> là thước đo sống còn duy nhất của một hệ thống Caching: <code>Hit Rate = (Số lần trúng Cache) / (Tổng số request)</code>.</p>
+        <p>Luôn tuân theo <strong>Nguyên lý Pareto 80/20:</strong> Trong thực tế, <strong>80% lưu lượng truy cập chỉ xoay quanh 20% dữ liệu nóng (Hotspot Data)</strong>. Bạn chỉ cần cache đúng 20% dữ liệu này (như danh mục món bán chạy, thông tin cửa hàng mở cửa) là đã bảo vệ được 80% tải của database.</p>
+
+        <h3>1.4. Phân biệt sống còn: Cache != Buffer</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Tiêu chí</th>
+              <th>CACHE (Bộ đệm dữ liệu lặp lại)</th>
+              <th>BUFFER (Vùng đệm chuyển tiếp dữ liệu)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Mục đích</strong></td>
+              <td>Tăng tốc độ đọc cho các request tương lai cùng hỏi 1 dữ liệu.</td>
+              <td>Điều hòa sự chênh lệch tốc độ giữa bên gửi và bên nhận (chống nghẽn).</td>
+            </tr>
+            <tr>
+              <td><strong>Vòng đời dữ liệu</strong></td>
+              <td>Dữ liệu được lưu giữ lâu dài (đến khi hết hạn TTL hoặc bị xóa).</td>
+              <td>Dữ liệu chỉ lưu tạm thời, truyền xong là xóa ngay.</td>
+            </tr>
+            <tr>
+              <td><strong>Bản chất hoạt động</strong></td>
+              <td>Bản sao dữ liệu để tái sử dụng nhiều lần.</td>
+              <td>Hoạt động giống như một Hàng đợi (Queue / FIFO).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>1.5. Các vị trí Caching trong hệ thống hiện đại</h3>
+        <ol>
+          <li><strong>Client Cache:</strong> Bộ nhớ trình duyệt (HTTP Cache, LocalStorage).</li>
+          <li><strong>CDN (Content Delivery Network):</strong> Cache ở các trạm viễn thông gần người dùng nhất (Cloudflare, Akamai) cho ảnh, video, CSS, JS.</li>
+          <li><strong>API Gateway / Reverse Proxy:</strong> NGINX Cache, Kong Cache.</li>
+          <li><strong>Application Local Cache:</strong> Cache ngay trong RAM của tiến trình Node.js (In-memory Map, NodeCache) ➔ Siêu nhanh nhưng tốn RAM app.</li>
+          <li><strong>Distributed Cache:</strong> Redis Cluster, Memcached ➔ Phổ biến nhất, chia sẻ chung cho nhiều server.</li>
+          <li><strong>Database Query Cache:</strong> Bộ đệm trang trong RAM của chính PostgreSQL (Shared Buffers).</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 2 -->
+    <div id="ch2" class="tab-pane">
+      <div class="card">
+        <h2>Chương 2: Toàn Cảnh Các Chiến Lược Đọc / Ghi Cache</h2>
+        
+        <h3>2.1. Các chiến lược ĐỌC (Read Strategies)</h3>
+        
+        <div class="diag-box">
+          <div class="diag-title">Chiến lược 1: Read-Aside (Cache-Aside) — Chuẩn mực phổ biến nhất</div>
+          <div class="diag-flow">
+            <div class="node node-app">Ứng Dụng (NestJS)</div>
+            <div class="arrow">── (1) Đọc Cache ──▶</div>
+            <div class="node node-cache">Redis</div>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">Nếu Cache Miss ➔ (2) App tự đọc Database ➔ (3) App tự ghi ngược lại vào Redis.</p>
+        </div>
+        <ul>
+          <li><strong>Ưu điểm:</strong> Chịu lỗi cực tốt. Nếu Redis bị sập, App vẫn gọi thẳng vào DB để hoạt động tiếp. Cực kỳ linh hoạt với mô hình dữ liệu.</li>
+          <li><strong>Nhược điểm:</strong> Logic dồn lên vai ứng dụng; có nguy cơ đọc phải dữ liệu cũ nếu DB thay đổi.</li>
+        </ul>
+
+        <div class="diag-box">
+          <div class="diag-title">Chiến lược 2: Read-Through</div>
+          <p style="font-size: 13.5px;">App chỉ nói chuyện với Cache Provider. Nếu Cache Miss, chính hệ thống Cache tự đi kết nối DB, nạp dữ liệu rồi trả về cho App. App coi Cache như một database duy nhất.</p>
+        </div>
+
+        <h3>2.2. Các chiến lược GHI (Write Strategies)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Chiến lược ghi</th>
+              <th>Cơ chế hoạt động</th>
+              <th>Ưu điểm</th>
+              <th>Nhược điểm & Rủi ro</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Write-Through</strong></td>
+              <td>Ghi đồng thời vào Cache và Database trong cùng một thao tác.</td>
+              <td>Dữ liệu trong Cache luôn tươi mới 100%.</td>
+              <td>Ghi chậm (Latency cao vì phải đợi cả 2 bên ghi xong).</td>
+            </tr>
+            <tr>
+              <td><strong>2. Write-Back (Write-Behind)</strong></td>
+              <td>Ghi vào Cache trước rồi trả về ngay. Gom cụm (Batch) ghi xuống DB sau một cách bất đồng bộ.</td>
+              <td>Tốc độ ghi siêu nhanh (vài microsecond).</td>
+              <td><strong>CỰC KỲ NGUY HIỂM:</strong> Nếu server Redis sập trước khi kịp sync xuống DB ➔ MẤT DỮ LIỆU VĨNH VIỄN!</td>
+            </tr>
+            <tr>
+              <td><strong>3. Write-Around (Chuẩn kết hợp với Read-Aside)</strong></td>
+              <td>Bỏ qua Cache, ghi thẳng vào Database. Sau đó gửi lệnh XÓA (Invalidate) dữ liệu trong Cache.</td>
+              <td>Tách rời hệ thống Cache và Storage; DB luôn nắm sự thật.</td>
+              <td>Lần đọc tiếp theo chắc chắn bị Cache Miss 1 lần để nạp lại.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 3 -->
+    <div id="ch3" class="tab-pane">
+      <div class="card">
+        <h2>Chương 3: Cuộc Chiến Bất Đồng Bộ Dữ Liệu & Bí Quyết "Update DB Trước, Xóa Cache Sau"</h2>
+        
+        <p>Trong ngành Khoa học Máy tính có một câu nói bất hủ của Phil Karlton:</p>
+        <div class="quote-box">“There are only two hard things in Computer Science: cache invalidation and naming things.”</div>
+
+        <h3>3.1. Thử nghiệm 1: Khi có dữ liệu mới, UPDATE Cache hay DELETE Cache?</h3>
+        <ul>
+          <li><strong>Nếu Update Cache:</strong> Sẽ bị Race Condition giữa 2 thao tác ghi (Write-Write Conflict). Ví dụ: Request 1 ghi DB trước nhưng mạng lag nên ghi Cache sau; Request 2 ghi DB sau nhưng ghi Cache trước ➔ <strong>DB mang giá trị mới, nhưng Cache mang giá trị cũ vĩnh viễn!</strong></li>
+          <li><strong>Kết luận 1:</strong> Khi sửa dữ liệu, <strong>TUYỆT ĐỐI KHÔNG UPDATE CACHE, MÀ PHẢI DELETE CACHE!</strong> Xóa đi để lần đọc tiếp theo tự nạp lại từ DB.</li>
+        </ul>
+
+        <h3>3.2. Thử nghiệm 2: Xóa Cache trước hay Cập nhật DB trước? (Trọng tâm phỏng vấn Senior)</h3>
+        
+        <div class="diag-box">
+          <div class="diag-title" style="color: #f87171;">KỊCH BẢN TỬ THẦN NẾU: XÓA CACHE TRƯỚC, UPDATE DB SAU (Delete Cache First)</div>
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.8;">
+            1. <strong>Luồng Ghi (Thread A):</strong> Cần sửa giá trị từ 10 thành 20. Thread A <strong>xóa Cache trước</strong>.<br/>
+            2. <strong>Luồng Đọc (Thread B) ập vào ngay lúc đó:</strong> Đọc Cache ➔ Thấy Cache trống (Miss)!<br/>
+            3. Thread B đọc DB ➔ Lúc này Thread A chưa update DB xong, nên DB vẫn mang giá trị cũ là <strong>10</strong>.<br/>
+            4. Thread B bốc giá trị cũ <strong>10 nạp ngược lại vào Cache</strong>.<br/>
+            5. Lúc này Thread A mới update DB thành <strong>20</strong>.<br/>
+            👉 <strong>HẬU QUẢ:</strong> DB là 20, nhưng Cache bị dính chặt giá trị 10 cũ mèm cho đến khi hết hạn TTL!
+          </div>
+        </div>
+
+        <div class="diag-box">
+          <div class="diag-title" style="color: #34d399;">KỊCH BẢN CHUẨN MỰC THẾ GIỚI: UPDATE DB TRƯỚC, XÓA CACHE SAU (Cache-Aside + DWA)</div>
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.8;">
+            1. <strong>Luồng Ghi (Thread A):</strong> Cập nhật DB thành 20 xong xuôi.<br/>
+            2. Thread A gửi lệnh <strong>XÓA Cache</strong>.<br/>
+            3. <strong>Luồng Đọc tiếp theo:</strong> Thấy Cache trống ➔ Đọc DB lấy được giá trị mới 20 ➔ Nạp lại Cache.<br/>
+            👉 <strong>TẠI SAO CÁCH NÀY THẮNG?</strong> Vì tốc độ ghi Cache nhanh gấp hàng chục lần tốc độ ghi đĩa của DB, nên xác suất một câu lệnh đọc chen ngang giữa lúc ghi là cực kỳ hiếm hoi.
+          </div>
+        </div>
+
+        <h3>3.3. Giải pháp giảm thiểu tối đa rủi ro bất đồng bộ:</h3>
+        <ul>
+          <li><strong>Luôn gắn Short TTL (Time-To-Live ngắn):</strong> Cho dù kịch bản xấu nhất xảy ra, sau vài chục giây dữ liệu trong cache cũng tự bốc hơi.</li>
+          <li><strong>Delayed Double Delete (Xóa 2 lần trễ):</strong> Xóa Cache ➔ Update DB ➔ Chờ 500ms ➔ Xóa Cache lần 2 để quét sạch mọi dữ liệu rác vừa bị nạp đè.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 4 -->
+    <div id="ch4" class="tab-pane">
+      <div class="card">
+        <h2>Chương 4: Tứ Đại Căn Bệnh Của Hệ Thống Caching & Toa Thuốc Điều Trị</h2>
+        
+        <h3>4.1. Bệnh 1: No Atomicity (Thiếu tính nguyên tử khi xóa Cache)</h3>
+        <ul>
+          <li><strong>Hiện tượng:</strong> Update Database thành công, nhưng lệnh xóa Redis bị đứt cáp / timeout ➔ Dữ liệu cũ vẫn nằm trong Cache.</li>
+          <li><strong>Toa thuốc:</strong>
+            <ul>
+              <li><em>Cơ chế Retry:</em> Đẩy lệnh xóa cache vào Queue (BullMQ / RabbitMQ) để tự động retry với Exponential Backoff.</li>
+              <li><em>Lắng nghe Binlog (Change Data Capture - CDC):</em> Dùng công cụ Debezium / Canal đọc trực tiếp WAL Log của PostgreSQL. Khi DB ghi nhận commit thành công, CDC tự động bắn message ra xóa Cache.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>4.2. Bệnh 2: Cache Avalanche (Tuyết Lở Caching)</h3>
+        <ul>
+          <li><strong>Hiện tượng:</strong> Một lượng khổng lồ các Key cùng hết hạn tại một thời điểm (ví dụ cấu hình TTL tròn 1 tiếng cho toàn bộ sản phẩm Maycha), HOẶC cụm Redis bị sập ➔ Hàng triệu request cùng ập thẳng xuống Database ➔ Database sập theo dây chuyền!</li>
+          <li><strong>Toa thuốc:</strong>
+            <ul>
+              <li><strong>Thêm Random Jitter vào TTL:</strong> Thay vì đặt <code>TTL = 3600s</code> cứng, ta đặt: <code>TTL = 3600 + Math.random() * 300</code> (dao động lệch nhau từ 1 đến 5 phút) để các key hết hạn rải rác.</li>
+              <li><strong>Triển khai Redis Cluster (Sentinel / Master-Replica):</strong> Đảm bảo tính sẵn sàng cao (High Availability), node này chết có node khác thay ngay.</li>
+              <li><strong>Circuit Breaker & Rate Limiting:</strong> Tự động ngắt bớt request nếu DB có dấu hiệu quá tải.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>4.3. Bệnh 3: Cache Breakdown / Cache Stampede (Đàn Bò Giẫm Đạp)</h3>
+        <ul>
+          <li><strong>Hiện tượng:</strong> Một Hot Key cực kỳ quan trọng (ví dụ: Voucher 50% giờ vàng hoặc Menu quán Maycha) vừa hết hạn TTL ➔ Trong đúng 1 giây đó có 10.000 request cùng hỏi ➔ Cả 10.000 request cùng thấy Cache Miss ➔ Cùng lao xuống DB query ➔ DB bị giẫm bẹp!</li>
+          <li><strong>Toa thuốc:</strong>
+            <ul>
+              <li><strong>Mutex Lock (Singleflight):</strong> Khi thấy Cache Miss, chỉ cho phép request ĐẦU TIÊN được cầm chìa khóa (Distributed Lock) chạy xuống DB, 9.999 request còn lại phải đứng đợi. Khi request 1 nạp cache xong thì 9.999 request kia lấy từ Cache ra.</li>
+              <li><strong>Không set TTL cho Hot Data:</strong> Cập nhật dữ liệu bằng Background Worker chạy ngầm định kỳ trước khi hết hạn.</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h3>4.4. Bệnh 4: Cache Penetration (Xuyên Thủng Cache)</h3>
+        <ul>
+          <li><strong>Hiện tượng:</strong> Hacker hoặc bug liên tục truy vấn dữ liệu KHÔNG HỀ TỒN TẠI (ví dụ: `ID = -9999` hoặc chuỗi rác ngẫu nhiên). Cache Miss ➔ Xuống DB cũng Miss ➔ Không có gì để ghi vào Cache ➔ Mọi request tiếp theo lại tiếp tục đâm thẳng xuống DB!</li>
+          <li><strong>Toa thuốc:</strong>
+            <ul>
+              <li><strong>Cache giá trị rỗng (Cache Null/Empty):</strong> Lưu `key: null` với TTL ngắn (30s – 60s) để chặn đứng các request trùng lặp tiếp theo.</li>
+              <li><strong>Validate chặt chẽ đầu vào:</strong> Dùng Zod / DTO chặn ngay ID âm, ID sai regex từ cửa ngõ API.</li>
+              <li><strong>Bloom Filter:</strong> Sử dụng bộ lọc xác suất Bloom Filter đặt trước Redis. Nếu Bloom Filter bảo *"Dữ liệu này không tồn tại"*, ta từ chối ngay lập tức mà không cần chạm vào Redis hay DB!</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 5 -->
+    <div id="ch5" class="tab-pane">
+      <div class="card">
+        <h2>Chương 5: Vấn Đề Tải Cao (Hot Keys, Large Keys) & Thuật Toán Dọn Bộ Nhớ</h2>
+        
+        <h3>5.1. Xử lý Hot Keys (Key nhận traffic đột biến)</h3>
+        <ul>
+          <li><strong>Nhân bản Key (Key Partitioning):</strong> Nhân bản key `hot_item` thành `hot_item_1`, `hot_item_2`... `hot_item_N` và phân tán sang các Redis Nodes khác nhau. Client random chọn node để đọc, chia đều tải.</li>
+          <li><strong>Local In-Memory Cache:</strong> Caching ngay trong bộ nhớ RAM của App Node.js (ví dụ dùng thư viện `lru-cache`) để chặn 99% request trước khi kịp bay ra Redis.</li>
+        </ul>
+
+        <h3>5.2. Xử lý Large Keys (Key có dung lượng quá lớn > 1MB)</h3>
+        <ul>
+          <li>Redis chạy đơn luồng. Đọc một Large Key 10MB sẽ làm nghẽn toàn bộ Redis trong vài mili-giây!</li>
+          <li><strong>Giải pháp:</strong> Nén dữ liệu bằng Gzip/Snappy trước khi lưu; chia nhỏ key (Split); hoặc chuyển sang lưu file trên S3 / MinIO thay vì nhồi vào Redis.</li>
+        </ul>
+
+        <h3>5.3. Thuật toán dọn dẹp khi đầy bộ nhớ (Cache Replacement Policies)</h3>
+        <p>Khi Redis chạm ngưỡng RAM tối đa (`maxmemory`), nó phải vứt bớt key cũ theo thuật toán nào?</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Thuật toán</th>
+              <th>Cơ chế hoạt động</th>
+              <th>Trường hợp áp dụng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>LRU (Least Recently Used)</strong></td>
+              <td>Xóa các key đã <strong>lâu nhất không được ai gọi tới</strong>.</td>
+              <td>Phổ biến nhất. Phù hợp với dữ liệu có tính chất theo trend (hết trend là bị xóa).</td>
+            </tr>
+            <tr>
+              <td><strong>LFU (Least Frequently Used)</strong></td>
+              <td>Xóa các key có <strong>tổng số lần được gọi ít nhất</strong>.</td>
+              <td>Phù hợp với dữ liệu cần giữ lại các item siêu hot dù nó vừa bị ngưng một chút.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 6 -->
+    <div id="ch6" class="tab-pane">
+      <div class="card">
+        <h2>Chương 6: Thực Chiến Cho Maycha F&B & Bài Tập Tự Luyện</h2>
+        
+        <h3>6.1. Ứng dụng thực tế vào hệ thống Quản lý hợp đồng Maycha</h3>
+        <ul>
+          <li><strong>Master Data ít thay đổi (Danh mục 200 cửa hàng, danh mục Brand Maycha, Bảng giá chuẩn):</strong> Áp dụng <strong>Read-Aside</strong> kết hợp TTL 24 giờ có Jitter ngẫu nhiên. Khi Kế toán sửa tên quán ➔ Dùng Write-Around xóa key tương ứng.</li>
+          <li><strong>Xử lý Xuất báo cáo tài chính nặng:</strong> Áp dụng Mutex Singleflight để đảm bảo 10 kế toán cùng bấm xuất báo cáo chỉ có đúng 1 worker chạy, không làm tràn RAM.</li>
+        </ul>
+
+        <h3>6.2. Bài tập thực hành (Homework Slide 43)</h3>
+        <p><strong>Đề bài:</strong> Xây dựng một module Local In-Memory Cache lưu danh sách các Sân Bay (Airport Code, Tên sân bay) theo mô hình Read-Aside kèm TTL.</p>
+        
+        <h3>Code Mẫu NestJS Hoàn Chỉnh:</h3>
+        <pre><code>import { Injectable, Logger } from '@nestjs/common';
+
+export interface Airport {
+  code: string;
+  name: string;
+}
+
+@Injectable()
+export class AirportCacheService {
+  private readonly logger = new Logger(AirportCacheService.name);
+  // Sử dụng Map làm In-Memory Local Cache
+  private readonly cache = new Map&lt;string, { data: Airport; expiresAt: number }&gt;();
+
+  // Mô hình Read-Aside
+  async getAirport(code: string): Promise&lt;Airport | null&gt; {
+    const cached = this.cache.get(code);
+    const now = Date.now();
+
+    // 1. CACHE HIT
+    if (cached && cached.expiresAt > now) {
+      this.logger.log(`⚡ [CACHE HIT] Sân bay: ${code}`);
+      return cached.data;
+    }
+
+    // 2. CACHE MISS -> Đọc từ nguồn gốc
+    this.logger.warn(`❌ [CACHE MISS] Sân bay: ${code} -> Đang nạp từ nguồn...`);
+    const airport = await this.fetchFromDatabaseOrApi(code);
+    if (!airport) return null;
+
+    // 3. Ghi ngược lại vào Cache với TTL 60s + Random Jitter (chống Avalanche)
+    const ttlSeconds = 60 + Math.floor(Math.random() * 10);
+    this.cache.set(code, {
+      data: airport,
+      expiresAt: now + ttlSeconds * 1000,
+    });
+
+    return airport;
+  }
+
+  // Giả lập đọc nguồn DB gốc (chậm 200ms)
+  private async fetchFromDatabaseOrApi(code: string): Promise&lt;Airport | null&gt; {
+    await new Promise((r) => setTimeout(r, 200));
+    const airports: Record&lt;string, string&gt; = {
+      SGN: 'Sân bay Quốc tế Tân Sơn Nhất - TP.HCM',
+      HAN: 'Sân bay Quốc tế Nội Bài - Hà Nội',
+      DAD: 'Sân bay Quốc tế Đà Nẵng',
+    };
+    if (!airports[code]) return null;
+    return { code, name: airports[code] };
+  }
+}</code></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function tab(id) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+
+    function sim(type) {
+      const out = document.getElementById('simOutput');
+      if (type === 1) {
+        out.innerHTML = `[THÍ NGHIỆM 1: READ-ASIDE]
+` +
+          `-> Request 1: Tìm thông tin quán Maycha Hóc Môn
+` +
+          `-> Redis: Tra cứu không thấy (CACHE MISS!)
+` +
+          `-> App: Đọc Database Postgres (mất 25ms) -> Ghi kết quả vào Redis với TTL = 3600s
+` +
+          `-> Request 2: Tìm lại thông tin quán Maycha Hóc Môn
+` +
+          `-> Redis: Thấy dữ liệu trong RAM (⚡ CACHE HIT! - mất 0.2ms! Không đụng tới DB)`;
+      } else if (type === 2) {
+        out.innerHTML = `[THÍ NGHIỆM 2: CACHE AVALANCHE (TUYẾT LỞ)]
+` +
+          `-> Bệnh trạng: 50.000 sản phẩm cùng được set cứng TTL = 3600 giây.
+` +
+          `-> Đúng 12:00:00: Cả 50.000 key đồng loạt hết hạn trong cùng 1 giây!
+` +
+          `-> 10.000 user đang truy cập -> 100% Cache Miss -> Hàng chục nghìn query đè bẹp Postgres -> DB DOWN!
+` +
+          `👉 TOA THUỐC: Thêm Jitter ngẫu nhiên TTL = 3600s + Math.random()*300s -> Các key hết hạn rải rác trong 5 phút. DB bình an vô sự!`;
+      } else if (type === 3) {
+        out.innerHTML = `[THÍ NGHIỆM 3: CACHE STAMPEDE (ĐÀN BÒ GIẪM ĐẠP)]
+` +
+          `-> Bệnh trạng: Key "voucher_giam_50_maycha" vừa hết hạn lúc 11:59:59.
+` +
+          `-> 5.000 người cùng bấm lấy voucher -> Cả 5.000 request cùng thấy Cache Miss -> Cùng chạy xuống DB tính toán!
+` +
+          `👉 TOA THUỐC: Dùng Mutex Lock (Singleflight):
+` +
+          `   • Request #1 lấy được Lock -> chạy xuống DB lấy voucher rồi ghi vào Redis.
+` +
+          `   • 4.999 request còn lại bị chặn đứng, đứng đợi ở Redis.
+` +
+          `   • Khi Request #1 ghi xong -> 4.999 request lấy ngay voucher từ Redis ra. DB chỉ gánh đúng 1 query duy nhất!`;
+      } else if (type === 4) {
+        out.innerHTML = `[THÍ NGHIỆM 4: CACHE PENETRATION (XUYÊN THỦNG CACHE)]
+` +
+          `-> Bệnh trạng: Hacker liên tục gọi GET /products?id=-99999 hoặc id rác không tồn tại.
+` +
+          `-> Cache Miss -> Xuống DB tìm cũng Miss -> Không lưu gì vào Cache -> Hacker cứ bắn là DB cứ phải gánh!
+` +
+          `👉 TOA THUỐC 1: Cache Null Value: Ghi { "-99999": null } với TTL ngắn 60s.
+` +
+          `👉 TOA THUỐC 2: Bloom Filter: Đặt bộ lọc xác suất trước Redis. Nếu Bloom Filter bảo "Không có", từ chối ngay lập tức!`;
+      } else if (type === 5) {
+        out.innerHTML = `[THÍ NGHIỆM 5: TẠI SAO PHẢI 'UPDATE DB TRƯỚC, XÓA CACHE SAU'?]
+` +
+          `-> Nếu XÓA CACHE TRƯỚC:
+` +
+          `   1. Thread A xóa Cache.
+` +
+          `   2. Thread B nhảy vào đọc -> Cache Miss -> đọc DB (vẫn mang giá trị cũ) -> nạp giá trị cũ vào Cache!
+` +
+          `   3. Thread A lúc này mới update DB giá trị mới.
+` +
+          `   => KẾT QUẢ: DB mang số mới, Cache dính chặt số cũ vĩnh viễn!
+` +
+          `👉 NÊN BẮT BUỘC: Update DB thành công trước -> Sau đó mới gửi lệnh XÓA CACHE!`;
+      }
+    }
+  </script>
+</body>
+</html>

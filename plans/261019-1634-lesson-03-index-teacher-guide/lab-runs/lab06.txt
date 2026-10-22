@@ -1,0 +1,27 @@
+Lab 3.06 — Covering index: Index Only Scan chỉ "không đụng heap" khi visibility map cho phép (slide 28, 38)
+
+A. SELECT name, email … WHERE country = 'SG' AND province = 'SG-P3' trên users (1 triệu dòng)
+─────────────────────────────────────────────────────────────────────────────────────────────
+│ Truy vấn                                            │ Kế hoạch                      │ Dòng │          Heap Fetches │ Trang │    ms │
+├─────────────────────────────────────────────────────┼───────────────────────────────┼──────┼───────────────────────┼───────┼───────┤
+│ (country, province) — 6.8 MB                        │ Index Scan (l06_cp_nodedup)   │  496 │ — (đọc heap mọi dòng) │   487 │ 0.530 │
+│ (country, province) INCLUDE (name, email) — 65.1 MB │ Index Only Scan (l06_cp_incl) │  496 │                     0 │     8 │ 0.263 │
+   => ✔ INCLUDE → Index Only Scan, Heap Fetches 0: 8 trang thay vì 487 (61× ít hơn)
+   => ✔ Cái giá: index INCLUDE nặng 65.1 MB, gấp 9.6× bản chỉ có khóa (6.8 MB). Một phần vì INCLUDE không được khử trùng lặp (bản khóa tắt dedup: 29.6 MB), phần còn lại (2.2×) là name, email chép vào mọi mục. Slide 28: giữ ≤ 5 cột
+
+B. Visibility map trên bản sao l06_users (SG + NL), cùng truy vấn, index (country, province) INCLUDE (name, email)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Trạng thái                                             │ Trang heap all-visible / tổng │ Kế hoạch        │ Heap Fetches │ Trang │
+├────────────────────────────────────────────────────────┼───────────────────────────────┼─────────────────┼──────────────┼───────┤
+│ 1. Sau VACUUM                                          │                       72 / 72 │ Index Only Scan │            0 │     7 │
+│ 2. Sau UPDATE 496 dòng (giữ nguyên giá trị, đã commit) │                        1 / 77 │ Index Only Scan │          496 │    18 │
+│ 3. Sau VACUUM lần nữa                                  │                       77 / 77 │ Index Only Scan │            0 │     9 │
+   => ✔ Vẫn là Index Only Scan, nhưng Heap Fetches 0 → 496 → 0: sau UPDATE phải quay lại heap kiểm tra từng dòng (7 → 18 trang) cho tới khi VACUUM đánh dấu lại
+
+C. Bên trong l06_cp_incl (bt_page_items): cây 3 tầng, root là block 164
+───────────────────────────────────────────────────────────────────────
+│ Nút                                  │ itemlen │ TB itemlen cả trang │ Các cột đọc từ data                                   │
+├──────────────────────────────────────┼─────────┼─────────────────────┼───────────────────────────────────────────────────────┤
+│ Root (level 2, block 164), item 2    │      32 │                  31 │ 'CA' · 'CA-P4'                                        │
+│ Lá (level 0, block 1), dòng đầu tiên │      48 │                  55 │ 'AU' · 'AU-P1' · 'Minh Doan' · 'user3835@example.com' │
+   => ✔ Tuple ở nút trong (pivot) chỉ có 2 cột khóa, 32 byte; tuple ở lá có đủ 4 cột (thêm name, email), 48 byte → cột INCLUDE chỉ nằm ở lá, nút trong không phình ra

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Lesson 3 guide harness</title>
+<style>body{margin:0;background:#888;font:12px monospace} iframe{border:0;background:#fff;display:block;margin:4px} #out{white-space:pre-wrap;background:#fff;padding:8px}</style>
+</head>
+<body>
+<!-- Loads the guide in phone-width iframes (light and dark), clicks every interactive control, and prints a JSON report.
+     Run: chrome --headless=new --allow-file-access-from-files --virtual-time-budget=15000 --dump-dom harness.html -->
+<div id="frames"></div>
+<pre id="out">pending</pre>
+<script>
+const GUIDE = '../../../reports/lesson_03_index_teacher_guide.html';
+const VIEWS = [{ w: 360, theme: 'light' }, { w: 400, theme: 'dark' }, { w: 1280, theme: 'light' }];
+const report = { views: [], checks: {} };
+const load = (v) => new Promise((resolve) => {
+  const f = document.createElement('iframe');
+  f.width = v.w; f.height = 900; f.src = GUIDE;
+  f.onload = () => resolve(f);
+  document.getElementById('frames').appendChild(f);
+});
+(async () => {
+  for (const v of VIEWS) {
+    const f = await load(v); const w = f.contentWindow; const d = f.contentDocument;
+    const errors = [];
+    w.addEventListener('error', (e) => errors.push(String(e.message)));
+    if (v.theme === 'dark') d.documentElement.dataset.theme = 'dark';
+    // Click everything once: quiz first options, widget buttons, selects.
+    d.querySelectorAll('.q').forEach((q) => q.querySelector('.q-opt')?.click());
+    d.querySelectorAll('[data-bt]').forEach((b) => b.click());
+    d.querySelectorAll('#pc-presets .btn').forEach((b) => b.click());
+    d.querySelector('#bh-grid .bh-entry')?.click(); d.querySelector('#bh-check')?.click();
+    for (const op of ['pk', 'email', 'cover', 'upd-plain', 'upd-idx']) for (const en of ['innodb', 'pg']) {
+      const s1 = d.querySelector('#lk-op'), s2 = d.querySelector('#lk-engine');
+      s1.value = op; s2.value = en; s1.dispatchEvent(new Event('input')); s2.dispatchEvent(new Event('input'));
+    }
+    for (const o of ['cpn', 'npc', 'ab', 'ba']) {
+      const s = d.querySelector('#cx-order'); s.value = o; s.dispatchEvent(new Event('input'));
+      const p = d.querySelector('#cx-preset');
+      [...p.options].forEach((opt) => { p.value = opt.value; p.dispatchEvent(new Event('input')); });
+    }
+    for (let i = 0; i < 12; i++) { d.querySelector('#dr-choices .btn')?.click(); d.querySelector('#dr-next')?.click(); }
+    d.querySelectorAll('[data-ds]').forEach((s) => { s.value = '0'; });
+    d.querySelector('#ds-check')?.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const doc = d.documentElement;
+    const wide = [...d.querySelectorAll('body *')].filter((el) => {
+      const r = el.getBoundingClientRect(); return r.right > w.innerWidth + 1 && !el.closest('.scroll-x, .table-wrap, pre, .code, .ix-list');
+    }).slice(0, 8).map((el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}.${[...el.classList].join('.')} right=${Math.round(el.getBoundingClientRect().right)}`);
+    report.views.push({ ...v, scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth, overflow: doc.scrollWidth > doc.clientWidth, wide, errors,
+      bg: w.getComputedStyle(d.body).backgroundColor });
+    if (v.w === 1280) {
+      const slideRefs = new Set();
+      d.querySelectorAll('.slide-ref').forEach((s) => (s.textContent.match(/\d+(?:–\d+)?/g) || []).forEach((t) => {
+        const [a, b] = t.split('–').map(Number); for (let i = a; i <= (b || a); i++) slideRefs.add(i);
+      }));
+      const chips = [...d.querySelectorAll('#slideMap a')];
+      report.checks = {
+        slideChips: chips.length,
+        chipNumbers: chips.map((a) => +a.querySelector('b').textContent).join(',') === Array.from({ length: 42 }, (_, i) => i + 1).join(','),
+        brokenHrefs: [...d.querySelectorAll('a[href^="#"]')].map((a) => a.getAttribute('href')).filter((h) => !d.getElementById(h.slice(1))),
+        slideRefMissing: Array.from({ length: 42 }, (_, i) => i + 1).filter((n) => !slideRefs.has(n)),
+        h3WithoutRef: [...d.querySelectorAll('section.stage h3')].filter((h) => !h.querySelector('.slide-ref')).map((h) => h.textContent.trim().slice(0, 40)),
+        quizzes: [...d.querySelectorAll('.quiz')].map((q) => q.querySelectorAll('.q').length),
+        quizAnswered: d.querySelectorAll('.q-explain').length,
+        examItems: d.querySelectorAll('#examList details').length,
+        doctorCards: !!d.querySelector('#dr-card pre'),
+        designOut: d.querySelector('#ds-out').textContent.slice(0, 40),
+        btreeLevels: d.querySelector('#bt-levels').textContent,
+        terminals: d.querySelectorAll('.code.terminal').length,
+        externalSrc: [...d.querySelectorAll('[src]')].map((e) => e.getAttribute('src')).filter((s) => /^https?:/.test(s)),
+        imgs: d.querySelectorAll('.slide-img img').length,
+        imgsLoaded: [...d.querySelectorAll('.slide-img img')].filter((i) => i.complete && i.naturalWidth > 0).length,
+      };
+    }
+  }
+  document.getElementById('out').textContent = 'REPORT ' + JSON.stringify(report);
+})();
+</script>
+</body>
+</html>

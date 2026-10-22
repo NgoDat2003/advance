@@ -1,0 +1,23 @@
+Lab 3.04 — Mỗi index làm chậm thao tác ghi; khóa chính tăng dần giữ index gọn và ít WAL (slide 17, 20, 37)
+
+A. Cùng 200,000 dòng, chèn vào bảng có 1 / 4 / 7 index (index phụ trên cột giá trị ngẫu nhiên)
+──────────────────────────────────────────────────────────────────────────────────────────────
+│ Số index │ Thời gian chèn │      WAL │ Tổng index │    Heap │
+├──────────┼────────────────┼──────────┼────────────┼─────────┤
+│ 1 index  │          0.4 s │  29.2 MB │     4.3 MB │ 11.5 MB │
+│ 4 index  │          1.9 s │  72.0 MB │    19.5 MB │ 11.5 MB │
+│ 7 index  │          5.3 s │ 114.9 MB │    34.8 MB │ 11.5 MB │
+   => ✔ Càng nhiều index càng chậm: 1 → 4 → 7 index = 0.4 s → 1.9 s → 5.3 s, WAL 29.2 MB → 72.0 MB → 114.9 MB
+   => ✔ Gần tuyến tính: mỗi index phụ thêm ≈ 14.3 MB WAL (1→4) và ≈ 14.3 MB (4→7) cho 200,000 dòng
+   => ✔ 7 index chiếm 34.8 MB, gấp 3.0× chính bảng (11.5 MB): index tốn dung lượng thật (slide 17)
+
+B. 1,000,000 dòng vào 3 kiểu khóa chính: tăng dần vs ngẫu nhiên
+───────────────────────────────────────────────────────────────
+│ Khóa chính           │ Thời gian chèn │ trong đó sinh khóa │      WAL │ Index pkey │ Trang lá │ Lá đầy │ Số tầng │
+├──────────────────────┼────────────────┼────────────────────┼──────────┼────────────┼──────────┼────────┼─────────┤
+│ bigint tăng dần      │          2.3 s │              0.3 s │ 126.9 MB │    21.4 MB │    2,733 │  90.1% │       3 │
+│ UUID ngẫu nhiên (v4) │          7.2 s │              3.1 s │ 157.1 MB │    38.1 MB │    4,847 │  71.3% │       3 │
+│ UUID theo thời gian  │          4.5 s │              2.2 s │ 143.3 MB │    30.1 MB │    3,832 │  90.0% │       3 │
+   => ✔ Cùng khóa 16 byte, chỉ khác thứ tự: UUID ngẫu nhiên lá đầy 71% so với 90% → index 38.1 MB vs 30.1 MB (+26%)
+   => ✔ UUID theo thời gian đầy như bigint (90% vs 90%); to hơn bigint 1.4× chỉ vì khóa 16 byte thay vì 8 (mục index 24 vs 16 byte)
+   => ✔ Chèn ngẫu nhiên tốn hơn: WAL 157.1 MB vs 143.3 MB (×1.10), thời gian ghi (trừ phần sinh khóa) 4.1 s vs 2.3 s — vì vậy slide 20/37 khuyên khóa tăng dần

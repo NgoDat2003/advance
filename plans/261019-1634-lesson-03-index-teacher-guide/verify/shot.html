@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Screenshot harness</title>
+<style>body{margin:0;display:flex;gap:8px;background:#777} iframe{border:0;background:#fff}</style></head>
+<body>
+<!-- Side-by-side screenshot: desktop dark (scrolled to an anchor given in ?a=) and a 380 px phone in light mode. -->
+<iframe id="d" width="1000" height="1400"></iframe>
+<iframe id="m" width="380" height="1400"></iframe>
+<script>
+const a = new URLSearchParams(location.search).get('a') || '';
+const src = '../../../reports/lesson_03_index_teacher_guide.html' + (a ? '#' + a : '');
+const d = document.getElementById('d'), m = document.getElementById('m');
+const jump = (f) => { if (a) setTimeout(() => f.contentDocument.getElementById(a)?.scrollIntoView({ behavior: 'instant', block: 'start' }), 300); };
+d.onload = () => { d.contentDocument.documentElement.dataset.theme = 'dark'; jump(d); };
+m.onload = () => jump(m);
+d.src = src; m.src = src;
+</script>
+</body>
+</html>

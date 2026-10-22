@@ -1,0 +1,69 @@
+Lab 3.07 — Khóa ≠ index, NULL trong UNIQUE và các loại index đặc biệt của Postgres (slide 19, 21, 29, 37)
+
+A. Slide 19: khóa (key) ≠ index — orders có khóa ngoại nhưng không có index cho nó
+──────────────────────────────────────────────────────────────────────────────────
+│ Loại       │ Tên                 │ Định nghĩa                                                 │
+├────────────┼─────────────────────┼────────────────────────────────────────────────────────────┤
+│ Index      │ orders_pkey         │ CREATE UNIQUE INDEX orders_pkey ON orders USING btree (id) │
+│ Khóa ngoại │ orders_user_id_fkey │ FOREIGN KEY (user_id) REFERENCES users(id)                 │
+   => ✔ pg_indexes của orders chỉ có orders_pkey: Postgres tự tạo index cho PRIMARY KEY/UNIQUE, KHÔNG cho khóa ngoại user_id (InnoDB thì có)
+
+B. DELETE user id = 2 (không có đơn nào) — thời gian trigger khóa ngoại orders_user_id_fkey
+───────────────────────────────────────────────────────────────────────────────────────────
+│ Trường hợp                         │ Trigger (lần gọi) │ Trang orders trigger đọc │ ms trigger │
+├────────────────────────────────────┼───────────────────┼──────────────────────────┼────────────┤
+│ Chưa có index trên orders(user_id) │                 1 │                    9,307 │       82.0 │
+│ Có index l07_orders_user_id        │                 1 │                        3 │      0.155 │
+   (Đã VACUUM users: DELETE bị rollback vẫn xóa cờ all-visible của trang chứa dòng đó)
+   => ✔ Không có index: trigger quét cả 9,307 trang orders (82.0 ms) chỉ để biết user không có đơn; có index: 3 trang, 0.155 ms → mọi FK cần tự tạo index
+
+C. Slide 21: UNIQUE vẫn nhận NULL — bảng tạm l07_uq, l07_uq_nnd
+───────────────────────────────────────────────────────────────
+│ Ràng buộc                         │ Thử chèn              │ Kết quả                                                                          │
+├───────────────────────────────────┼───────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ UNIQUE (email)                    │ hai dòng email = NULL │ nhận cả 2 dòng                                                                   │
+│ UNIQUE NULLS NOT DISTINCT (email) │ dòng NULL thứ hai     │ lỗi 23505: duplicate key value violates unique constraint "l07_uq_nnd_email_key" │
+   => ✔ UNIQUE coi hai NULL là khác nhau nên nhận 2 dòng NULL; muốn chỉ một NULL thì dùng NULLS NOT DISTINCT (PG 15+) → SQLSTATE 23505
+
+D. Slide 29: đếm đơn PROCESSING (10,069 / 1 triệu) — Postgres không có bitmap index lưu sẵn
+───────────────────────────────────────────────────────────────────────────────────────────
+│ Truy vấn              │ Index (kích thước)           │ Kế hoạch                                     │ Dòng quét │ Trang │   ms │
+├───────────────────────┼──────────────────────────────┼──────────────────────────────────────────────┼───────────┼───────┼──────┤
+│ count PROCESSING      │ —                            │ Aggregate > Seq Scan (orders)                │    10,069 │ 9,307 │ 82.0 │
+│ count PROCESSING      │ btree(status) 6.7 MB         │ Aggregate > Index Only Scan (l07_status)     │    10,069 │    13 │  1.1 │
+│ count PROCESSING      │ (id) WHERE PROCESSING 240 KB │ Aggregate > Index Only Scan (l07_processing) │    10,069 │    30 │  1.2 │
+│ count DELIVERED (90%) │ btree(status) 6.7 MB         │ Aggregate > Index Only Scan (l07_status)     │   900,009 │   773 │  105 │
+│ sum(total) DELIVERED  │ btree(status) 6.7 MB         │ Aggregate > Seq Scan (orders)                │   900,009 │ 9,307 │  207 │
+│ count DELIVERED (90%) │ (id) WHERE PROCESSING 240 KB │ Aggregate > Seq Scan (orders)                │   900,009 │ 9,307 │  179 │
+   => ✔ btree(status) chỉ 6.7 MB nhờ deduplication (tắt dedup: 30.1 MB); đếm PROCESSING 9,307 → 13 trang
+   => ✔ Partial index chỉ chứa dòng PROCESSING: 240 KB, nhỏ hơn btree(status) 28.8× và chỉ phải cập nhật khi đơn ở PROCESSING; đọc 30 trang (btree(status) đã nén: 13)
+   => ✔ DELIVERED chiếm 90%: sum(total) cần cột trong heap → Seq Scan dù có btree(status); partial index không chứa DELIVERED → Seq Scan
+   => ✔ count(*) DELIVERED (90%) dùng Index Only Scan trên btree(status): 773 trang thay vì 9,307. count(*) không cần cột nào trong heap, mà index đã nén nhỏ hơn bảng, nên đếm trên index rẻ hơn dù phải đọc gần hết nó
+
+E. BRIN vs btree trên orders.created_at — tổng tiền 1 ngày (bảng 9,307 trang)
+─────────────────────────────────────────────────────────────────────────────
+│ Truy vấn │ Index (kích thước) │ Kế hoạch                                                                     │ Dòng quét │ Trang │    ms │
+├──────────┼────────────────────┼──────────────────────────────────────────────────────────────────────────────┼───────────┼───────┼───────┤
+│ 1 ngày   │ BRIN 24 KB         │ Aggregate > Bitmap Heap Scan (orders) > Bitmap Index Scan (l07_created_brin) │     2,880 │   770 │   7.2 │
+│ 1 ngày   │ btree 21.4 MB      │ Aggregate > Index Scan (l07_created_btree)                                   │     2,880 │    40 │ 0.759 │
+   => ✔ BRIN nhỏ hơn btree 915×; đọc 770 trang ≈ 6 khối 128 trang (loại 79,730 dòng khi kiểm lại) — vẫn ít hơn 12× so với quét bảng; btree chính xác hơn (40 trang) nhưng nặng 21.4 MB
+   Vì sao 770 trang: 6 khối 128 trang có min/max phủ ngày 2023-03-01, nhưng chỉ 2 khối thật sự chứa dòng của ngày đó. Lệnh INSERT hàng loạt đã nhét một ít dòng mới vào chỗ trống ở các trang đầu bảng; mỗi dòng như vậy kéo max của cả khối lên.
+
+F. Slide 37 "NOT NULL": btree của Postgres lưu cả NULL — users.deleted_at (95% NULL)
+────────────────────────────────────────────────────────────────────────────────────
+│ Index                                       │ Số dòng trong index │ Kích thước │
+├─────────────────────────────────────────────┼─────────────────────┼────────────┤
+│ (deleted_at) — mặc định, có dedup           │           1,000,000 │     7.3 MB │
+│ (deleted_at) WITH (deduplicate_items = off) │           1,000,000 │    21.5 MB │
+│ (deleted_at) WHERE deleted_at IS NOT NULL   │              49,956 │     1.0 MB │
+   => ✔ Partial nhỏ hơn bản đầy đủ 7.1× (dự đoán ~20×): dedup đã gộp 950,044 NULL lại; tắt dedup thì gấp 21.0×
+
+G. Slide 37 "prefix index": Postgres không có — dùng index biểu thức; và giới hạn kích thước 1 entry btree
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Index                              │ Kích thước │
+├────────────────────────────────────┼────────────┤
+│ users_email_key (email đầy đủ)     │    38.8 MB │
+│ l07_email_left10 (left(email, 10)) │    30.1 MB │
+   Chèn chuỗi 3,008 ký tự vào cột có btree: lỗi 54000 — index row size 3024 exceeds btree version 4 maximum 2704 …
+   => ✔ left(email, 10) nhỏ hơn 22% (30.1 MB vs 38.8 MB) — email ở đây ngắn nên lợi ít; truy vấn phải viết đúng biểu thức: left(email, 10) = 'user777777' → Bitmap Heap Scan (users) > Bitmap Index Scan (l07_email_left10), 4 trang
+   => ✔ Entry btree tối đa 2,704 byte (~1/3 trang 8 KB): cột text dài thì index md5(v), left(v, n) hoặc hash thay vì btree trên cả giá trị

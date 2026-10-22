@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Async Export API & Polling Pattern (202 Accepted) | Advance Backend</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #38bdf8;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --purple: #a78bfa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: #0284c7;
+      color: #fff;
+      margin-right: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-purple { background: #7c3aed; }
+    .badge-success { background: #059669; }
+    h1 { font-size: 26px; color: #fff; margin: 12px 0 6px 0; }
+    .subtitle { color: var(--text-muted); font-size: 14px; }
+
+    /* Interactive Simulator */
+    .sim-card {
+      background: #1e1b4b;
+      border: 1px solid #4338ca;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .sim-title { font-size: 16px; font-weight: 700; color: #e0e7ff; margin-bottom: 12px; }
+    .sim-btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .sim-btn {
+      background: #312e81; border: 1px solid #6366f1; color: #e0e7ff;
+      padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .sim-btn:hover { background: #4338ca; border-color: #818cf8; transform: translateY(-1px); }
+    .sim-progress-bar {
+      background: #0f172a; border-radius: 9999px; height: 16px; overflow: hidden; margin-bottom: 14px;
+      border: 1px solid #334155;
+    }
+    .sim-progress-fill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #34d399);
+      transition: width 0.4s ease;
+    }
+    .sim-console {
+      background: #090d16; border: 1px solid #312e81; border-radius: 8px; padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px; min-height: 120px; color: #a5b4fc; white-space: pre-wrap;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--card-border); margin-bottom: 20px; overflow-x: auto; }
+    .tab-btn {
+      background: none; border: none; color: var(--text-muted);
+      padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; white-space: nowrap;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Section Cards */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 22px; margin-bottom: 20px;
+    }
+    h2 { font-size: 18px; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; }
+    h3 { font-size: 15px; color: var(--accent); margin: 16px 0 8px 0; }
+    p { margin-bottom: 12px; font-size: 14px; }
+
+    /* Visual Sequence Box */
+    .seq-step {
+      display: flex; gap: 16px; padding: 14px; background: #0f172a;
+      border: 1px solid #1e293b; border-radius: 8px; margin-bottom: 12px;
+    }
+    .seq-badge {
+      width: 36px; height: 36px; border-radius: 8px; font-weight: 800; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .badge-blue { background: #0284c7; color: #fff; }
+    .badge-yellow { background: #d97706; color: #fff; }
+    .badge-green { background: #059669; color: #fff; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+    th, td { border: 1px solid var(--card-border); padding: 10px 14px; text-align: left; }
+    th { background: #1f2937; color: #fff; }
+    tr:nth-child(even) { background: #0f172a; }
+
+    /* Code Block */
+    pre {
+      background: #030712; border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 16px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px; color: #e5e7eb; margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <span class="badge badge-purple">SYSTEM ARCHITECTURE</span>
+        <span class="badge badge-success">ADVANCE BACKEND LAB 1.3</span>
+        <span class="badge">ASYNC API & 202 ACCEPTED</span>
+      </div>
+      <h1>Thiết Kế Async API Cho Xuất File Nặng 500MB (Polling Pattern)</h1>
+      <div class="subtitle">Giải quyết triệt để 4 tử huyệt: 504 Gateway Timeout, Heap Out of Memory (OOM Crash), Treo Event Loop và Đơ Trình Duyệt.</div>
+    </header>
+
+    <!-- INTERACTIVE SIMULATOR -->
+    <div class="sim-card">
+      <div class="sim-title">🎮 TRÌNH MÔ PHỎNG TIẾN ĐỘ THỜI GIAN THỰC (BẤM TỪ BƯỚC 1 ĐẾN 4)</div>
+      <div class="sim-progress-bar">
+        <div class="sim-progress-fill" id="progressBar"></div>
+      </div>
+      <div class="sim-btn-group">
+        <button class="sim-btn" onclick="simStep(1)">Bước 1: Bấm "Xuất Báo Cáo 500MB" (POST /export-jobs)</button>
+        <button class="sim-btn" onclick="simStep(2)">Bước 2: Polling lần 1 (Sau 3s)</button>
+        <button class="sim-btn" onclick="simStep(3)">Bước 3: Polling lần 2 (Sau 6s)</button>
+        <button class="sim-btn" onclick="simStep(4)">Bước 4: Polling lần 3 -> HOÀN THÀNH (Sau 9s)</button>
+        <button class="sim-btn" onclick="simStep(5)">Bước 5: Bấm Tải File Stream</button>
+      </div>
+      <div class="sim-console" id="simLog">// Bấm vào 'Bước 1' để bắt đầu mô phỏng quy trình Async Polling...</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-seq')">🗺️ 1. Sơ Đồ Tuần Tự (Không Bị Tràn)</button>
+      <button class="tab-btn" onclick="switchTab('tab-traps')">💀 2. 4 Tử Huyệt Của Cách Cũ</button>
+      <button class="tab-btn" onclick="switchTab('tab-specs')">📋 3. Đặc Tả Bộ 3 API RESTful</button>
+      <button class="tab-btn" onclick="switchTab('tab-code')">💻 4. Code Mẫu NestJS & BullMQ</button>
+    </div>
+
+    <!-- TAB 1: SƠ ĐỒ TUẦN TỰ -->
+    <div id="tab-seq" class="tab-pane active">
+      <div class="card">
+        <h2>Quy Trình 3 Giai Đoạn Chuẩn Enterprise</h2>
+
+        <div class="seq-step">
+          <div class="seq-badge badge-blue">01</div>
+          <div class="step-content">
+            <h3 style="margin-top: 0; color: #38bdf8;">Giai đoạn 1: Khởi Tạo Tác Vụ Ngầm (Trả về sau 5 mili-giây)</h3>
+            <p><strong>Client:</strong> Gửi <code>POST /api/v1/export-jobs</code> (kèm bộ lọc: <code>year=2025, brand=MAYCHA</code>).</p>
+            <p><strong>API Gateway:</strong> Đẩy tác vụ vào Queue nền (BullMQ Redis) ➔ <strong>KHÔNG ĐỢI XUẤT XONG!</strong></p>
+            <p><strong>Response ngay lập tức:</strong> Mã <strong><code>202 Accepted</code></strong> kèm JSON: <code>{ "job_id": "job_exp_888", "status": "PENDING" }</code>.</p>
+            <p style="color: #34d399; font-weight: 600;">👉 Trình duyệt người dùng KHÔNG BỊ ĐƠ! Kế toán vẫn bấm xem hợp đồng, làm việc khác bình thường.</p>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-badge badge-yellow">02</div>
+          <div class="step-content">
+            <h3 style="margin-top: 0; color: #fbbf24;">Giai đoạn 2: Polling Kiểm Tra Tiến Độ (Định kỳ 3s - 5s)</h3>
+            <p><strong>Worker:</strong> Chạy ngầm trong tiến trình riêng biệt. Đọc dữ liệu từ PostgreSQL theo từng cụm (Stream Cursor 1.000 dòng/lần), ghi dần vào file tạm trên đĩa cứng (không nạp 500MB vào RAM).</p>
+            <p><strong>Client:</strong> Định kỳ 3 giây gọi: <code>GET /api/v1/export-jobs/job_exp_888</code>.</p>
+            <p><strong>API Gateway:</strong> Trả về tiến độ hiện tại: <code>{ "status": "PROCESSING", "progress": 45 }</code>.</p>
+            <p style="color: #fbbf24; font-weight: 600;">👉 Giao diện người dùng hiện thanh progress bar nhảy mượt mà: 20% ... 45% ... 80%.</p>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-badge badge-green">03</div>
+          <div class="step-content">
+            <h3 style="margin-top: 0; color: #34d399;">Giai đoạn 3: Hoàn Thành & Tải File Stream</h3>
+            <p><strong>Worker:</strong> Ghi file xong, đẩy file lên Storage (S3 / MinIO / Local Storage), cập nhật trạng thái job thành <code>COMPLETED</code>.</p>
+            <p><strong>Client:</strong> Polling lần cuối nhận: <code>{ "status": "COMPLETED", "download_url": "/api/v1/downloads/job_exp_888.xlsx" }</code>.</p>
+            <p><strong>Tải file:</strong> Giao diện hiện nút xanh: <strong>[ Tải File Báo Cáo Về Máy ]</strong>. Kế toán bấm tải, backend stream file nhả về máy khách.</p>
+            <p style="color: #38bdf8; font-weight: 600;">👉 Dù kế toán có tắt máy đi ăn trưa, chiều mở lên link tải vẫn còn đó (sẵn sàng trong 24 giờ).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 4 TỬ HUYỆT -->
+    <div id="tab-traps" class="tab-pane">
+      <div class="card">
+        <h2>So Sánh Trực Diện: Cách Đồng Bộ Cũ vs Cách Bất Đồng Bộ Chuẩn</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Vấn đề kỹ thuật</th>
+              <th>Cách Cũ: Gọi Đồng Bộ (`GET /export`)</th>
+              <th>Cách Chuẩn: Async Polling (`202 Accepted`)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Giới hạn Timeout</strong></td>
+              <td><span style="color: #f87171; font-weight: 700;">CHẾT VÌ 504 TIMEOUT:</span> NGINX/Cloudflare tự động ngắt kết nối sau 60 giây. File 500MB chạy 2 phút là gãy!</td>
+              <td><span style="color: #34d399; font-weight: 700;">0% TIMEOUT:</span> Request khởi tạo trả về sau 5 mili-giây với mã <code>202 Accepted</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Tràn bộ nhớ (OOM Crash)</strong></td>
+              <td><span style="color: #f87171; font-weight: 700;">SẬP SERVER:</span> Nạp 500MB Excel thô vào RAM ngốn 2GB. 3 người cùng bấm xuất ➔ Server Node.js bị đứt bóng (Out of Memory).</td>
+              <td><span style="color: #34d399; font-weight: 700;">TIẾT KIỆM RAM:</span> Worker dùng NodeJS Stream ghi thẳng ra đĩa, RAM chỉ tốn ~50MB bất kể file nặng bao nhiêu GB.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Nghẽn CPU Event Loop</strong></td>
+              <td><span style="color: #f87171; font-weight: 700;">ĐỨNG SERVER:</span> Tiến trình chính bận parse 200.000 dòng ➔ Toàn bộ user khác không thể đăng nhập hay đặt món!</td>
+              <td><span style="color: #34d399; font-weight: 700;">TÁCH BIỆT TIẾN TRÌNH:</span> Worker chạy ở Background thread/container riêng, không ảnh hưởng 1 mili-giây nào đến web chính.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Trải nghiệm người dùng</strong></td>
+              <td><span style="color: #f87171; font-weight: 700;">ỨC CHẾ:</span> Trình duyệt đơ, chuột quay mòng mòng, user tưởng lỗi bấm liên tục 5 lần khiến server quá tải.</td>
+              <td><span style="color: #34d399; font-weight: 700;">CHUYÊN NGHIỆP:</span> Thanh tiến độ nhảy %, user vẫn lướt web làm việc khác, thông báo chuông khi file xong.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: ĐẶC TẢ BỘ 3 API -->
+    <div id="tab-specs" class="tab-pane">
+      <div class="card">
+        <h2>Đặc Tả Chuẩn RESTful Cho Bộ 3 Endpoint Async</h2>
+
+        <h3>1. Khởi tạo tác vụ xuất file (Trigger Job)</h3>
+        <pre><code>POST /api/v1/export-jobs
+Header: Content-Type: application/json
+Body:
+{
+  "report_type": "MAYCHA_ANNUAL_CONTRACTS",
+  "year": 2025,
+  "format": "EXCEL"
+}
+
+HTTP Response: 202 Accepted
+Body:
+{
+  "job_id": "job_exp_888",
+  "status": "PENDING",
+  "created_at": "2026-10-16T11:00:00Z",
+  "estimated_seconds": 45,
+  "status_check_url": "/api/v1/export-jobs/job_exp_888"
+}</code></pre>
+
+        <h3>2. Kiểm tra tiến độ tác vụ (Polling Status)</h3>
+        <pre><code>GET /api/v1/export-jobs/job_exp_888
+
+HTTP Response: 200 OK
+Body (Khi đang xử lý):
+{
+  "job_id": "job_exp_888",
+  "status": "PROCESSING",
+  "progress": 65,
+  "processed_rows": 130000,
+  "total_rows": 200000
+}
+
+Body (Khi hoàn thành):
+{
+  "job_id": "job_exp_888",
+  "status": "COMPLETED",
+  "progress": 100,
+  "file_size_mb": 482.5,
+  "download_url": "/api/v1/downloads/job_exp_888.xlsx",
+  "expires_at": "2026-10-17T11:00:00Z"
+}</code></pre>
+
+        <h3>3. Tải file stream về máy (Download Stream)</h3>
+        <pre><code>GET /api/v1/downloads/job_exp_888.xlsx
+
+HTTP Response: 200 OK
+Headers:
+  Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  Content-Disposition: attachment; filename="Maycha_BaoCao_2025.xlsx"
+  Transfer-Encoding: chunked
+
+(Truyền dữ liệu dạng luồng NodeJS Stream nhả về máy khách, không nghẽn RAM)</code></pre>
+      </div>
+    </div>
+
+    <!-- TAB 4: CODE MẪU NESTJS & BULLMQ -->
+    <div id="tab-code" class="tab-pane">
+      <div class="card">
+        <h2>Code Mẫu Triển Khai NestJS + BullMQ Queue</h2>
+        
+        <h3>1. Controller: Nhận request và trả ngay 202 Accepted</h3>
+        <pre><code>@Controller('export-jobs')
+export class ExportController {
+  constructor(
+    @InjectQueue('export-queue') private readonly exportQueue: Queue,
+  ) {}
+
+  @Post()
+  @HttpCode(HttpStatus.ACCEPTED) // Trả về 202 Accepted chuẩn RESTful!
+  async triggerExport(@Body() dto: ExportRequestDto) {
+    const job = await this.exportQueue.add('generate-excel', dto, {
+      removeOnComplete: false, // Giữ lại metadata để client polling
+      removeOnFail: false,
+    });
+
+    return {
+      job_id: job.id,
+      status: 'PENDING',
+      status_check_url: `/api/v1/export-jobs/${job.id}`,
+    };
+  }
+
+  @Get(':id')
+  async getStatus(@Param('id') id: string) {
+    const job = await this.exportQueue.getJob(id);
+    if (!job) throw new NotFoundException('Không tìm thấy Job!');
+
+    const state = await job.getState(); // pending, active, completed, failed
+    const progress = job.progress;
+
+    return {
+      job_id: job.id,
+      status: state.toUpperCase(),
+      progress: progress || 0,
+      download_url: state === 'completed' ? `/api/v1/downloads/${job.id}.xlsx` : null,
+    };
+  }
+}</code></pre>
+
+        <h3>2. Consumer Worker: Chạy ngầm và Stream file</h3>
+        <pre><code>@Processor('export-queue')
+export class ExportProcessor {
+  @Process('generate-excel')
+  async handleExport(job: Job) {
+    // 1. Dùng Cursor đọc PostgreSQL từng cụm (không load toàn bộ vào RAM):
+    const total = 200000;
+    let processed = 0;
+
+    // 2. Dùng thư viện exceljs dạng STREAM:
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      filename: `./storage/exports/${job.id}.xlsx`,
+    });
+    const sheet = workbook.addWorksheet('BaoCao');
+
+    for await (const batch of this.fetchBatchesFromDb()) {
+      for (const row of batch) {
+        sheet.addRow(row).commit();
+        processed++;
+      }
+      // Cập nhật tiến độ cho Client polling
+      await job.progress(Math.round((processed / total) * 100));
+    }
+
+    await workbook.commit();
+    return { success: true };
+  }
+}</code></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function simStep(step) {
+      const log = document.getElementById('simLog');
+      const bar = document.getElementById('progressBar');
+
+      if (step === 1) {
+        bar.style.width = '5%';
+        log.innerHTML = `[BƯỚC 1: KHỞI TẠO TÁC VỤ]
+` +
+          `-> Client: POST /api/v1/export-jobs { report: 'MAYCHA_CONTRACTS_2025' }
+` +
+          `-> NestJS: Đẩy job vào BullMQ Queue -> KHÔNG ĐỢI XUẤT XONG!
+` +
+          `-> Response: 202 ACCEPTED (Nhận việc sau 5ms!)
+` +
+          `   Payload: { "job_id": "job_exp_888", "status": "PENDING" }
+` +
+          `👉 Kết quả: Giao diện web mượt mà, không bị xoay vòng, hiện thông báo: "Đang tạo báo cáo..."`;
+      } else if (step === 2) {
+        bar.style.width = '35%';
+        log.innerHTML = `[BƯỚC 2: POLLING LẦN 1 (SAU 3 GIÂY)]
+` +
+          `-> Client: GET /api/v1/export-jobs/job_exp_888
+` +
+          `-> Worker: Đang đọc Postgres stream đợt 1 (Đã ghi được 70.000 dòng)
+` +
+          `-> Response: 200 OK
+` +
+          `   Payload: { "status": "PROCESSING", "progress": 35, "processed_rows": 70000 }
+` +
+          `👉 Giao diện: Thanh tiến độ nhảy lên 35%!`;
+      } else if (step === 3) {
+        bar.style.width = '85%';
+        log.innerHTML = `[BƯỚC 3: POLLING LẦN 2 (SAU 6 GIÂY)]
+` +
+          `-> Client: GET /api/v1/export-jobs/job_exp_888
+` +
+          `-> Worker: Đang đọc Postgres stream đợt 2 (Đã ghi được 170.000 dòng)
+` +
+          `-> Response: 200 OK
+` +
+          `   Payload: { "status": "PROCESSING", "progress": 85, "processed_rows": 170000 }
+` +
+          `👉 Giao diện: Thanh tiến độ nhảy lên 85%!`;
+      } else if (step === 4) {
+        bar.style.width = '100%';
+        log.innerHTML = `[BƯỚC 4: POLLING LẦN 3 -> HOÀN THÀNH (SAU 9 GIÂY)]
+` +
+          `-> Worker: Đã xuất xong 200.000 dòng vào file 482MB, nén xong!
+` +
+          `-> Client: GET /api/v1/export-jobs/job_exp_888
+` +
+          `-> Response: 200 OK
+` +
+          `   Payload: {
+` +
+          `     "status": "COMPLETED",
+` +
+          `     "progress": 100,
+` +
+          `     "download_url": "/api/v1/downloads/job_exp_888.xlsx"
+` +
+          `   }
+` +
+          `👉 Giao diện: Hiện nút xanh: [ BẤM ĐỂ TẢI FILE EXCEL 500MB VỀ MÁY ]!`;
+      } else if (step === 5) {
+        log.innerHTML = `[BƯỚC 5: TẢI FILE STREAM VỀ TRÌNH DUYỆT]
+` +
+          `-> Client: GET /api/v1/downloads/job_exp_888.xlsx
+` +
+          `-> Backend: Tạo fs.createReadStream() bơm thẳng ra response
+` +
+          `-> Headers: Transfer-Encoding: chunked, Content-Disposition: attachment
+` +
+          `👉 File 500MB tải về với tốc độ mạng tối đa, RAM server chỉ ngốn đúng 45MB!`;
+      }
+    }
+  </script>
+</body>
+</html>

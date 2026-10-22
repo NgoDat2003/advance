@@ -1,0 +1,29 @@
+Lab 3.11 — Truy vấn "Top 10 phim năm 2015" của Bài 2: thêm index nào thì hết chậm?
+Kết quả gốc: #1 = Thani Oruvan (8.4★, 24536 votes)
+
+A. Chưa thêm index nào: tiền nằm ở đâu?
+───────────────────────────────────────
+│ Cấu hình              │ Kế hoạch                                                                          │ Tra titles_pkey │   Trang │   ms │
+├───────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼─────────────────┼─────────┼──────┤
+│ Song song (như Bài 2) │ Nested Loop > Gather Merge > Sort > Seq Scan (ratings) > Index Scan (titles_pkey) │           2,956 │  25,898 │ 90.2 │
+│ Tắt song song         │ Sort > Nested Loop > Seq Scan (ratings) > Index Scan (titles_pkey)                │          18,310 │ 102,542 │  266 │
+   => ✔ 18,310 lần tra khóa chính titles (mỗi lần ~5 trang) chiếm phần lớn 102,542 trang, không phải lần quét ratings (10,992 trang)
+
+B. Thử từng index (tất cả trong một transaction, cuối cùng ROLLBACK)
+────────────────────────────────────────────────────────────────────
+│ Phương án                                  │ Index (kích thước, thời gian tạo) │ Kế hoạch                                                                                                           │  Trang │   ms │ Kết quả đúng │
+├────────────────────────────────────────────┼───────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼──────┼──────────────┤
+│ V0 không thêm gì                           │ —                                 │ Nested Loop > Gather Merge > Sort > Seq Scan (ratings) > Index Scan (titles_pkey)                                  │ 25,898 │ 90.2 │            ✔ │
+│ V1 ratings(num_votes)                      │ 11.9 MB, tạo 1.1 s                │ Nested Loop > Gather Merge > Sort > Bitmap Heap Scan (ratings) > Bitmap Index Scan (v1) > Index Scan (titles_pkey) │ 21,794 │ 53.1 │            ✔ │
+│ V2 ratings xếp theo điểm, partial, INCLUDE │ 744 KB, tạo 0.2 s                 │ Gather Merge > Nested Loop > Index Only Scan (v2) > Index Scan (titles_pkey)                                       │ 15,556 │ 32.5 │            ✔ │
+│ V3 titles partial, INCLUDE                 │ 40.4 MB, tạo 8.2 s                │ Gather Merge > Sort > Hash Join > Index Only Scan (v3) > Hash > Seq Scan (ratings)                                 │ 11,192 │  114 │            ✔ │
+│ V2 + V3 (titles partial, INCLUDE)          │ V2 744 KB + V3 40.4 MB            │ Sort > Hash Join > Index Only Scan (v3) > Hash > Index Only Scan (v2)                                              │    221 │ 12.3 │            ✔ │
+Định nghĩa index:
+  V1: CREATE INDEX lab03_tmp_v1 ON lab_imdb.ratings (num_votes)
+  V2: CREATE INDEX lab03_tmp_v2 ON lab_imdb.ratings (average_rating DESC, num_votes DESC) INCLUDE (tconst) WHERE num_votes >= 10000
+  V3: CREATE INDEX lab03_tmp_v3 ON lab_imdb.titles (start_year) INCLUDE (tconst, primary_title) WHERE title_type = 'movie'
+   => ✔ mọi phương án trả về đúng 10 dòng như Bài 2: index không đổi kết quả, chỉ đổi đường đi
+   => ✔ V1 (index "hiển nhiên" trên num_votes) chỉ giảm 25,898 → 21,794 trang: phần đắt vẫn là các lần tra titles
+   => ✔ tốt nhất: V2 + V3 (titles partial, INCLUDE) với 221 trang, 12.3 ms (V0: 25,898 trang, 90.2 ms)
+So với cache Bài 2 (Redis HIT 1.24 ms, MISS 149 ms): index tốt nhất chạm 221 trang ở mọi lần đọc, kể cả lần đầu tiên khi cache còn trống (12.3 ms đo lúc các trang đã nằm trong RAM).
+✔ lab_imdb chỉ còn index: ratings_pkey, titles_pkey

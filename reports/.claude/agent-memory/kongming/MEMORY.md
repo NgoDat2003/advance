@@ -1,0 +1,1 @@
+- [Bash hook gotchas](reference_bash_hook_gotchas.md) — "node_modules" in command text is blocked; URL-with-creds strings are redacted in output; psql read-only route

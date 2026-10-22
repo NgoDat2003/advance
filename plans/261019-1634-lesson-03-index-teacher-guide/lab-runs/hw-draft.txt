@@ -1,0 +1,23 @@
+
+[1] Slide 26: cột có cardinality cao (store_id: 200 giá trị) đặt trước status (4 giá trị) có nhanh hơn?
+    (status, store_id): 5 ms, 15 dòng
+    (store_id, status): 2 ms, 15 dòng
+    => (store_id, status) nhanh hơn 2.5×. Lý thuyết ĐÚNG.
+
+[2] Slide 28: covering index có giúp Postgres trả kết quả mà không đọc bảng?
+    Bảng copy: 46 MB, đã gia hạn 14990 hợp đồng
+    Index (customer_id, signed_at) INCLUDE (total): 24 MB
+    SELECT * ...: Index Scan trên idx_copy_customer_covering
+    SELECT signed_at, total ...: Index Only Scan, Heap Fetches 5/5 dòng
+    => Postgres vẫn phải đọc bảng cho mọi dòng. Covering index vô dụng trên Postgres (chỉ đúng với MySQL).
+
+[3] Slide 31: có nên đánh index cho status (chỉ 4 giá trị)?
+    Index (status): 3408 kB
+    status = 'ACTIVE': Seq Scan, 300545 dòng, 1490 ms
+    => Postgres không dùng index status. Lý thuyết ĐÚNG: đừng index cột ít giá trị, xoá index này.
+
+=== KẾT LUẬN CỦA THÍ NGHIỆM ===
+  Slide 26  ĐÚNG — (store_id, status) nhanh hơn 2.5×  → Luôn đặt cột cardinality cao lên đầu index
+  Slide 28  SAI trên Postgres — vẫn đọc bảng          → Không dùng INCLUDE, tiết kiệm dung lượng
+  Slide 31  ĐÚNG — Postgres bỏ qua index status       → DROP INDEX idx_contracts_status
+Khuyến nghị cho hệ thống hợp đồng: áp dụng 3 hành động trên cho mọi bảng tương tự.

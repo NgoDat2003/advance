@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idempotency Key & Redis Lifecycle Architecture | Advance Backend</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.2);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --purple: #a78bfa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: #0284c7;
+      color: #fff;
+      margin-right: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-purple { background: #7c3aed; }
+    .badge-success { background: #059669; }
+    h1 { font-size: 26px; color: #fff; margin: 12px 0 6px 0; }
+    .subtitle { color: var(--text-muted); font-size: 14px; }
+
+    /* Interactive Simulator */
+    .sim-card {
+      background: #1e1b4b;
+      border: 1px solid #4338ca;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .sim-title { font-size: 16px; font-weight: 700; color: #e0e7ff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .sim-btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .sim-btn {
+      background: #312e81;
+      border: 1px solid #6366f1;
+      color: #e0e7ff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sim-btn:hover { background: #4338ca; border-color: #818cf8; transform: translateY(-1px); }
+    .sim-console {
+      background: #090d16;
+      border: 1px solid #312e81;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      min-height: 110px;
+      color: #a5b4fc;
+      white-space: pre-wrap;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--card-border); margin-bottom: 20px; }
+    .tab-btn {
+      background: none; border: none; color: var(--text-muted);
+      padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Section Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    h2 { font-size: 18px; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; }
+    h3 { font-size: 15px; color: var(--accent); margin: 16px 0 8px 0; }
+    p { margin-bottom: 12px; font-size: 14px; color: var(--text-main); }
+
+    /* Sequence Steps Visual */
+    .step-box {
+      display: flex;
+      gap: 16px;
+      padding: 14px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: #000;
+      font-weight: 800; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-content { flex-grow: 1; }
+    .step-title { font-weight: 700; color: #fff; margin-bottom: 4px; font-size: 14px; }
+    .step-desc { font-size: 13px; color: var(--text-muted); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+    th, td { border: 1px solid var(--card-border); padding: 10px 14px; text-align: left; }
+    th { background: #1f2937; color: #fff; }
+    tr:nth-child(even) { background: #0f172a; }
+
+    /* Code Block */
+    pre {
+      background: #030712;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #e5e7eb;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <span class="badge badge-purple">SYSTEM ARCHITECTURE</span>
+        <span class="badge badge-success">ADVANCE BACKEND LAB 1.2</span>
+        <span class="badge">MAYCHA ENTERPRISE PATTERN</span>
+      </div>
+      <h1>Kiến Trúc Idempotency Key & Chu Trình Sống Của Redis</h1>
+      <div class="subtitle">Bản đồ thiết kế chuẩn mực chống trừ tiền / tạo trùng lặp giao dịch 2 lần cho hệ thống Backend</div>
+    </header>
+
+    <!-- INTERACTIVE SIMULATOR -->
+    <div class="sim-card">
+      <div class="sim-title">🎮 MÔ PHỎNG TƯƠNG TÁC THỰC TẾ (BẤM ĐỂ XEM HỆ THỐNG XỬ LÝ)</div>
+      <div class="sim-btn-group">
+        <button class="sim-btn" onclick="runSim(1)">1. Gửi Lần Đầu (Mới toanh)</button>
+        <button class="sim-btn" onclick="runSim(2)">2. Bấm Đúp khi đang PENDING</button>
+        <button class="sim-btn" onclick="runSim(3)">3. Gửi lại cùng Key + Body (Lag mạng)</button>
+        <button class="sim-btn" onclick="runSim(4)">4. Gửi cùng Key nhưng ĐỔI Body</button>
+        <button class="sim-btn" onclick="runSim(5)">5. Sau 24h (TTL hết hạn)</button>
+      </div>
+      <div class="sim-console" id="simOutput">// Bấm vào 1 trong các nút phía trên để mô phỏng luồng chạy của NestJS và Redis...</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('tab-flow')">🗺️ 1. Sơ Đồ Luồng Hoạt Động</button>
+      <button class="tab-btn" onclick="showTab('tab-rules')">⏱️ 2. Quy Tắc Clear Redis Khi Nào</button>
+      <button class="tab-btn" onclick="showTab('tab-compare')">⚖️ 3. Phân Biệt Redis vs Bảng DB</button>
+      <button class="tab-btn" onclick="showTab('tab-code')">💻 4. Code Mẫu NestJS & Next.js</button>
+    </div>
+
+    <!-- TAB 1: SƠ ĐỒ LUỒNG -->
+    <div id="tab-flow" class="tab-pane active">
+      <div class="card">
+        <h2>Toàn Cảnh 4 Kịch Bản Xử Lý Tại Cửa Ngõ Backend</h2>
+        
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Frontend Gửi Lên Header: <code>x-idempotency-key</code> + Body JSON</div>
+            <div class="step-desc">Frontend tự sinh mã UUID theo Form hoặc gắn ID nghiệp vụ (ví dụ: <code>addendum:HD149:PL02</code>). Frontend KHÔNG kết nối Redis!</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Backend Interceptor: Validate Cú Pháp & Tính SHA-256 Body</div>
+            <div class="step-desc">Nếu body sai cú pháp -> Trả ngay <code>400 Bad Request</code>. Nếu đúng -> Băm chuỗi Body thành mã Hash SHA-256 để chống giả mạo payload.</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Tra Cứu Key Trong Redis / Database Table</div>
+            <div class="step-desc">
+              • <strong>Chưa có key:</strong> Ghi nhận <code>status = 'PENDING'</code>, khóa tạm 60 giây, cho phép chạy tiếp vào Service.<br/>
+              • <strong>Key đang PENDING:</strong> Trả về ngay <code>409 Conflict</code> (Chặn đứng thao tác bấm đúp liên thanh).<br/>
+              • <strong>Key đã COMPLETED:</strong> So khớp Hash Body. Nếu trùng 100% -> Bốc luôn kết quả cũ trả về <code>200 OK</code> trong 1ms (Không chạy lại Service). Nếu khác Body -> Báo <code>422 Unprocessable Entity</code>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Chạy Service Nghiệp Vụ & Giao Dịch Database</div>
+            <div class="step-desc">Mở Transaction: Ghi bảng hợp đồng, trừ tiền cọc, sync SAP...</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Cập Nhật Trạng Thái & Thiết Lập Hạn Sử Dụng (TTL)</div>
+            <div class="step-desc">
+              • <strong>Thành công:</strong> Đổi sang <code>COMPLETED</code>, lưu kèm Response Body, đặt TTL = 24 giờ. Trả về <code>201 Created</code>.<br/>
+              • <strong>Thất bại (Catch Error):</strong> Xóa ngay key (<code>DEL key</code>) để user sửa dữ liệu và bấm lại được.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: QUY TẮC CLEAR REDIS -->
+    <div id="tab-rules" class="tab-content tab-pane">
+      <div class="card">
+        <h2>Quy Tắc Vàng: Khi Nào Được Xóa Redis, Khi Nào Không?</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tình huống giao dịch</th>
+              <th>Trạng thái trong Redis</th>
+              <th>Hành vi xử lý đối với Redis</th>
+              <th>Lý do kỹ thuật</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Thanh toán THÀNH CÔNG</strong></td>
+              <td><code>COMPLETED</code></td>
+              <td><span style="color: #f87171; font-weight: 700;">TUYỆT ĐỐI KHÔNG XÓA NGAY!</span> Giữ lại kèm TTL 24 giờ.</td>
+              <td>Nếu xóa ngay, khi mạng lag gửi lại request lần 2, hệ thống sẽ trừ tiền thêm 1 lần nữa! Hết 24h Redis tự bốc hơi.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Lỗi nghiệp vụ có thể sửa (Thiếu tiền, sai mã)</strong></td>
+              <td><code>FAILED</code></td>
+              <td><span style="color: #34d399; font-weight: 700;">XÓA NGAY LẬP TỨC (`DEL key`)</span></td>
+              <td>Để người dùng nạp thêm tiền hoặc sửa lại mã giảm giá rồi bấm thanh toán lại thì không bị chặn!</td>
+            </tr>
+            <tr>
+              <td><strong>3. Server bị sập nguồn / Crash giữa chừng</strong></td>
+              <td><code>PENDING</code></td>
+              <td><span style="color: #fbbf24; font-weight: 700;">ĐỂ TỰ HẾT HẠN (TTL 60s)</span></td>
+              <td>Sau 60 giây cái khóa PENDING tự động mở ra, tài khoản của khách không bị đóng băng vĩnh viễn.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Admin / Kế toán chủ động hủy giao dịch</strong></td>
+              <td>Bất kỳ</td>
+              <td><span style="color: #38bdf8; font-weight: 700;">Chủ động gọi `DEL key`</span></td>
+              <td>Xóa sạch dấu vết phiên cũ để tạo phiên giao dịch mới từ đầu.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: PHÂN BIỆT REDIS VS BẢNG DB -->
+    <div id="tab-compare" class="tab-content tab-pane">
+      <div class="card">
+        <h2>So Sánh Trực Diện: Redis vs Bảng Database Riêng (PostgreSQL)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Tiêu chí so sánh</th>
+              <th>Dùng In-Memory REDIS</th>
+              <th>Dùng BẢNG DATABASE (PostgreSQL)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Tốc độ đọc/ghi</strong></td>
+              <td><strong>Siêu nhanh (0.1 - 0.5 ms)</strong> trên RAM</td>
+              <td><strong>5 - 20 ms</strong> trên đĩa SSD</td>
+            </tr>
+            <tr>
+              <td><strong>Tính toàn vẹn (ACID Transaction)</strong></td>
+              <td>Không bọc chung Transaction với bảng Hợp đồng Maycha được</td>
+              <td><strong>Có thể bọc chung trong 1 DB Transaction</strong> (Lỗi hợp đồng -> Tự rollback key)</td>
+            </tr>
+            <tr>
+              <td><strong>Cơ chế dọn rác (Cleanup)</strong></td>
+              <td><strong>Tự động 100%</strong> bằng TTL (60s hoặc 24h)</td>
+              <td>Phải viết thêm Cron Job dọn dẹp các key quá 30 ngày</td>
+            </tr>
+            <tr>
+              <td><strong>Tính bền vững khi cúp điện</strong></td>
+              <td>Có nguy cơ mất dữ liệu nếu Redis chưa kịp sync đĩa</td>
+              <td><strong>Bền vững 100% (WAL log)</strong>, không bao giờ mất</td>
+            </tr>
+            <tr>
+              <td><strong>Hệ thống phù hợp</strong></td>
+              <td>Sàn TMĐT, Flash Sale, API công cộng nhiều người bấm</td>
+              <td><strong>Hệ thống ERP, Tài chính, Bán lẻ Maycha</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: CODE MẪU -->
+    <div id="tab-code" class="tab-content tab-pane">
+      <div class="card">
+        <h2>Code Mẫu Triển Khai Chuẩn</h2>
+        
+        <h3>1. Phía Backend: NestJS Interceptor</h3>
+        <pre><code>@Injectable()
+export class IdempotencyInterceptor implements NestInterceptor {
+  constructor(private readonly redis: RedisService) {}
+
+  async intercept(context: ExecutionContext, next: CallHandler): Promise&lt;Observable&lt;any&gt;&gt; {
+    const req = context.switchToHttp().getRequest();
+    const key = req.headers['x-idempotency-key'];
+    if (!key) return next.handle(); // Không có header thì bỏ qua
+
+    const redisKey = `idemp:${key}`;
+    const bodyHash = crypto.createHash('sha256').update(JSON.stringify(req.body)).digest('hex');
+
+    // 1. Thử khóa key với trạng thái PENDING (TTL = 60s)
+    const acquired = await this.redis.set(redisKey, 'PENDING', 'NX', 'EX', 60);
+
+    if (!acquired) {
+      const cached = await this.redis.get(`${redisKey}:response`);
+      if (cached) {
+        const { savedHash, body } = JSON.parse(cached);
+        // Kiểm tra Hash Body
+        if (savedHash !== bodyHash) {
+          throw new UnprocessableEntityException('Cùng Idempotency Key nhưng nội dung Body bị thay đổi!');
+        }
+        return of(body); // Trả kết quả cũ 200 OK
+      }
+      throw new ConflictException('Yêu cầu đang được xử lý, vui lòng chờ!');
+    }
+
+    // 2. Chạy Service
+    return next.handle().pipe(
+      tap(async (responseBody) => {
+        // [THÀNH CÔNG]: Lưu kết quả và đặt TTL 24h (86400s)
+        await this.redis.set(`${redisKey}:response`, JSON.stringify({ savedHash: bodyHash, body: responseBody }), 'EX', 86400);
+        await this.redis.set(redisKey, 'COMPLETED', 'EX', 86400);
+      }),
+      catchError(async (err) => {
+        // [LỖI]: Xóa key ngay để user thử lại!
+        await this.redis.del(redisKey);
+        throw err;
+      })
+    );
+  }
+}</code></pre>
+
+        <h3>2. Phía Frontend: Next.js Client Component</h3>
+        <pre><code>// Gắn key theo ID nghiệp vụ (Ví dụ phụ lục hợp đồng Maycha):
+const handleSaveAddendum = async () => {
+  const idempotencyKey = `addendum:${contractId}:${formValues.addendumNumber}`;
+
+  await fetch('/api/v1/addenda', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey, // Gửi kèm header
+    },
+    body: JSON.stringify(formValues),
+  });
+};</code></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function runSim(type) {
+      const out = document.getElementById('simOutput');
+      if (type === 1) {
+        out.innerHTML = `[REQUEST 1: MỚI TOANH]
+` +
+          `-> Header: x-idempotency-key = "uuid-demo-123", Body: { amount: 50000000 }
+` +
+          `-> Redis: Tra cứu không thấy key -> SET idemp:uuid-demo-123 'PENDING' EX 60s (Thành công!)
+` +
+          `-> Service: Mở Transaction DB -> Trừ tiền cọc 50 triệu -> Tạo hợp đồng Maycha HD-149
+` +
+          `-> Redis: Cập nhật status = 'COMPLETED', lưu response, đặt TTL = 24 giờ
+` +
+          `👉 KẾT QUẢ: 201 Created (Tạo đơn thành công lần đầu tiên, mất 150ms)`;
+      } else if (type === 2) {
+        out.innerHTML = `[REQUEST 2: BẤM ĐÚP KHI REQUEST 1 ĐANG XỬ LÝ (PENDING)]
+` +
+          `-> Header: x-idempotency-key = "uuid-demo-123"
+` +
+          `-> Redis: Tra cứu thấy status = 'PENDING' (Đang xử lý dở ở thread bên cạnh)
+` +
+          `-> Backend: DỪNG LẠI NGAY LẬP TỨC! Không gọi Service! Không đụng Database!
+` +
+          `👉 KẾT QUẢ: 409 Conflict ("Giao dịch đang được xử lý, vui lòng không bấm lại!")`;
+      } else if (type === 3) {
+        out.innerHTML = `[REQUEST 3: GỬI LẠI DO LAG MẠNG (RETRY HỢP LỆ)]
+` +
+          `-> Header: x-idempotency-key = "uuid-demo-123", Body: { amount: 50000000 }
+` +
+          `-> Redis: Tra cứu thấy status = 'COMPLETED'
+` +
+          `-> Kiểm tra: Hash(Body gửi lên) == Hash(Body đã lưu) -> TRÙNG KHỚP 100%!
+` +
+          `-> Backend: Bốc luôn kết quả cũ đã lưu trong Redis trả về ngay
+` +
+          `👉 KẾT QUẢ: 200 OK (Trả kết quả cũ trong 1ms, KHÔNG TRỪ TIỀN LẦN HAI!)`;
+      } else if (type === 4) {
+        out.innerHTML = `[REQUEST 4: CÙNG KEY NHƯNG SỬA DỮ LIỆU BODY (GIẢ MẠO)]
+` +
+          `-> Header: x-idempotency-key = "uuid-demo-123", Body: { amount: 999999999 } (Sửa từ 50tr thành 999tr!)
+` +
+          `-> Redis: Tra cứu thấy key đã 'COMPLETED'
+` +
+          `-> Kiểm tra: Hash(Body mới) != Hash(Body cũ) -> BỊ LỆCH!
+` +
+          `-> Backend: Phát hiện gian lận hoặc bug tái sử dụng key sai mục đích!
+` +
+          `👉 KẾT QUẢ: 422 Unprocessable Entity ("Mã key đã dùng nhưng nội dung Body bị thay đổi!")`;
+      } else if (type === 5) {
+        out.innerHTML = `[REQUEST 5: SAU 24 GIỜ (HẾT HẠN TTL)]
+` +
+          `-> Header: x-idempotency-key = "uuid-demo-123"
+` +
+          `-> Redis: Key đã tự động bốc hơi khỏi RAM sau 24 giờ
+` +
+          `-> Backend: Coi đây là một giao dịch mới hoàn toàn
+` +
+          `👉 KẾT QUẢ: 201 Created (Cho phép tạo đơn mới, không bị kẹt vĩnh viễn)`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+Lab 3.03 — PostgreSQL: heap + TID, HOT update và CLUSTER chỉ một lần (slide 14–17)
+
+A. UPDATE ghi một phiên bản dòng mới → ctid (địa chỉ vật lý) đổi
+────────────────────────────────────────────────────────────────
+id = 42: ctid (0,42) → (127,1) (UPDATE … RETURNING ctid), số HOT update = 0
+l03_users_pkey giờ có 2 mục cho id = 42: (0,42) và (127,1)
+   => ✔ ctid đổi sau UPDATE: địa chỉ vật lý của một dòng không cố định — đúng điều slide 17 lo ngại
+   => ✔ Trang 0 đã đầy (fillfactor 100) → bản mới sang block 127, không HOT: khóa chính phải thêm mục mới, mục cũ (0,42) nằm lại chờ VACUUM
+
+B. HOT update: trang còn chỗ (fillfactor 90) + không đổi cột có index → không ghi index nào
+───────────────────────────────────────────────────────────────────────────────────────────
+│ UPDATE 5,000 dòng, đổi cột │         HOT │ ctid của id = 20 │ Bản ghi WAL │    WAL │ TID trong index k │         Index k │
+├────────────────────────────┼─────────────┼──────────────────┼─────────────┼────────┼───────────────────┼─────────────────┤
+│ v (không có index)         │ 5,000/5,000 │ (0,20) → (0,109) │       5,000 │ 347 KB │ 100,000 → 100,000 │ 2.2 MB → 2.2 MB │
+│ k (có index)               │     0/5,000 │ (0,20) → (0,109) │      10,000 │ 659 KB │ 100,000 → 105,000 │ 2.2 MB → 2.2 MB │
+   => ✔ Đổi v: 100% HOT, index k không thêm TID nào; đổi k: 0% HOT (ctid đổi trong cả hai trường hợp, nhưng HOT giữ bản mới cùng trang nên index vẫn trỏ được qua chuỗi HOT)
+   => ✔ Không HOT: WAL ×1.9 (10,000 vs 5,000 bản ghi) và index k thêm 5,000 TID; kích thước index chưa đổi vì lá còn 10% chỗ trống — bảng có N index thì mỗi UPDATE không HOT ghi N mục
+
+C. CLUSTER sắp xếp heap theo index MỘT LẦN — không được duy trì khi có dòng mới
+───────────────────────────────────────────────────────────────────────────────
+│ Thời điểm                           │ Kế hoạch (category = 42)                                                      │  Dòng │ Block heap │ Trang │ correlation │
+├─────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────┼───────┼────────────┼───────┼─────────────┤
+│ Trước CLUSTER (dòng đến ngẫu nhiên) │ Bitmap Heap Scan (l03_cluster) > Bitmap Index Scan (l03_cluster_category_idx) │ 1,041 │        908 │   910 │        0.01 │
+│ Sau CLUSTER + ANALYZE               │ Index Scan (l03_cluster_category_idx)                                         │ 1,041 │         19 │    21 │        1.00 │
+│ Sau khi chèn thêm 20,000 dòng       │ Index Scan (l03_cluster_category_idx)                                         │ 1,127 │         95 │    97 │        0.83 │
+   => ✔ CLUSTER gom 1,041 dòng từ 908 block về 19 block: đọc 910 → 21 trang
+   => ✔ Thêm 10% dòng: correlation 1.00 → 0.83, block 19 → 95. CLUSTER không tự duy trì; muốn gom lại phải CLUSTER lần nữa (khóa ACCESS EXCLUSIVE cả bảng)

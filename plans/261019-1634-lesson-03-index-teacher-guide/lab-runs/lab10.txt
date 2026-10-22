@@ -1,0 +1,18 @@
+Lab 3.10 — B+Tree không "mất cân bằng": xóa 90% chỉ làm index rỗng ruột (bloat), REINDEX mới thu nhỏ (slide 37)
+
+Index l10_bloat_k trên l10_bloat(k) và truy vấn 1% khoảng k: SELECT count(*) FROM l10_bloat WHERE k < 21474836
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Giai đoạn               │ Dòng trong bảng │ Kích thước │ Level │ Trang lá │ Mật độ lá │ Dòng khớp │ Trang đọc │
+├─────────────────────────┼─────────────────┼────────────┼───────┼──────────┼───────────┼───────────┼───────────┤
+│ 1. Vừa tạo index        │       1,000,000 │    21.4 MB │     2 │    2,733 │     90.1% │     9,989 │        31 │
+│ 2. Xóa 90% + VACUUM     │         100,000 │    21.4 MB │     2 │    2,733 │      9.3% │       980 │        31 │
+│ 3. REINDEX CONCURRENTLY │         100,000 │     2.2 MB │     1 │      274 │     89.8% │       980 │         5 │
+Kế hoạch của truy vấn khoảng: Aggregate > Index Only Scan (l10_bloat_k)
+
+Kết luận
+────────
+   => ✔ Xóa 90% + VACUUM: index vẫn 21.4 MB (trước 21.4 MB), 2,733 trang lá — VACUUM không trả trang
+   => ✔ Mật độ lá sụp 90.1% → 9.3%: mỗi trang 8 KB giờ chủ yếu là chỗ trống
+   => ✔ Level 2 → 2: cây vẫn cân bằng (mọi lá cùng độ sâu); "mất cân bằng" thực chất là bloat
+   => ✔ Truy vấn 1% khoảng: 9,989 → 980 dòng nhưng vẫn đọc 31 → 31 trang
+   => ✔ REINDEX CONCURRENTLY: 21.4 MB → 2.2 MB (0.10×), mật độ lá 89.8%, level 2 → 1 vì còn 1/10 số mục; truy vấn khoảng 31 → 5 trang

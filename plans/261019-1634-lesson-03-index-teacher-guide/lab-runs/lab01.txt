@@ -1,0 +1,31 @@
+Lab 3.01 — Index chỉ giúp khi lọc ra một phần nhỏ của bảng (slide 4, 31)
+
+A. lab_imdb.ratings (1.721.260 dòng): cùng một câu, 4 ngưỡng num_votes
+──────────────────────────────────────────────────────────────────────
+Tạo index tạm ratings(num_votes): 1025 ms, 11.9 MB, indcheckxmin = false
+│ num_votes ≥ │    Dòng │ Tỉ lệ │ Không index: trang │  ms │ Có index: kế hoạch                   │  trang │    ms │
+├─────────────┼─────────┼───────┼────────────────────┼─────┼──────────────────────────────────────┼────────┼───────┤
+│   1,000,000 │      98 │ 0.01% │             10,992 │ 104 │ Bitmap Heap Scan > Bitmap Index Scan │     91 │ 0.182 │
+│     100,000 │   3,162 │ 0.18% │             10,992 │ 103 │ Bitmap Heap Scan > Bitmap Index Scan │  2,258 │   3.1 │
+│      10,000 │  18,310 │  1.1% │             10,992 │ 117 │ Bitmap Heap Scan > Bitmap Index Scan │  6,986 │  17.2 │
+│       1,000 │ 108,479 │  6.3% │             10,992 │ 124 │ Bitmap Heap Scan > Bitmap Index Scan │ 10,440 │  50.3 │
+Ép dùng Index Scan cho ngưỡng 1,000 (ép): 108,122 trang, 96.5 ms
+   => ✔ 98 dòng: index đọc 91 trang thay vì 10,992
+   => ✔ 6.3% số dòng: vẫn chạm 10,440 trang (cả bảng chỉ có 10,992), index không bớt được trang (chỉ nhanh hơn vì xử lý 108,479 dòng thay vì lọc cả 1,7 triệu)
+   => ✔ ép Index Scan: 108,122 lượt chạm trang (cùng 10,992 trang bị chạm lặp lại), gấp 10 lần quét tuần tự; chỉ rẻ khi mọi trang đã nằm trong RAM
+✔ lab_imdb chỉ còn index: ratings_pkey, titles_pkey
+
+B. Cột chỉ có 2 giá trị: users.gender (50/50)
+─────────────────────────────────────────────
+│ Truy vấn                    │ Kế hoạch                                                  │    Dòng │  Trang │  ms │
+├─────────────────────────────┼───────────────────────────────────────────────────────────┼─────────┼────────┼─────┤
+│ gender = 'F', chưa có index │ Seq Scan (users)                                          │ 499,876 │ 14,258 │ 194 │
+│ gender = 'F', có index      │ Bitmap Heap Scan (users) > Bitmap Index Scan (l01_gender) │ 499,876 │ 14,681 │ 132 │
+   => ✔ có index vẫn đọc 14,681 trang (không index: 14,258): lấy nửa bảng thì phải đọc gần hết các trang
+
+C. Bảng quá nhỏ: 50 dòng nằm gọn trong 1 trang
+──────────────────────────────────────────────
+│ Truy vấn               │ Kế hoạch            │ Dòng │ Trang │    ms │
+├────────────────────────┼─────────────────────┼──────┼───────┼───────┤
+│ id = 7 (có khóa chính) │ Seq Scan (l01_tiny) │    1 │     1 │ 0.052 │
+   => ✔ bảng 1 trang: đọc thẳng nhanh hơn đi qua index

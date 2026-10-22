@@ -1,0 +1,15 @@
+
+Đối tượng trong lab03_indexing
+──────────────────────────────
+bảng hw_contracts
+bảng orders
+bảng t_ab
+bảng users
+index hw_contracts_pkey
+index orders_pkey
+index t_ab_pkey
+index users_email_key
+index users_pkey
+✔ Không còn bảng/index tạm nào
+✔ Visibility map đầy trên users, orders, t_ab
+✔ lab_imdb chỉ còn index: ratings_pkey, titles_pkey

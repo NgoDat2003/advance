@@ -570,7 +570,7 @@ textarea.field { min-height: 92px; resize: vertical; line-height: 1.5; }
       </div>
       <details class="fold" id="raceSlideFold">
         <summary>Đối chiếu với slide gốc</summary>
-        <div class="fold-body"><div class="slide-img"><img id="raceImg" alt="Hình gốc trong slide" loading="lazy"></div><p class="muted" style="font-size:.82rem;margin-bottom:0">Ảnh lấy từ thư mục <code>Tài Liệu/assets/2_Caching_Design/</code> nên chỉ hiện khi mở file trong thư mục dự án.</p></div>
+        <div class="fold-body"><div class="slide-img"><img id="raceImg" alt="Hình gốc trong slide" loading="lazy"></div><p class="muted" style="font-size:.82rem;margin-bottom:0">Ảnh lấy từ thư mục <code>Tài Liệu/advanced_backend/assets/2_Caching_Design/</code> nên chỉ hiện khi mở file trong thư mục dự án.</p></div>
       </details>
     </div>
   </div>
@@ -1329,7 +1329,7 @@ stats: { hits: 2, misses: 55, loads: 6 }</code></pre></div>
   paintHit();
 
   /* ---------- Race player ---------- */
-  const IMG = '../T%C3%A0i%20Li%E1%BB%87u/assets/2_Caching_Design/';
+  const IMG = '../../T%C3%A0i%20Li%E1%BB%87u/advanced_backend/assets/2_Caching_Design/';
   const SCEN = [
     { id: 'A', name: 'A · Update cache trước', slide: 20, img: 'page_20_img_01.png', init: { cache: '0', db: '0' },
       intro: 'Hai request cùng đổi age. Mỗi request SET cache trước rồi mới ghi DB. R1 ghi DB chậm vì phải chờ lock.',

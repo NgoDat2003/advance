@@ -557,7 +557,7 @@ C. Bảng quá nhỏ: 50 dòng nằm gọn trong 1 trang
       </tbody>
     </table>
   </div>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_09_img_01.png" alt="Slide 9: cây B-Tree với gốc 30, node trong 8 và 90, các lá 1, 20, 40 44, 99 150" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_09_img_01.png" alt="Slide 9: cây B-Tree với gốc 30, node trong 8 và 90, các lá 1, 20, 40 44, 99 150" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
 
   <h3 id="s2-2">2.2. B+Tree <span class="slide-ref">slide 10</span></h3>
   <p>B+Tree sửa B-Tree ở hai chỗ, và cả hai đều nhắm vào việc đọc đĩa ít hơn:</p>
@@ -565,7 +565,7 @@ C. Bảng quá nhỏ: 50 dòng nằm gọn trong 1 trang
     <li><strong>Con trỏ tới dữ liệu chỉ nằm ở lá.</strong> Node trong chỉ giữ khóa và con trỏ xuống node con. Không phải chứa dữ liệu nên mỗi node trong chứa được nhiều khóa hơn, nhiều nhánh hơn, cây thấp hơn, đọc đĩa ít hơn.</li>
     <li><strong>Các lá nối với nhau thành danh sách liên kết.</strong> Tìm <code>WHERE id BETWEEN 40 AND 99</code>: đi xuống một lần tới lá chứa 40, rồi đi ngang theo mũi tên cho tới 99. Không phải leo lên leo xuống.</li>
   </ol>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_10_img_01.png" alt="Slide 10: cây B+Tree, gốc 30 và 90, lá nối nhau bằng mũi tên 1 → 8 20 → 30 → 40 44 → 90 → 99 150" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_10_img_01.png" alt="Slide 10: cây B+Tree, gốc 30 và 90, lá nối nhau bằng mũi tên 1 → 8 20 → 30 → 40 44 → 90 → 99 150" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
 
   <div class="widget" id="btree">
     <div class="widget-head"><h4>Tự dựng cây B+Tree</h4><span class="eyebrow">Mô phỏng · slide 9–11, 20</span></div>
@@ -677,7 +677,7 @@ Kích thước / thời gian dựng: hash 32.0 MB / 1.8 s · btree 38.8 MB / 1.3
     <dt>Hợp với</dt><dd>Chỉ phép so sánh bằng <code>=</code>. Đôi khi nhỏ hơn B+Tree khi khóa dài (URL, token), vì index chỉ lưu mã băm 4 byte.</dd>
     <dt>Không làm được</dt><dd>Truy vấn khoảng (<code>&gt;</code>, <code>BETWEEN</code>), <code>ORDER BY</code>, <code>LIKE 'abc%'</code>: băm xong thì thứ tự biến mất. Hai khóa khác nhau có thể cùng mã băm (va chạm), nên luôn phải kiểm tra lại giá trị thật.</dd>
   </dl>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_12_img_01.png" alt="Slide 12: email đi qua hàm băm thành số block trong file hash index" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_12_img_01.png" alt="Slide 12: email đi qua hàm băm thành số block trong file hash index" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
   <div class="callout pg">
     <span class="tag">Slide nói / PG 16 đo được</span> <span class="vchip ok">Đúng trên PG16</span>
     <dl class="pg-lines">
@@ -705,11 +705,11 @@ Kích thước / thời gian dựng: hash 32.0 MB / 1.8 s · btree 38.8 MB / 1.3
     <dt>Hệ quả</dt><dd>Mỗi bảng chỉ có <strong>một</strong> clustered index (dòng chỉ xếp được theo một thứ tự). Mặc định là khóa chính. InnoDB bắt buộc clustered index là B+Tree, không dùng Hash được.</dd>
     <dt>Lợi</dt><dd>Tra theo khóa chính: đi xuống cây là có luôn dòng. Quét khoảng theo khóa chính: các dòng nằm liền nhau trên đĩa.</dd>
   </dl>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_14_img_01.png" alt="Slide 14: clustered index, node trong màu xanh ngọc, lá màu hồng chứa khóa, dưới mỗi lá là dữ liệu dòng màu cam" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_14_img_01.png" alt="Slide 14: clustered index, node trong màu xanh ngọc, lá màu hồng chứa khóa, dưới mỗi lá là dữ liệu dòng màu cam" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
 
   <h3 id="s3-2">3.2. Secondary index và bài soi lỗi sơ đồ slide 15 <span class="slide-ref">slide 15–16</span></h3>
   <p>Mọi index khác clustered đều là secondary (slide 16). Lá của secondary index trong InnoDB chứa <strong>giá trị khóa chính</strong>, không chứa dòng. Tra theo email nên phải đi hai cây: cây email cho ra khóa chính, rồi cây clustered cho ra dòng. Slide gọi đó là "ít nhất hai lần đọc đĩa", thực tế là hai lần đi từ gốc xuống lá.</p>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_15_img_01.png" alt="Slide 15: clustered index ở trên, secondary index theo email ở dưới, mũi tên từ lá email trỏ lên lá clustered" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_15_img_01.png" alt="Slide 15: clustered index ở trên, secondary index theo email ở dưới, mũi tên từ lá email trỏ lên lá clustered" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
 
   <div class="widget" id="bughunt">
     <div class="widget-head"><h4>Soi lỗi sơ đồ slide 15</h4><span class="eyebrow">Bài tập review · slide 15</span></div>
@@ -871,7 +871,7 @@ B. DELETE user id = 2 (không có đơn nào) — thời gian trigger khóa ngo�
 
   <h3 id="s3-6">3.6. Primary index và khóa tuần tự <span class="slide-ref">slide 20</span></h3>
   <p>Slide 20: khóa chính tăng tuần tự thì ghi hiệu quả. Mô phỏng cây ở Chặng 2 đã cho thấy lý do: khóa mới luôn vào lá cuối bên phải. Với UUID ngẫu nhiên (<code>gen_random_uuid()</code>, bản v4), khóa mới rơi vào chỗ bất kỳ, tách trang khắp cây. Lab 04 phần B chèn 1 triệu dòng với ba loại khóa. Để lần chạy nào cũng ra cùng con số, lab sinh UUID v4 từ <code>md5(số thứ tự)</code> thay vì <code>gen_random_uuid()</code>: thứ tự vẫn ngẫu nhiên như nhau, nên cây chịu cùng một kiểu tách trang như khi dùng <code>gen_random_uuid()</code>.</p>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_20_img_01.png" alt="Slide 20: bảng CUSTOMERS với id tự tăng làm khóa chính, index trỏ tới các khối dữ liệu" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_20_img_01.png" alt="Slide 20: bảng CUSTOMERS với id tự tăng làm khóa chính, index trỏ tới các khối dữ liệu" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
   <div class="code terminal"><span class="label">Kết quả đã chạy trên máy bạn ngày 20/10/2026 · <code>npm run lab4</code> · phần B</span><pre><code>B. 1,000,000 dòng vào 3 kiểu khóa chính: tăng dần vs ngẫu nhiên
 ───────────────────────────────────────────────────────────────
 │ Khóa chính           │ Thời gian chèn │ trong đó sinh khóa │      WAL │ Index pkey │ Trang lá │ Lá đầy │ Số tầng │
@@ -915,8 +915,8 @@ CREATE UNIQUE INDEX contracts_store_code_uq ON contracts (store_id, code);</code
   <h3 id="s4-1">4.1. Composite index lưu gì <span class="slide-ref">slide 22–24</span></h3>
   <p>Composite index là index nhiều cột. Các mục được sắp theo cột 1, trong cùng cột 1 thì theo cột 2, rồi cột 3. Giống danh bạ điện thoại sắp theo (họ, tên đệm, tên): tìm mọi người họ Nguyễn thì dễ, tìm mọi người tên "An" thì phải lật cả cuốn. Index càng nhiều cột càng tốn chỗ (slide 23).</p>
   <div class="grid-2">
-    <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_23_img_01.png" alt="Slide 23: composite index (Name, Country) trỏ về bảng theo khóa chính" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
-    <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_24_img_01.png" alt="Slide 24: cây B+Tree của composite index (a, b): node trong chứa cặp (a, b), lá chứa a, b và khóa chính" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+    <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_23_img_01.png" alt="Slide 23: composite index (Name, Country) trỏ về bảng theo khóa chính" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+    <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_24_img_01.png" alt="Slide 24: cây B+Tree của composite index (a, b): node trong chứa cặp (a, b), lá chứa a, b và khóa chính" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
   </div>
   <p>Ảnh slide 24 đáng nhìn kỹ: node trong chứa <em>cặp</em> (a, b) như (1, 12), (10, 46). Ở lá, các dòng xếp theo a trước. Trong cùng một a (hai dòng a = 2), b mới được xếp: 7 rồi 8.</p>
 
@@ -1033,7 +1033,7 @@ CREATE UNIQUE INDEX contracts_store_code_uq ON contracts (store_id, code);</code
     <dt>Trong PG</dt><dd>Hiện ra là <code>Index Only Scan</code>. Cột chỉ để trả về (không để lọc) nên cho vào <code>INCLUDE (...)</code>: nằm ở lá, không làm to node trong.</dd>
     <dt>Giới hạn</dt><dd>Slide khuyên tối đa khoảng 5 cột. Mỗi cột thêm vào làm index to hơn và mỗi lần ghi tốn hơn: ở Lab 06, thêm <code>INCLUDE (name, email)</code> làm index to gấp 9,6 lần (6,8 MB thành 65,1 MB) để đổi 487 trang lấy 8 trang. Phần lớn con số 9,6 đến từ việc index có <code>INCLUDE</code> không bao giờ được khử trùng lặp (cùng khóa đó mà tắt khử trùng lặp đã là 29,6 MB); name, email chép vào chỉ làm to thêm khoảng 2,2 lần.</dd>
   </dl>
-  <div class="slide-img"><img src="../Tài Liệu/assets/3_Index/page_28_img_01.png" alt="Slide 28: covering index chứa FirstName, LastName, Country; SELECT FirstName, LastName WHERE Country = 'UK' không cần tra thêm" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
+  <div class="slide-img"><img src="../../Tài Liệu/advanced_backend/assets/3_Index/page_28_img_01.png" alt="Slide 28: covering index chứa FirstName, LastName, Country; SELECT FirstName, LastName WHERE Country = 'UK' không cần tra thêm" loading="lazy" onerror="this.closest('.slide-img').hidden=true"></div>
   <div class="code terminal"><span class="label">Kết quả đã chạy trên máy bạn ngày 20/10/2026 · <code>npm run lab6</code></span><pre><code>Lab 3.06 — Covering index: Index Only Scan chỉ "không đụng heap" khi visibility map cho phép (slide 28, 38)
 
 A. SELECT name, email … WHERE country = 'SG' AND province = 'SG-P3' trên users (1 triệu dòng)

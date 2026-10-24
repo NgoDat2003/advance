@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lộ Trình Tác Chiến 30 Ngày: 1 Ngày = Đúng 1 Bài Học Cụ Thể</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.2);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --c1: #3b82f6;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 80px;
+    }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+    header.hero {
+      padding: 36px 0 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(11, 17, 32, 0) 100%);
+    }
+    .badge-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px;
+      font-size: 0.8rem; font-weight: 600; background: var(--surface-light); color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .badge.warning { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); }
+    .badge.success { color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1); }
+    h1 {
+      font-size: 2.1rem; font-weight: 800; margin-bottom: 10px;
+      background: linear-gradient(90deg, #ffffff 0%, #38bdf8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lead { color: var(--muted); font-size: 1.05rem; max-width: 950px; margin-bottom: 20px; }
+    
+    .progress-section {
+      margin: 24px 0; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 24px;
+    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .progress-bar-bg { background: var(--surface-light); height: 12px; border-radius: 9999px; overflow: hidden; }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, var(--c1) 0%, var(--success) 100%);
+      height: 100%; width: 3.3%; transition: width 0.3s ease;
+    }
+    
+    .day-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 20px; overflow: hidden; transition: all 0.2s;
+    }
+    .day-card.completed { border-color: var(--success); opacity: 0.85; }
+    .day-card.completed .day-header { background: rgba(16, 185, 129, 0.12); }
+    .day-header {
+      padding: 14px 20px; background: rgba(51, 65, 85, 0.4); border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .day-title-wrap { display: flex; align-items: center; gap: 12px; }
+    .day-check { width: 22px; height: 22px; cursor: pointer; accent-color: var(--success); }
+    .day-number {
+      background: var(--c1); color: #fff; font-size: 0.8rem; font-weight: 800;
+      padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
+    }
+    .day-number.sprint { background: var(--warning); color: #000; }
+    .day-number.capstone { background: var(--danger); color: #fff; }
+    .day-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+    .day-time { font-size: 0.85rem; color: var(--muted); font-family: var(--font-mono); }
+
+    .cockpit-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1px; background: var(--border);
+    }
+    .box { background: var(--surface); padding: 18px 20px; }
+    .box-title {
+      font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+    .box-title.input-title { color: var(--accent); }
+    .box-title.exec-title { color: var(--warning); }
+    .box-title.dod-title { color: var(--success); }
+    .box-content { font-size: 0.92rem; color: #cbd5e1; }
+    .code-block {
+      background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;
+      padding: 8px 12px; font-family: var(--font-mono); font-size: 0.83rem; color: #38bdf8;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute; top: 6px; right: 6px; background: var(--surface-light);
+      border: 1px solid var(--border); color: var(--muted); font-size: 0.7rem;
+      padding: 2px 6px; border-radius: 4px; cursor: pointer;
+    }
+    .copy-btn:hover { color: #fff; background: var(--c1); }
+    
+    footer { text-align: center; margin-top: 40px; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <div class="badge-bar">
+        <span class="badge">📅 Lịch 30 Ngày Minh Bạch</span>
+        <span class="badge warning">⚡ 1 Ngày = Đúng 1 Bài Học</span>
+        <span class="badge success">🎯 Học Hết 39 Chuyên Đề Của 3 Khóa</span>
+      </div>
+      <h1>Lịch Tác Chiến 30 Ngày: Mỗi Ngày Đúng 1 Bài Học Cụ Thể</h1>
+      <p class="lead">
+        Xóa bỏ 100% sự mơ hồ. Không gom bài, không nói chung chung. 
+        Mỗi ngày nhìn vào lịch là biết ngay: <strong>Hôm nay mở file nào ➔ Làm bài tập gì ➔ Nghiệm thu số liệu nào</strong>.
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="progress-section">
+      <div class="progress-header">
+        <div>
+          <strong style="font-size: 1.1rem;">Tiến Độ Hoàn Thành (Checklist 30 Ngày)</strong>
+          <span style="color: var(--muted); font-size: 0.9rem; margin-left: 8px;" id="progressText">0 / 30 Ngày (0%)</span>
+        </div>
+        <button onclick="resetProgress()" style="background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Reset</button>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar" style="width: 3.3%;"></div>
+      </div>
+    </section>
+
+    <!-- LIST OF 30 DAY CARDS -->
+    
+    <div class="day-card" id="card-day-1">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-1" onchange="toggleDay(1)">
+          <span class="day-number ">Ngày 01</span>
+          <span class="day-title">Khóa 1 - Bài 03: Database Index: B-Tree, Composite & Covering Index</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/3. Index.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> reports/advanced_backend/lesson_03_index_teacher_guide.html</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Mở file homework-theories.mine.mjs, điền 3 dự đoán T1, T2, T3, chạy npm run homework trên bảng 500k hợp đồng.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>labs/lesson-03-index/ (npm run homework)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">3 lý thuyết hiện dấu xanh PASS; Heap Fetches = 0 khi có Covering Index INCLUDE (total).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-2">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-2" onchange="toggleDay(2)">
+          <span class="day-number ">Ngày 02</span>
+          <span class="day-title">Khóa 1 - Bài 12: Database Transaction, WAL Logging & MVCC Internals</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/12. Transaction.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'WAL & MVCC' trong slide 12</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Mở 2 session psql: Session 1 BEGIN; SELECT xmin, xmax, ctid FROM hw_contracts WHERE id=1; Session 2 UPDATE; Session 1 SELECT lại.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>psql terminal (mô phỏng xmin, xmax)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Tận mắt thấy tuple mới sinh ra, Readers never block Writers trong PostgreSQL.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-3">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-3" onchange="toggleDay(3)">
+          <span class="day-number ">Ngày 03</span>
+          <span class="day-title">Khóa 1 - Bài 12 (tiếp): 4 Cấp Độ Cô Lập (Isolation Levels) & Dị Thường Write Skew</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/12. Transaction.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục '4 Isolation Levels' trong slide 12</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Tái hiện lỗi Write Skew trên mức Repeatable Read (2 transaction cùng đọc 2 người đại diện active rồi cùng sửa).</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>psql terminal (mô phỏng Repeatable Read vs Serializable)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Thấy Repeatable Read vẫn bị Write Skew; đổi lên Serializable thấy Postgres tự ném lỗi 40001 chặn đứng.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-4">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-4" onchange="toggleDay(4)">
+          <span class="day-number ">Ngày 04</span>
+          <span class="day-title">Khóa 1 - Bài 14: Database Locking, Row Locks & Triệt Tiêu Deadlock</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/14. Locking.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'SELECT FOR UPDATE & Deadlock'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Mở 2 session cố tình khóa chéo ID 1 và ID 2 để kích hoạt Deadlock. Sau đó sửa bằng Resource Ordering (ORDER BY id ASC).</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>psql terminal (tái hiện 40P01 Deadlock)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Tận mắt thấy mã lỗi 40P01, sửa xong Deadlock biến mất 100%.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-5">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-5" onchange="toggleDay(5)">
+          <span class="day-number ">Ngày 05</span>
+          <span class="day-title">Khóa 1 - Bài 07: Data Modeling & Thiết Kế Bảng Sổ Cái Kép (Double-Entry)</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/7. Data Modeling.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Double-Entry Bookkeeping'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Thiết kế bảng số dư cọc có CHECK (balance >= 0) và bảng bút toán nợ/có (Debit = Credit).</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Dựng schema bảng contract_balances và ledger_entries
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">INSERT thử nghiệm: Tổng tiền Nợ luôn bằng tổng tiền Có, không bao giờ có dòng âm tiền.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-6">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-6" onchange="toggleDay(6)">
+          <span class="day-number ">Ngày 06</span>
+          <span class="day-title">Khóa 1 - Bài 04 & 13: Clean Architecture & Clean Code: Cấu Trúc Module Chuẩn</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/4. Codebase Structure.md & 13. Clean Code.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Dependency Inversion & Result Pattern'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Tách rạch ròi 3 tầng: Domain (Rules tiền cọc) -> Service (Use-case) -> Repository (Postgres raw SQL).</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Tạo thư mục engine/sprint-1-settlement/
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Logic tính cọc độc lập 100% với database driver, sẵn sàng viết test.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-7">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-7" onchange="toggleDay(7)">
+          <span class="day-number ">Ngày 07</span>
+          <span class="day-title">Khóa 1 - Bài 06: Redis Mastery: Single-Threaded Event Loop & Data Structures</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/6. Redis.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Redis Data Types & I/O Multiplexing'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Viết script Node.js lưu hợp đồng bằng Hash, lưu lịch thanh toán bằng ZSET, benchmark tốc độ.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Docker Redis 7 (viết script test Hash, ZSET, SCAN)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu rõ cơ chế epoll giúp Redis đạt 100k QPS; thay thế hoàn toàn lệnh cấm KEYS * bằng SCAN.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-8">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-8" onchange="toggleDay(8)">
+          <span class="day-number ">Ngày 08</span>
+          <span class="day-title">Khóa 1 - Bài 15: Operating System Internals: Page Cache, epoll & Zero-Copy</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/15. Operating System.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Zero-Copy & sendfile system call'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Đọc hiểu cơ chế Linux Virtual Memory, Page Faults, và tại sao Kafka/Nginx lại dùng Zero-Copy.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Phân tích sơ đồ 4 lần copy vs sendfile
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Trả lời trôi chảy: Tại sao sendfile truyền thẳng từ Page Cache sang NIC không qua User Space.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-9">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-9" onchange="toggleDay(9)">
+          <span class="day-number ">Ngày 09</span>
+          <span class="day-title">Khóa 1 - Bài 05: Computer Networking: TCP 3-Way, TLS 1.3 & HTTP/2 Multiplexing</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/5. Networking.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'TCP Handshake & HTTP/2 vs HTTP/3'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> So sánh HTTP/1.1 Keep-Alive vs HTTP/2 binary framing; hiểu WebSocket connection upgrade.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>cURL / Wireshark inspect kết nối
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu lý do tại sao cạn kiệt TIME_WAIT socket khi không dùng Connection Pool.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-10">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-10" onchange="toggleDay(10)">
+          <span class="day-number ">Ngày 10</span>
+          <span class="day-title">Khóa 1 - Bài 16: System Integration: Exponential Backoff + Jitter & Circuit Breaker</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/16. Integration.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Resilience & Circuit Breaker Pattern'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Viết hàm retry với công thức Full Jitter; giả lập dịch vụ ngoài sập để kích hoạt trạng thái OPEN.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Viết module Retry Full Jitter & Circuit Breaker
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hệ thống tự động từ chối request sau 5 lần lỗi liên tiếp, bảo vệ thread pool không bị treo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-11">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-11" onchange="toggleDay(11)">
+          <span class="day-number ">Ngày 11</span>
+          <span class="day-title">Khóa 1 - Bài 08 & 11: Application Security (OWASP Top 10) & Regex ReDoS Prevention</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/advanced_backend/8. Security.md & 11. Regex.md</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'IDOR, JWT Stateless & Catastrophic Backtracking'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Nhận diện lỗ hổng IDOR khi xem hợp đồng; kiểm tra biểu thức chính quy mã số thuế tránh bẫy ReDoS.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Viết middleware JWT auth + Regex an toàn
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Nắm vững cách phòng vệ IDOR bằng cách luôn gán tenant_id/user_id vào điều kiện WHERE.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-12">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-12" onchange="toggleDay(12)">
+          <span class="day-number ">Ngày 12</span>
+          <span class="day-title">Khóa 3 - Bài 01 & 02: Kafka Introduction & 4 Bí Mật Tốc Độ Của Kafka Engine</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Kafka Introduction.pdf & Why Kafka..pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Sequential I/O, Page Cache & Zero-Copy'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Khởi động cụm Kafka KRaft (không cần ZooKeeper container). Dùng kafka-topics tạo topic đầu tiên.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Dựng Docker Compose Kafka 3.8+ KRaft mode
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Cụm Kafka khởi động healthy trên Docker với 0 VNĐ, topic pos.orders.v1 sẵn sàng nhận tin.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-13">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-13" onchange="toggleDay(13)">
+          <span class="day-number ">Ngày 13</span>
+          <span class="day-title">Khóa 3 - Bài 03 & 04: Kafka Core Concepts: Topic, Partition, Offset & Anatomy of Record</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Core Concepts.pdf & Message Broker.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Partition as Unit of Parallelism'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Bắn 10 tin nhắn có Key = store_id; quan sát cách Kafka phân bổ tin nhắn vào đúng partition theo key.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>kafka-console-producer & consumer CLI
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Khắc cốt ghi tâm: Kafka CHỈ đảm bảo thứ tự trong phạm vi 1 partition, không đảm bảo toàn topic.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-14">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-14" onchange="toggleDay(14)">
+          <span class="day-number ">Ngày 14</span>
+          <span class="day-title">Khóa 3 - Bài 05: Kafka Producer Deep Dive: ACKs, Retries & Idempotence</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Producer.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'enable.idempotence & acks=all'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Cấu hình Producer: acks=all, enable.idempotence=true, max.in.flight=5, linger.ms=10. Thử nghiệm retry.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Viết script Node.js Producer với kafkajs
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Producer gửi tin an toàn tuyệt đối, không bao giờ bị duplicate hay mất mát gói tin.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-15">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-15" onchange="toggleDay(15)">
+          <span class="day-number ">Ngày 15</span>
+          <span class="day-title">Khóa 3 - Bài 06: Serialization, Binary Formats (Avro/Protobuf) & Schema Registry</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Serialization.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Schema Registry & Magic Byte'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Hiểu cấu trúc 1 byte Magic + 4 bytes Schema ID; quy tắc tiến hóa Backward / Forward Compatibility.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>So sánh payload size JSON (500 bytes) vs Avro/Protobuf (45 bytes)
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu rõ tại sao microservices truyền Avro tiết kiệm 90% băng thông mạng so với JSON.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-16">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-16" onchange="toggleDay(16)">
+          <span class="day-number ">Ngày 16</span>
+          <span class="day-title">Khóa 3 - Bài 07: Consumer Groups, Partition Assignor & Cooperative Sticky Rebalance</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Group Membership & Partition Assignment.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'CooperativeStickyAssignor vs Eager'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Cấu hình CooperativeStickyAssignor; quan sát quá trình tái phân bổ gia số mà không Stop-The-World.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Chạy 2 Consumer cùng group đọc topic 4 partition, tắt 1 consumer
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Consumer còn lại tiếp tục đọc mượt mà từ các partition không bị ảnh hưởng.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-17">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-17" onchange="toggleDay(17)">
+          <span class="day-number ">Ngày 17</span>
+          <span class="day-title">Khóa 3 - Bài 08: Consumer Liveness: Tách Biệt Heartbeat Thread & Poll Thread</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Liveness.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'max.poll.interval.ms & Rebalance Cascade'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Thấy rõ consumer bị đuổi vì xử lý quá 5 phút; sửa bằng cách đẩy tác vụ sang Worker Pool riêng.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Giả lập tác vụ nặng 6 phút để kích hoạt Rebalance Cascade
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Triệt tiêu hoàn toàn nguy cơ sập dây chuyền (Rebalance Loop) trong môi trường production.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-18">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-18" onchange="toggleDay(18)">
+          <span class="day-number ">Ngày 18</span>
+          <span class="day-title">Khóa 3 - Bài 09 (Phần 1): Triệt Tiêu Thảm Họa Dual-Write & Transactional Outbox Pattern</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Problems & Patterns.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'The Dual-Write Problem' (trang 40-60)</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Viết mã nguồn lưu nghiệp vụ và lưu event vào outbox trong cùng 1 transaction PostgreSQL.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Tạo bảng outbox_events trong PostgreSQL
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Đạt 100% tính nguyên tử: Hoặc cả 2 cùng lưu, hoặc cùng rollback; không bao giờ lệch DB và Event.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-19">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-19" onchange="toggleDay(19)">
+          <span class="day-number ">Ngày 19</span>
+          <span class="day-title">Khóa 3 - Bài 09 (Phần 2): Debezium Change Data Capture (CDC) Đọc WAL Postgres Sang Kafka</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Problems & Patterns.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Debezium CDC Engine'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Cấu hình Debezium Connector lắng nghe bảng outbox_events và tự động đẩy sang Kafka topic.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Bật wal_level=logical trên Postgres, kết nối Debezium
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Khi INSERT vào bảng outbox, message xuất hiện bên Kafka trong < 80ms không cần cronjob.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-20">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-20" onchange="toggleDay(20)">
+          <span class="day-number ">Ngày 20</span>
+          <span class="day-title">Khóa 3 - Bài 10: Case Study: Hệ Thống Phát Hiện Gian Lận Thời Gian Thực (Fintech)</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../Fraud Detection System.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Real-time Sliding Window & Alerting'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Nắm vững cách tính toán sliding window 5 phút để phát hiện tài khoản chuyển tiền đột biến.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Phân tích kiến trúc Flink / Kafka Streams phát hiện quẹt thẻ bất thường
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu kiến trúc phân tầng: Ingestion -> Stream Processing -> Rule Engine -> Real-time Enforcement.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-21">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-21" onchange="toggleDay(21)">
+          <span class="day-number ">Ngày 21</span>
+          <span class="day-title">Khóa 2 - Bài 01 & 02: Phương Pháp Luận System Design 4 Bước & Capacity Estimation</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../01. System Design...pdf & 02. Design Principles...pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Back-of-the-envelope & CAP/PACELC'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Luyện công thức tính nhẩm: DAU -> QPS, dung lượng đĩa 5 năm, RAM Cache 20% theo quy tắc 80/20.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Tính toán dung lượng hệ thống 10M DAU trên giấy nháp
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Tự tin tính toán cấu hình server cho chuỗi 500 nhà hàng POS Maycha trong 10 phút.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-22">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-22" onchange="toggleDay(22)">
+          <span class="day-number ">Ngày 22</span>
+          <span class="day-title">Khóa 2 - Bài 03: Database Scaling: Vertical vs Horizontal Partitioning & Sharding</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../03. Database.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Shard Key Selection & Cross-shard joins'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> So sánh Range Partitioning vs Hash Partitioning; tiêu chí chọn Shard Key chống Hotspot.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Phân tích chiến lược Sharding theo store_id
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu rõ khi nào nên Sharding thủ công, khi nào nên dùng Distributed SQL (CockroachDB/TiDB).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-23">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-23" onchange="toggleDay(23)">
+          <span class="day-number ">Ngày 23</span>
+          <span class="day-title">Khóa 2 - Bài 04: Caching At Scale & 5 Thuật Toán Rate Limiting Kinh Điển</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../04. Caching.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Token Bucket vs Leaky Bucket vs Sliding Window'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Cài đặt Token Bucket 100 req/s per store_id; đo lường độ chính xác dưới tải cao.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Viết thuật toán Token Bucket bằng Redis Lua Script
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Request thứ 101 trong cùng 1 giây nhận ngay HTTP 429 Too Many Requests.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-24">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-24" onchange="toggleDay(24)">
+          <span class="day-number ">Ngày 24</span>
+          <span class="day-title">Khóa 2 - Bài 05: High-Performance Communication: REST vs gRPC over HTTP/2, WebSocket</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../05. Communication.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Reactor Threading Model & SSE vs WebSocket'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Nắm vững lý do gRPC nhanh hơn REST 5-10 lần; thiết kế WebSocket cho màn hình bếp KDS.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>So sánh latency gRPC Protobuf vs REST JSON
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Tự tin phân tích đánh đổi khi nào dùng REST, gRPC, WebSocket, SSE trong phỏng vấn.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-25">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-25" onchange="toggleDay(25)">
+          <span class="day-number ">Ngày 25</span>
+          <span class="day-title">Khóa 2 - Bài 06: Microservices Decomposition & Distributed Transactions (Saga)</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../06. Microservices.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Saga Orchestration vs Choreography & Temporal.io'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Phân tích hiện tượng Lack of Isolation (Dirty Read, Lost Update) trong Saga và cách khắc phục.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Vẽ luồng Compensating Transactions cho đơn hàng POS
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hiểu vì sao ngành công nghiệp chuyển từ tự viết Saga thủ công sang Durable Execution (Temporal).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-26">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-26" onchange="toggleDay(26)">
+          <span class="day-number ">Ngày 26</span>
+          <span class="day-title">Khóa 2 - Bài 07: High-Performance Concurrency: LMAX Disruptor & Hashed Wheel Timer</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../07. DSA.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Lock-Free Ring Buffer & False Sharing Padding'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Hiểu cấu trúc Cache Line 64 byte và kỹ thuật Padding triệt tiêu False Sharing trên CPU đa lõi.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Phân tích cấu trúc Ring Buffer không khóa dùng CAS
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Giải mã bí mật tại sao LMAX Disruptor xử lý 6 triệu giao dịch/giây trên 1 máy đơn.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-27">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-27" onchange="toggleDay(27)">
+          <span class="day-number ">Ngày 27</span>
+          <span class="day-title">Khóa 2 - Bài 08: Case Study 1: Thiết Kế Hệ Thống Rút Gọn Link (URL Shortener - Bitly)</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../08. URL Shortener.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Base62, KGS & Redirection Caching 301 vs 302'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Thiết kế Key Generation Service (KGS) sinh trước mã ngắn; tính toán RAM Cache theo 80/20.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Luyện vẽ bản thiết kế 4 bước hoàn chỉnh
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Hoàn thành bài thuyết trình kiến trúc URL Shortener trong vòng 35 phút.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-28">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-28" onchange="toggleDay(28)">
+          <span class="day-number ">Ngày 28</span>
+          <span class="day-title">Khóa 2 - Bài 09 & 10: Case Study 2: Mạng Xã Hội Bảng Tin (Threads Feed) & Sách Kiến Trúc</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 3.../09...Threads.pdf & master-software-architecture.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Mục 'Push vs Pull vs Hybrid Fan-out & Architecture ADRs'</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Mô hình hóa Timeline bằng Redis ZSET; trích xuất mẫu viết Architecture Decision Record (ADR).</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Thiết kế Hybrid Model giải quyết Celebrity 30M followers
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Giải quyết dứt điểm câu hỏi hóc búa nhất của phỏng vấn mạng xã hội: Celebrity Problem.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-29">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-29" onchange="toggleDay(29)">
+          <span class="day-number ">Ngày 29</span>
+          <span class="day-title">Khóa 3 - Bài 11, 12, 13: Chinh Phục Chứng Chỉ Quốc Tế Confluent CCDAK (Top 40 Kịch Bản)</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>Tài Liệu/Khóa 4.../CCDAK Exam_2.pdf</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> File đề thi thực chiến 139 trang</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> Tập trung giải quyết các câu hỏi về: commitSync vs commitAsync, Rebalance, Exactly-Once, Schema Evolution.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Luyện 40 câu hỏi tình huống chọn lọc
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Đạt tỷ lệ trả lời đúng >= 85%, phản xạ phân tích bài toán cực bén.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="day-card" id="card-day-30">
+      <div class="day-header">
+        <div class="day-title-wrap">
+          <input type="checkbox" class="day-check" id="check-day-30" onchange="toggleDay(30)">
+          <span class="day-number capstone">Ngày 30</span>
+          <span class="day-title">CAPSTONE - Tổng Kết: Tốt Nghiệp: Refactor Codebase Hợp Đồng Maycha Đang Đóng Băng</span>
+        </div>
+        <span class="day-time">⏱️ 2.0 - 2.5 Giờ</span>
+      </div>
+      <div class="cockpit-grid">
+        <div class="box">
+          <div class="box-title input-title">📁 1. Hộp Đầu Vào (Mở file nào?)</div>
+          <div class="box-content">
+            <p><strong>File tài liệu:</strong> <code>D:\work\maycha\quan_ly_hop_dong</code></p>
+            <p style="margin-top: 6px;"><strong>Hướng dẫn:</strong> Soạn file ARCHITECTURE_SHOWCASE.md trong repo Maycha</p>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title exec-title">⚡ 2. Hộp Thực Thi (Làm bài tập gì?)</div>
+          <div class="box-content">
+            <p><strong>Thao tác:</strong> 1. Đưa SELECT FOR UPDATE vào luồng duyệt cọc. 2. Thêm bảng Outbox đồng bộ SAP ERP qua Kafka CDC. 3. Đánh Covering Index.</p>
+            <div class="code-block" style="margin-top: 8px;">
+              # Môi trường thực hành:<br>Refactor 3 module lõi trong dự án Maycha
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title dod-title">🎯 3. Hộp Nghiệm Thu (Nhìn số nào để biết xong?)</div>
+          <div class="box-content">
+            <p style="color: #4ade80; font-weight: 600;">Codebase Maycha đạt chuẩn Senior. Tự tin điền vào CV: Core Settlement 5,000 TPS, Zero Data Loss SAP Sync.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>Lộ Trình Tác Chiến 30 Ngày Minh Bạch Cá Nhân Hóa Dành Cho Đạt</p>
+      <p style="margin-top: 6px;">File gốc: <code>reports/LO_TRINH_HOC_CHI_TIET_A_Z_TANG_TOC.md</code></p>
+    </div>
+  </footer>
+
+  <script>
+    const TOTAL_DAYS = 30;
+    function init() {
+      let saved = JSON.parse(localStorage.getItem('dat_study_30days') || '{}');
+      let doneCount = 0;
+      for (let i = 1; i <= TOTAL_DAYS; i++) {
+        let el = document.getElementById('check-day-' + i);
+        if (el) {
+          if (saved[i]) {
+            el.checked = true;
+            document.getElementById('card-day-' + i).classList.add('completed');
+            doneCount++;
+          }
+        }
+      }
+      updateProgress(doneCount);
+    }
+    function toggleDay(num) {
+      let el = document.getElementById('check-day-' + num);
+      let card = document.getElementById('card-day-' + num);
+      let saved = JSON.parse(localStorage.getItem('dat_study_30days') || '{}');
+      if (el.checked) {
+        saved[num] = true;
+        card.classList.add('completed');
+      } else {
+        delete saved[num];
+        card.classList.remove('completed');
+      }
+      localStorage.setItem('dat_study_30days', JSON.stringify(saved));
+      updateProgress(Object.keys(saved).length);
+    }
+    function updateProgress(doneCount) {
+      let pct = Math.round((doneCount / TOTAL_DAYS) * 100);
+      pct = Math.max(pct, 3);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressText').innerText = doneCount + ' / ' + TOTAL_DAYS + ' Ngày (' + pct + '%)';
+    }
+    function resetProgress() {
+      if (confirm('Bạn có chắc chắn muốn reset toàn bộ tiến độ 30 ngày?')) {
+        localStorage.removeItem('dat_study_30days');
+        location.reload();
+      }
+    }
+    function copyCode(btn) {
+      let block = btn.parentElement;
+      let text = block.innerText.replace('Copy', '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        let orig = btn.innerText;
+        btn.innerText = 'Copied!';
+        setTimeout(() => { btn.innerText = orig; }, 1500);
+      });
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

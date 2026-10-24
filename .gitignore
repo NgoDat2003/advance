@@ -24,3 +24,6 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# Local Python venv (PDF conversion tooling)
+.venv/

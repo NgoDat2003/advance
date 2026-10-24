@@ -27,3 +27,9 @@ __pycache__/
 
 # Local Python venv (PDF conversion tooling)
 .venv/
+
+# Temporary browser verification profiles and local auth restore helpers
+**/verify/tmp/
+.claude/.credentials.json
+.claude.json
+RESTORE.ps1

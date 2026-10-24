@@ -25,3 +25,11 @@
 4. **Mô hình Bài tập Tích lũy Cuốn chiếu (Cumulative Integration):**
    - Bài sau kế thừa bài trước (Ví dụ: Bài 3 Index -> Bài 4 đưa vào Clean Architecture -> Bài 6 bọc Redis -> Bài 14 thêm Locking).
    - Giúp Đạt tích lũy dần thành một Mini Production Engine hoàn chỉnh và tự tin mang đi phỏng vấn.
+
+## Skill Parameter & CLI Flag Protocol (Zero-Drop Contract)
+1. **Command & Flag Parsing**: Khi nhận lệnh gọi skill có dạng `/skill:<name> [flags] [prompt]` hoặc `/ak:<name> [flags] [prompt]`, AI BẮT BUỘC phải trích xuất các flag (`--flag`, `-f`, `key=value`) độc lập trước khi chạy prompt.
+2. **Tuyệt đối KHÔNG bỏ qua Flag**: Cấm tuyệt đối việc âm thầm nuốt hoặc bỏ sót tham số người dùng truyền vào. Mọi flag đều phải tác động trực tiếp lên logic thực thi hoặc được báo cáo cách xử lý trong phản hồi.
+3. **Quy tắc phân loại & Thực thi**:
+   - **Native Skill Flags** (ví dụ `--ultra`, `ext`, `--parallel`, `--fix`): BẮT BUỘC chạy đúng branch mode trong `SKILL.md`, không tự ý hạ cấp về flow mặc định.
+   - **Pipeline / Modifier Flags** (ví dụ `--ak-render`, `--preview`, `--diagram`, `--json`): BẮT BUỘC thực thi pipeline mở rộng tương ứng (ví dụ `--ak-render` bắt buộc phải kèm visual diagram / UI showcase kết quả thay vì chỉ trả về text thuần).
+   - **Custom Flags**: Bắt buộc ghi nhận trong header phản hồi và áp dụng đúng ngữ cảnh yêu cầu.

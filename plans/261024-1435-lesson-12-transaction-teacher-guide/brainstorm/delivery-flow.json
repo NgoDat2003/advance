@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Bài 12 Transaction — luồng dựng bài giảng",
+    "visual_preset": "classic",
+    "theme": "light"
+  },
+  "stages": [
+    { "id": "st-source", "label": "Nguồn", "order": 0 },
+    { "id": "st-data", "label": "Dựng dữ liệu", "order": 1 },
+    { "id": "st-run", "label": "Chạy lab", "order": 2 },
+    { "id": "st-evidence", "label": "Bằng chứng", "order": 3 },
+    { "id": "st-lesson", "label": "Bài giảng", "order": 4 },
+    { "id": "st-learner", "label": "Người học", "order": 5 }
+  ],
+  "nodes": [
+    { "id": "hw", "label": "lab03 hw_contracts (chỉ đọc)", "role": "source", "stage": "st-source", "classification": "internal" },
+    { "id": "slides", "label": "26 slide 12. Transaction.md", "role": "source", "stage": "st-source", "classification": "public" },
+    { "id": "setup", "label": "npm run setup", "role": "transform", "stage": "st-data" },
+    { "id": "sandbox", "label": "lab12_transaction: contracts, store_reps", "role": "store", "stage": "st-data", "classification": "internal" },
+    { "id": "runner", "label": "tx-kit + scenarios (2 session + observer)", "role": "transform", "stage": "st-run" },
+    { "id": "labs", "label": "Lab 01–08", "role": "transform", "stage": "st-run" },
+    { "id": "check", "label": "npm run check", "role": "governance", "stage": "st-run" },
+    { "id": "runs", "label": "lab-runs/*.txt (nguyên văn)", "role": "store", "stage": "st-evidence" },
+    { "id": "guide", "label": "lesson_12 teacher guide .html", "role": "sink", "stage": "st-lesson" },
+    { "id": "homework", "label": "Bài tập: dự đoán, replay, review", "role": "sink", "stage": "st-lesson" },
+    { "id": "manual", "label": "psql ×2: M1 Ngày 02, M3 Ngày 03", "role": "consumer", "stage": "st-learner" },
+    { "id": "learner", "label": "Đạt học Ngày 02 + 03", "role": "consumer", "stage": "st-learner" }
+  ],
+  "flows": [
+    { "from": "hw", "to": "setup", "label": "copy id 1–100.000" },
+    { "from": "setup", "to": "sandbox", "label": "bảng riêng" },
+    { "from": "sandbox", "to": "runner", "label": "bảng nháp lNN_*" },
+    { "from": "runner", "to": "labs", "label": "thứ tự bước" },
+    { "from": "labs", "to": "check", "label": "dọn sạch" },
+    { "from": "labs", "to": "runs", "label": "stdout" },
+    { "from": "runs", "to": "guide", "label": "chỉ trích số từ đây" },
+    { "from": "slides", "to": "guide", "label": "slide map 26 chip" },
+    { "from": "runner", "to": "homework", "label": "scenarios dùng chung" },
+    { "from": "guide", "to": "manual", "label": "bảng bước" },
+    { "from": "guide", "to": "learner", "label": "đọc + quiz" },
+    { "from": "homework", "to": "learner", "label": "tự làm" },
+    { "from": "manual", "to": "learner", "label": "tận mắt thấy" }
+  ]
+}

@@ -15,34 +15,34 @@ Toàn bộ tài liệu (`Tài Liệu/`) và báo cáo thực hành (`reports/`) 
 - 📊 **Teacher Guides & Báo cáo chuyên sâu**: `reports/advanced_backend/`
 
 ### 2. Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub
-- 📚 **Tài liệu PDF gốc (10 chuyên đề)**: `Tài Liệu/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/`
-  1. `01. System Design- In-Depth Understanding.pdf`
-  2. `02. Design Principles & Estimation.pdf`
-  3. `03. Database.pdf`
-  4. `04. Caching.pdf`
-  5. `05. Communication.pdf`
-  6. `06. Microservices.pdf`
-  7. `07. DSA.pdf`
-  8. `08. URL Shortener.pdf`
-  9. `09. Design a Microblogging System (Threads).pdf`
-  10. `master-software-architecture.pdf`
+- 📚 **Tài liệu học tập (10 PDF & Markdown kèm assets)**: `Tài Liệu/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/`
+  1. `01. System Design- In-Depth Understanding.pdf / .md`
+  2. `02. Design Principles & Estimation.pdf / .md`
+  3. `03. Database.pdf / .md`
+  4. `04. Caching.pdf / .md`
+  5. `05. Communication.pdf / .md`
+  6. `06. Microservices.pdf / .md`
+  7. `07. DSA.pdf / .md`
+  8. `08. URL Shortener.pdf / .md`
+  9. `09. Design a Microblogging System (Threads).pdf / .md`
+  10. `master-software-architecture.pdf / .md`
 - 📊 **Thư mục báo cáo & Guides**: `reports/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/`
 
 ### 3. Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub
-- 📚 **Tài liệu PDF gốc (13 chuyên đề)**: `Tài Liệu/Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/`
-  1. `Kafka Introduction.pdf`
-  2. `Why Kafka..pdf`
-  3. `Core Concepts.pdf`
-  4. `Producer.pdf`
-  5. `Serialization.pdf`
-  6. `Liveness.pdf`
-  7. `Group Membership & Partition Assignment.pdf`
-  8. `Message Broker.pdf`
-  9. `Problems & Patterns.pdf`
-  10. `Fraud Detection System.pdf`
-  11. `CCDAK Knowledge Domains.pdf`
-  12. `CCDAK Exam.pdf`
-  13. `CCDAK Exam_2.pdf`
+- 📚 **Tài liệu học tập (13 PDF & Markdown kèm assets)**: `Tài Liệu/Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/`
+  1. `Kafka Introduction.pdf / .md`
+  2. `Why Kafka..pdf / .md`
+  3. `Core Concepts.pdf / .md`
+  4. `Producer.pdf / .md`
+  5. `Serialization.pdf / .md`
+  6. `Liveness.pdf / .md`
+  7. `Group Membership & Partition Assignment.pdf / .md`
+  8. `Message Broker.pdf / .md`
+  9. `Problems & Patterns.pdf / .md`
+  10. `Fraud Detection System.pdf / .md`
+  11. `CCDAK Knowledge Domains.pdf / .md`
+  12. `CCDAK Exam.pdf / .md`
+  13. `CCDAK Exam_2.pdf / .md`
 - 📊 **Thư mục báo cáo & Guides**: `reports/Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/`
 
 ---
@@ -55,17 +55,20 @@ advance-be/
 ├── TONG_QUAN_KHOA_HOC_ADVANCED_BACKEND.md
 ├── BAO_CAO_LO_TRINH_DEVOPS_DOKPLOY.md
 ├── AGENTS.md
+├── convert_pdf_to_md.py
 ├── Tài Liệu/
 │   ├── advanced_backend/
 │   │   ├── 1. REST API Design.pdf / .md
 │   │   ├── ...
 │   │   └── assets/
 │   ├── Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/
-│   │   ├── 01. System Design- In-Depth Understanding.pdf
-│   │   └── ... (10 PDFs)
+│   │   ├── 01. System Design- In-Depth Understanding.pdf / .md
+│   │   ├── ... (10 chuyên đề)
+│   │   └── assets/
 │   └── Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/
-│       ├── Kafka Introduction.pdf
-│       └── ... (13 PDFs)
+│       ├── Kafka Introduction.pdf / .md
+│       ├── ... (13 chuyên đề)
+│       └── assets/
 ├── reports/
 │   ├── advanced_backend/
 │   │   ├── lesson_02_caching_teacher_guide.html

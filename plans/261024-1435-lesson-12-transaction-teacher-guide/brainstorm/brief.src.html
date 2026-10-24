@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brief Bài 12 Transaction</title>
+<style>
+/* Design brief (ak:frontend-design, preserve route)
+   Register: Product · Scene: Đạt reads this on a Windows laptop mid study session, light or dark, 5–10 minutes,
+   to see how lesson 12 will be built before it is built · Direction: the lesson-3 study notebook, because the learner
+   already knows that page · Color: Restrained, lesson-3 tokens · Type: system grotesque + system mono (offline)
+   · Signature: the two-window step table and the delivery-flow map · Dials: variance 3, motion 1, density 6 */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eceff4; --fg: #1a1d24; --muted: #596172; --line: #d8dde6;
+  --accent: #1f5fa8; --accent-soft: #e5eefa; --accent-fg: #ffffff;
+  --ok: #1d7a4c; --ok-soft: #e2f3e9; --bad: #b3261e; --bad-soft: #fbe8e6; --warn: #8f5407; --warn-soft: #fcf0da;
+  --code-bg: #1c1f26; --code-fg: #e9ecf2; --code-muted: #9aa3b2;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+  --diagram-w: 2040px;
+  --radius: 10px; --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+    --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+    --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+    --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+  --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+  --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+  --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.65 var(--font-body); padding: 0 var(--s4) var(--s8); -webkit-text-size-adjust: 100%; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+main { max-width: 980px; margin: 0 auto; }
+h1, h2, h3 { line-height: 1.2; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 800; margin-top: var(--s8); padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.05rem; font-weight: 700; margin-top: var(--s6); }
+p { margin: var(--s3) 0; max-width: 72ch; }
+ul, ol { margin: var(--s3) 0; padding-left: 1.3rem; max-width: 76ch; }
+li { margin: var(--s1) 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; font-variant-ligatures: none; }
+.eyebrow { font: 600 0.74rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.hero { padding: var(--s7) 0 var(--s2); display: grid; gap: var(--s3); }
+.lead { font-size: 1.1rem; color: var(--muted); margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font: 500 0.86rem/1.4 var(--font-mono); color: var(--muted); }
+.meta b { color: var(--fg); }
+.toc { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s4); }
+.toc a { font: 500 0.82rem/1 var(--font-mono); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: var(--s2) var(--s3); min-height: 44px; display: inline-flex; align-items: center; color: var(--fg); }
+.toc a:hover { border-color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s4); margin: var(--s4) 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s4); min-width: 0; }
+.panel h3 { margin-top: 0; }
+.panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+.callout { border-radius: var(--radius); padding: var(--s3) var(--s4); margin: var(--s4) 0; }
+.callout.key { background: var(--ok-soft); }
+.callout.warn { background: var(--warn-soft); }
+.callout .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; background: var(--surface); margin-bottom: var(--s1); }
+.callout.key .tag { color: var(--ok); }
+.callout.warn .tag { color: var(--warn); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: var(--s4) 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); }
+th { font-size: 0.76rem; font-weight: 600; color: var(--muted); background: var(--surface-2); text-transform: uppercase; letter-spacing: 0.03em; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.win td { background: var(--accent-soft); }
+.chip { display: inline-block; font: 600 0.7rem/1 var(--font-mono); padding: 5px 8px; border-radius: 99px; white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.diff { background: var(--accent-soft); color: var(--accent); }
+.chip.fix { background: var(--bad-soft); color: var(--bad); }
+.pick { font-weight: 700; color: var(--accent); }
+.receipt { font: 500 0.82rem/1.5 var(--font-mono); background: var(--code-bg); color: var(--code-fg); padding: var(--s3) var(--s4); border-radius: var(--radius); overflow-x: auto; }
+.diagram-box { margin: var(--s4) 0; overflow-x: auto; }
+/* The embedded diagram reader ships 32px controls; the page keeps every touch target at 44px. */
+.diagram-box .ak-diagram-btn, .diagram-box .ak-diagram-search-input { min-height: 44px; }
+.diagram-box .ak-diagram-btn { min-width: 44px; }
+/* Native width keeps the 13px node labels legible; the reader's viewport scrolls sideways instead of shrinking it. */
+.diagram-box .ak-diagram-viewport { justify-content: flex-start; }
+.diagram-box .ak-diagram-svg { max-width: none; width: var(--diagram-w); }
+/* Annotated mock of the lesson-12 guide */
+.mock { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: var(--s4); background: var(--bg); border: 1px dashed var(--line); border-radius: 14px; padding: var(--s4); }
+.mock-rail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s3); font-size: 0.84rem; align-self: start; }
+.mock-rail .day { font: 600 0.7rem/1 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: var(--s3) 0 var(--s1); }
+.mock-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.mock-rail li { display: grid; grid-template-columns: 22px 1fr; gap: var(--s1); padding: var(--s1) var(--s2); border-radius: 6px; margin: 0; }
+.mock-rail li b { font: 600 0.74rem/1.6 var(--font-mono); color: var(--accent); }
+.mock-rail li.cur { background: var(--accent-soft); }
+.mock-main { display: grid; gap: var(--s3); min-width: 0; }
+.mock-head { display: flex; align-items: end; gap: var(--s3); border-bottom: 1px solid var(--line); padding-bottom: var(--s2); }
+.mock-head .no { font-size: 2.6rem; font-weight: 800; line-height: 0.9; color: var(--accent); }
+.mock-head .t { font-weight: 800; font-size: 1.15rem; }
+.mock-pg { background: var(--surface); border-left: 3px solid var(--accent); border-radius: 8px; padding: var(--s3); font-size: 0.88rem; }
+.mock-term { background: var(--code-bg); color: var(--code-fg); border-left: 3px solid var(--ok); border-radius: 8px; padding: var(--s3); font: 400 0.78rem/1.55 var(--font-mono); overflow-x: auto; white-space: pre; }
+.mock-term .c { color: var(--code-muted); }
+.steps { width: 100%; font-size: 0.82rem; }
+.steps td code { white-space: nowrap; }
+.steps input { width: 100%; min-width: 90px; font: 400 0.82rem var(--font-body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); min-height: 36px; }
+.ann { position: relative; }
+.pin { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font: 700 0.72rem/1 var(--font-mono); flex: none; }
+.ann > .pin { position: absolute; top: -10px; right: -10px; }
+.legend-list { list-style: none; padding: 0; display: grid; gap: var(--s2); }
+.legend-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--s3); align-items: start; }
+details.fold { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: var(--s3) 0; }
+details.fold > summary { cursor: pointer; padding: var(--s3) var(--s4); font-weight: 600; min-height: 44px; }
+details.fold > div { padding: 0 var(--s4) var(--s4); }
+@media (max-width: 720px) {
+  .mock { grid-template-columns: minmax(0, 1fr); }
+  h2 { margin-top: var(--s7); }
+}
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <p class="eyebrow">Brainstorm · /ak-brainstorm --html --ultra · 24/10/2026</p>
+  <h1>Bài 12 Transaction sẽ được dựng như thế nào</h1>
+  <p class="lead">Bản tóm tắt hợp đồng trước khi làm: bài giảng HTML theo khung Bài 3, 8 lab chạy thật trên Postgres 16.15 của bạn, hai cửa sổ psql để tận mắt thấy MVCC và write skew, chia đúng Ngày 02 và Ngày 03 của lộ trình.</p>
+  <div class="meta"><span><b>5</b> bản brainstorm độc lập</span><span>verifier chọn <b>bản E</b></span><span><b>129</b>/140 điểm</span><span>cách biệt <b>thấp</b></span><span>chưa commit, chưa push</span></div>
+  <nav class="toc" aria-label="Mục lục">
+    <a href="#ket-qua">Kết quả</a><a href="#so-do">Sơ đồ</a><a href="#lo-trinh">Lộ trình 2 ngày</a><a href="#giao-dien">Giao diện</a><a href="#nghiem-thu">Nghiệm thu</a><a href="#phuong-an">Phương án</a><a href="#xep-hang">Xếp hạng</a><a href="#rui-ro">Rủi ro</a>
+  </nav>
+</header>
+
+<section id="ket-qua">
+  <h2>Kết quả khi xong</h2>
+  <div class="grid">
+    <div class="panel">
+      <h3>Bạn nhận được</h3>
+      <ul>
+        <li><code>reports/advanced_backend/lesson_12_transaction_teacher_guide.html</code>: 8 chặng, 5 mô phỏng, quiz, đề 10 câu, bảng tóm tắt, bản đồ 26 slide.</li>
+        <li><code>labs/lesson-12-transaction/</code>: <code>setup</code>, <code>check</code>, <code>reset</code>, <code>lab1</code>–<code>lab8</code>, <code>homework</code>, <code>homework:draft</code>, <code>homework:solution</code>.</li>
+        <li><code>lab-runs/*.txt</code>: kết quả chạy nguyên văn, nơi duy nhất bài giảng được lấy số.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Học xong bạn làm được</h3>
+      <ul>
+        <li>Nói được COMMIT bảo đảm điều gì, đọc <code>xmin</code> / <code>xmax</code> / <code>ctid</code>.</li>
+        <li>Đoán đúng mỗi dị thường ở mỗi mức cô lập của Postgres, rồi tự tái hiện bằng hai cửa sổ psql.</li>
+        <li>Tìm và chặn session <code>idle in transaction</code>.</li>
+        <li>Soát lỗi code transaction NestJS/TypeORM.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h3>Ràng buộc</h3>
+      <ul>
+        <li>Làm thẳng trên <code>main</code>, không tạo nhánh, không commit, không push.</li>
+        <li>Chỉ tạo đối tượng trong schema <code>lab12_transaction</code>. <code>lab03_indexing</code> chỉ đọc; không đụng <code>lab_imdb</code>, <code>maycha_lease</code>.</li>
+        <li>Lab hai session chạy theo thứ tự bước, không dùng <code>sleep</code>; mọi chờ khóa đều có <code>lock_timeout</code>; <code>finally</code> luôn rollback và đóng kết nối.</li>
+        <li>Không in <code>PG_URL</code>. Container mới: <code>quan-ly-hop-dong-postgres-1</code>.</li>
+        <li>Mỗi file code ≤ 200 dòng, comment tiếng Việt, verdict tính từ số đo.</li>
+        <li>Markdown chỉ nằm trong <code>plans/</code> hoặc <code>docs/</code>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Không làm</h3>
+      <ul>
+        <li>Đo MySQL: chỉ trích dẫn, gắn nhãn "không đo trên máy này".</li>
+        <li>Nội dung Bài 14 (khóa, deadlock) ngoài phần cầu nối.</li>
+        <li>Sửa file Bài 3 (teaser "Bài 4", tên container cũ): chờ bạn quyết.</li>
+        <li>Lab prepared transaction (<code>max_prepared_transactions = 0</code>).</li>
+        <li>Đụng vào repo NestJS thật của bạn.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="tag">Đổi so với lộ trình</span>
+    <p>Lộ trình Ngày 02 ghi <code>UPDATE hw_contracts</code>. Database <code>advance_be_lab</code> đang đặt sẵn <code>search_path = lab03_indexing, public</code>, nên lệnh đó sẽ sửa thẳng dữ liệu Bài 3 và làm hỏng lý thuyết T2 (Heap Fetches = 0). Bài 12 chép 100.000 dòng đầu sang <code>lab12_transaction.contracts</code> (dòng id = 1 vẫn là HD0000001, cửa hàng 44), và mọi cửa sổ psql chạy <code>SET search_path = lab12_transaction</code> trước.</p>
+  </div>
+</section>
+
+<section id="so-do">
+  <h2>Sơ đồ: dữ liệu đi từ đâu tới bài giảng</h2>
+  <p>Sơ đồ đọc từ trái sang phải; kéo ngang để xem hết, hoặc nhấn <code>F</code> để xem toàn màn hình. Bấm một ô để làm nổi các đường nối của nó; <code>/</code> để tìm, <code>R</code> để xem đường đi giữa hai ô.</p>
+  <div class="diagram-box"><!-- DIAGRAM --></div>
+</section>
+
+<section id="lo-trinh">
+  <h2>Lộ trình 2 ngày</h2>
+  <p>Học cơ chế trước rồi mới tới mức cô lập: ở Postgres, Read Committed và Repeatable Read chỉ khác nhau ở thời điểm chụp snapshot, nên phải hiểu MVCC trước. Bản đồ slide trong bài giảng vẫn trỏ đúng từng slide.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ngày</th><th>Chặng</th><th>Slide</th><th class="n">Phút</th></tr></thead>
+    <tbody>
+      <tr><td>02</td><td>0 · Cách học, mở 2 cửa sổ psql</td><td>1–2</td><td class="n">5</td></tr>
+      <tr><td>02</td><td>1 · Transaction &amp; ACID trên PG</td><td>3–5</td><td class="n">20</td></tr>
+      <tr><td>02</td><td>2 · WAL: COMMIT làm gì</td><td>11–12</td><td class="n">20</td></tr>
+      <tr><td>02</td><td>3 · MVCC trong PostgreSQL</td><td>13–15</td><td class="n">40</td></tr>
+      <tr><td>02</td><td>4 · Phiên bản chết, VACUUM, "HLL" của PG</td><td>14, 16</td><td class="n">20</td></tr>
+      <tr><td>02</td><td>5 · Transaction lớn, dài, treo, bị bỏ rơi</td><td>17–21</td><td class="n">30</td></tr>
+      <tr><td>03</td><td>6 · Đặt mức cô lập, dị thường khi đọc</td><td>6–9, 22</td><td class="n">30</td></tr>
+      <tr><td>03</td><td>7 · Lost update, write skew, Serializable</td><td>8–10</td><td class="n">40</td></tr>
+      <tr><td>03</td><td>8 · Recap, bài tập, NestJS, đề thi</td><td>23–26</td><td class="n">80</td></tr>
+    </tbody>
+  </table></div>
+  <h3>8 lab</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Lab</th><th>Slide</th><th>Chứng minh điều gì</th><th>Cách chạy</th></tr></thead>
+    <tbody>
+      <tr><td>01 atomicity</td><td>4–5</td><td>lỗi → 25P02, COMMIT trả về ROLLBACK; SAVEPOINT; DDL rollback được, sequence thì không</td><td>1 session</td></tr>
+      <tr><td>02 wal-records</td><td>5, 12</td><td>ghi log trước; COMMIT có bản ghi riêng và được flush; rollback chỉ là bản ghi ABORT</td><td>1 session</td></tr>
+      <tr><td>03 mvcc-two-sessions</td><td>13–15</td><td>UPDATE tạo phiên bản mới; đọc không chặn ghi; RC thấy bản mới, RR thấy bản cũ có <code>xmax</code></td><td>2 session + observer</td></tr>
+      <tr><td>04 dead-versions-horizon</td><td>13–14, 16</td><td>ROLLBACK nhanh nhưng để lại tuple chết; snapshot RR đang mở chặn VACUUM dọn</td><td>2 session + observer</td></tr>
+      <tr><td>05 big-and-idle-tx</td><td>17–21</td><td>batch so với 1 UPDATE lớn; session idle chặn người ghi; 55P03, 25P03 (sẽ tách 2 phần)</td><td>2 session + observer</td></tr>
+      <tr><td>06 levels-read-anomalies</td><td>6–9, 22</td><td>SET TRANSACTION đặt ở đâu; RU chạy như RC; non-repeatable read và phantom chỉ ở RC</td><td>runner</td></tr>
+      <tr><td>07 lost-update</td><td>8–9</td><td>đọc-sửa-ghi ở app mất cập nhật ở RC, ra 40001 ở RR; <code>x = x - 1</code> an toàn ở RC</td><td>runner</td></tr>
+      <tr><td>08 write-skew</td><td>9–10, 23</td><td>RR: cả hai commit (0 người trực); SER: một bên nhận 40001; retry giữ luật</td><td>runner</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="giao-dien">
+  <h2>Giao diện bài giảng (bản phác có chú thích)</h2>
+  <p>Giữ nguyên khung Bài 3 bạn đã quen. Phần mới là thanh bên chia theo ngày và bảng hai cửa sổ để bạn tự điền.</p>
+  <div class="mock" role="img" aria-label="Bản phác giao diện bài giảng Bài 12: thanh bên chia Ngày 02 và Ngày 03, nội dung chặng 3 MVCC với khung khác biệt Postgres, khối kết quả lab và bảng hai cửa sổ">
+    <div class="mock-rail ann"><span class="pin">1</span>
+      <div class="day">Ngày 02</div>
+      <ol>
+        <li><b>00</b><span>Cách học</span></li><li><b>01</b><span>ACID trên PG</span></li><li><b>02</b><span>WAL</span></li>
+        <li class="cur"><b>03</b><span>MVCC trong PG</span></li><li><b>04</b><span>VACUUM &amp; "HLL"</span></li><li><b>05</b><span>Transaction xấu</span></li>
+      </ol>
+      <div class="day">Ngày 03</div>
+      <ol><li><b>06</b><span>Mức cô lập</span></li><li><b>07</b><span>Write skew</span></li><li><b>08</b><span>Bài tập</span></li></ol>
+    </div>
+    <div class="mock-main">
+      <div class="mock-head"><span class="no">03</span><span class="t">MVCC trong PostgreSQL</span></div>
+      <div class="mock-pg ann"><span class="pin">2</span><span class="chip diff">MySQL đúng, PG khác</span> <strong>Slide 13 nói</strong> phiên bản cũ nằm trong undo log. <strong>PG 16</strong>: không có undo log, phiên bản cũ nằm ngay trong bảng tới khi VACUUM dọn.</div>
+      <div class="mock-term ann"><span class="pin">3</span><span class="c"># số từ probe 24/10 (lab thật sẽ đo lại)</span>
+RR đọc trước : xmin 935, xmax 0,   ctid (0,1)
+B ghi xong   : xmin 936, ctid (0,3), mất 2,3 ms
+RR đọc lại   : xmin 935, xmax 936, ctid (0,1)</div>
+      <div class="table-wrap ann" style="margin:0"><span class="pin">4</span><table class="steps">
+        <thead><tr><th>Bước</th><th>Cửa sổ A</th><th>Cửa sổ B</th><th>Bạn thấy</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>BEGIN; SELECT xmin, xmax, ctid …</code></td><td></td><td><input type="text" aria-label="Bước 1, bạn thấy gì" placeholder="xmin, xmax, ctid"></td></tr>
+          <tr><td>2</td><td></td><td><code>UPDATE … RETURNING xmin, ctid;</code></td><td><input type="text" aria-label="Bước 2, bạn thấy gì" placeholder="có phải chờ không?"></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <ol class="legend-list">
+    <li><span class="pin">1</span><span>Thanh bên chia theo Ngày 02 / Ngày 03, có ô đánh dấu và thanh tiến độ, lưu bằng khóa <code>l12-*</code> riêng nên không đè tiến độ Bài 3 (nghiệm thu 1).</span></li>
+    <li><span class="pin">2</span><span>Khung "Slide nói / PG 16" với nhãn màu, dùng lại token <code>--accent</code> của Bài 3; có ở mọi slide mà Postgres khác MySQL (nghiệm thu 3).</span></li>
+    <li><span class="pin">3</span><span>Khối kết quả lab dán nguyên văn, ghi ngày và lệnh <code>npm run</code>; con số nào cũng tìm được trong <code>lab-runs/</code> (nghiệm thu 6).</span></li>
+    <li><span class="pin">4</span><span>Bảng hai cửa sổ: lệnh y hệt lab, ô "Bạn thấy" lưu trong trình duyệt; đáp án gập lại là output của lab (nghiệm thu 8).</span></li>
+  </ol>
+</section>
+
+<section id="nghiem-thu">
+  <h2>Tiêu chí nghiệm thu</h2>
+  <ol>
+    <li>Khung Bài 3: 8 chặng, tiến độ lưu <code>l12-*</code>, hero "Bài 12 / 16". Kiểm bằng grep <code>chang-1</code>…<code>chang-8</code>, <code>phong-van</code>, <code>cheat-sheet</code>, <code>ban-do-slide</code>.</li>
+    <li>Chạy offline trừ font, sáng và tối, không cuộn ngang ở 360 px, console sạch.</li>
+    <li>Bản đồ 26 chip, mọi link tới được; slide 7, 9, 10, 13–16, 20, 22, 23 có gạch chân pg và khung <code>callout pg</code> kèm nhãn, kèm lab tương ứng.</li>
+    <li>Mỗi chặng có mục tiêu, lưới <code>wwh</code>, mô phỏng hoặc khối lab, quiz 3–5 câu với đáp án hợp lệ; có đề thi và tài liệu tham khảo (slide 25 + PG 16 docs).</li>
+    <li>Mọi lệnh npm chạy được; mỗi file ≤ 200 dòng; không có <code>verdict(true</code> viết cứng.</li>
+    <li>Mỗi lab chạy 2 lần; so hai lần sau khi che ms, xid, LSN, pid thì giống hệt; mọi con số trong bài tìm được trong <code>lab-runs/</code>.</li>
+    <li><code>npm run check</code> xanh sau lần chạy đủ và sau khi Ctrl+C giữa chừng: không còn session <code>lesson-12*</code>, không còn khóa; <code>hw_contracts</code> vẫn 500.000 dòng, 5.666/5.666 trang all-visible, dòng id = 1 vẫn xmin 875 / ctid (0,1).</li>
+    <li>Lệnh SQL trong bảng hai cửa sổ trùng với bước trong <code>scenarios.mjs</code>.</li>
+    <li>Bài tập: file chưa điền bị từ chối và liệt kê mọi ô <code>'???'</code>; <code>homework:solution</code> ra ma trận đo được, mọi ô ✔; <code>homework:draft</code> chạy an toàn; cả ba lưu trong <code>lab-runs/</code>.</li>
+    <li>Bài soát NestJS có 6 lỗi, đáp án gập; tên API khớp phiên bản TypeORM bạn dùng.</li>
+    <li>Không có <code>postgres://</code>, <code>PGPASSWORD</code>, <code>POSTGRES_PASSWORD</code> trong file mới; <code>git status</code> chỉ có đường dẫn dự kiến.</li>
+  </ol>
+</section>
+
+<section id="phuong-an">
+  <h2>Các phương án đã so</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Quyết định</th><th>Phương án</th><th>Dựa vào giả định</th><th>Hỏng đầu tiên khi</th><th>Tệ nhất</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Chạy 2 session</td><td class="pick">Node runner + observer, in dòng thời gian (chọn), kèm psql ×2 chạy lại đúng các bước</td><td>mỗi bước hoặc bị chặn hoặc xong, lần nào cũng vậy</td><td>gặp một lần chờ không khai báo (GUI giữ khóa)</td><td><code>lock_timeout</code> biến nó thành lỗi có báo</td></tr>
+      <tr><td>Chỉ psql ×2 bằng tay</td><td>gõ đúng từng bước</td><td>quên <code>BEGIN</code>, câu lệnh tự commit</td><td>kết luận sai, không có số để trích</td></tr>
+      <tr><td><code>dblink</code> trong một file SQL</td><td>kết nối vòng không cần mật khẩu</td><td>phải ghi mật khẩu vào SQL</td><td>lộ mật khẩu</td></tr>
+      <tr><td rowspan="3">Dữ liệu</td><td>Sửa thẳng <code>hw_contracts</code></td><td>ghi nhỏ thì vô hại</td><td>UPDATE đầu tiên xóa cờ all-visible</td><td>bài tập Bài 3 chấm sai mà không báo</td></tr>
+      <tr><td class="pick">Chép id 1–100.000 sang <code>contracts</code> + bảng <code>store_reps</code> (chọn)</td><td>dữ liệu Bài 3 đã dựng</td><td>sau khi chạy <code>reset</code> của Bài 3</td><td>chạy lại setup Bài 3</td></tr>
+      <tr><td>Bộ dữ liệu mới hoàn toàn</td><td>không cần nối tiếp bài trước</td><td>trái quy tắc 4 của CLAUDE.md</td><td>bài học rời rạc</td></tr>
+      <tr><td rowspan="2">Thứ tự học</td><td>Theo thứ tự slide</td><td>dạy được mức cô lập trước snapshot</td><td>RR của PG (không phantom, lỗi 40001) không giải thích được</td><td>mục tiêu MVCC của Ngày 02 trôi sang Ngày 03</td></tr>
+      <tr><td class="pick">Cơ chế trước, theo lộ trình (chọn)</td><td>bản đồ slide bù được việc đảo thứ tự</td><td>bạn đọc PDF song song từ đầu tới cuối</td><td>lạc hướng một chút</td></tr>
+      <tr><td rowspan="3">Tái dùng Bài 3</td><td>Import <code>pg-explain-kit.mjs</code></td><td>mặc định của nó hợp</td><td>nó ép <code>search_path = lab03_indexing</code></td><td>sửa bài này làm hỏng output đã kiểm của bài kia</td></tr>
+      <tr><td class="pick">Kit nhỏ riêng + <code>scenarios.mjs</code> dùng chung cho lab và bài tập (chọn)</td><td>mỗi bài một bản sao là chấp nhận được</td><td>runner phình ra</td><td>thành framework; giới hạn ~120 dòng</td></tr>
+      <tr><td>Một kit chung cho mọi bài</td><td>được phép refactor Bài 3</td><td>output đã kiểm của Bài 3</td><td>Bài 3 hỏng</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Phương án tốt hơn bản sao nguyên Bài 3</h3>
+  <ol>
+    <li><strong>Dạy cơ chế trước.</strong> Docs PG 16: transaction Repeatable Read "thấy snapshot tại câu lệnh đầu tiên không phải lệnh điều khiển transaction"; slide 15 bỏ trống. Chi phí: chỉ đổi link trong bản đồ slide.</li>
+    <li><strong>Dòng thời gian từ kết nối thật là kết quả chính</strong>, thay cho số trang của Bài 3. Chi phí: một runner ~120 dòng.</li>
+    <li><strong>Slide 12 bằng bản ghi WAL thật</strong> qua <code>pg_walinspect</code> 1.1 (có sẵn, chưa cài), lọc theo xid của lab. Chi phí: một extension, <code>reset</code> sẽ gỡ.</li>
+    <li><strong>GUI chỉ làm observer.</strong> Hiện có 4 session rảnh không tên ứng dụng; một GUI bỏ quên giữa transaction sẽ giữ horizon VACUUM và làm sai Lab 04.</li>
+  </ol>
+</section>
+
+<section id="xep-hang">
+  <h2>Xếp hạng 5 bản brainstorm</h2>
+  <p>Năm bản viết độc lập trên cùng một bộ bằng chứng, rồi một verifier mạnh hơn chấm ẩn danh theo 7 tiêu chí (1–20 điểm). Bản thắng được giữ nguyên, không trộn với bản khác.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Bản</th><th class="n">Bám yêu cầu</th><th class="n">Bằng chứng</th><th class="n">Nghiệm thu</th><th class="n">Trung thực</th><th class="n">Đánh đổi</th><th class="n">Hợp người học</th><th class="n">Khả thi</th><th class="n">Tổng</th></tr></thead>
+    <tbody>
+      <tr class="win"><td><strong>E</strong></td><td class="n">19</td><td class="n">19</td><td class="n">18</td><td class="n">19</td><td class="n">19</td><td class="n">17</td><td class="n">18</td><td class="n"><strong>129</strong></td></tr>
+      <tr><td>C</td><td class="n">16</td><td class="n">17</td><td class="n">18</td><td class="n">18</td><td class="n">18</td><td class="n">18</td><td class="n">19</td><td class="n">124</td></tr>
+      <tr><td>B</td><td class="n">18</td><td class="n">18</td><td class="n">17</td><td class="n">18</td><td class="n">17</td><td class="n">18</td><td class="n">17</td><td class="n">123</td></tr>
+      <tr><td>D</td><td class="n">17</td><td class="n">17</td><td class="n">16</td><td class="n">18</td><td class="n">18</td><td class="n">18</td><td class="n">18</td><td class="n">122</td></tr>
+      <tr><td>A</td><td class="n">17</td><td class="n">17</td><td class="n">18</td><td class="n">17</td><td class="n">18</td><td class="n">17</td><td class="n">17</td><td class="n">121</td></tr>
+    </tbody>
+  </table></div>
+  <p>E thắng vì giống Bài 3 nhất (thẻ dữ liệu, dự đoán, soát thí nghiệm AI viết, tự làm, bài NestJS) và có bằng chứng chắc nhất. Cách biệt thấp: E 54 điểm, B, C, D cùng 53 điểm trên ba tiêu chí quyết định. C an toàn hơn về khả thi; B, C, D hợp người học hơn. Những điểm đó nằm trong danh sách phải sửa khi lập kế hoạch.</p>
+  <div class="receipt">ultra: picked=5/5 margin=low unanimous=no rejected_all=no</div>
+  <details class="fold"><summary>10 điểm phải sửa khi lập kế hoạch</summary><div><ol>
+    <li>Bài tập B: 24 ô chỉ chọn giá trị; mỗi hàng kịch bản 1 dòng "vì sao" (6 dòng), không viết cho từng ô.</li>
+    <li>SSI: probe trên máy bạn cho thấy UPDATE của B vẫn chạy, <strong>COMMIT thứ hai</strong> mới nhận 40001. Cố định thứ tự bước, vẫn đo lại.</li>
+    <li>Lab 05 ôm quá nhiều: tách transaction lớn và transaction treo/bỏ rơi thành hai phần.</li>
+    <li>Giữ đúng hai cửa sổ psql: người ghi thứ hai do observer hoặc cửa sổ A đóng vai.</li>
+    <li>Dấu vân tay <code>hw_contracts</code>: dùng 500.000 dòng, 5.666/5.666 all-visible, id = 1 xmin 875 / ctid (0,1); bộ đếm thống kê chỉ là phụ.</li>
+    <li>Phiên bản TypeORM của bạn chưa biết (repo app không có trên máy này): ghim phiên bản docs và ghi rõ chỗ khác nhau 0.3 / 1.x.</li>
+    <li><code>pg_walinspect</code>: lấy LSN trước BEGIN và sau COMMIT, lọc theo xid của lab, chỉ in loại bản ghi và độ lệch tương đối.</li>
+    <li>Bài tập D (<code>FOR UPDATE</code>) là phạm vi Bài 14: để tùy chọn, sau đề thi.</li>
+    <li>Ghi rõ "Markdown chỉ trong <code>plans/</code> hoặc <code>docs/</code>".</li>
+    <li>Mọi session lab và mọi cửa sổ psql chạy <code>SET search_path = lab12_transaction</code>, và giải thích vì sao.</li>
+  </ol></div></details>
+</section>
+
+<section id="rui-ro">
+  <h2>Rủi ro và câu hỏi còn mở</h2>
+  <ul>
+    <li>Phải đo trước khi trích: <code>backend_xmin</code> của session RC chỉ đọc khi rảnh, số trang khi có phiên bản chết, tên bản ghi <code>pg_walinspect</code>, ký hiệu prompt psql, câu lệnh TypeORM gửi xuống.</li>
+    <li><code>synchronous_commit</code> on/off trên Docker Desktop có thể chênh rất ít: chỉ báo ms, nếu không chênh thì verdict ghi ✘ và lời giảng đổi theo.</li>
+    <li>Session bị server ngắt bắn sự kiện <code>error</code> của <code>pg</code>; kit phải bắt, nếu không Node sẽ sập.</li>
+    <li>Chưa rõ GUI của bạn (DBX, DBeaver hay pgAdmin) xử lý auto-commit thế nào, nên GUI chỉ làm observer; Lab 04–05 cảnh báo khi session khác đang giữ <code>backend_xmin</code>.</li>
+  </ul>
+  <div class="callout key">
+    <span class="tag">Bước tiếp theo</span>
+    <p>5 bản kế hoạch độc lập (<code>/ak:plan --ultra --tdd</code>), verifier chọn một; red-team và hỏi bạn vài câu thật sự cần quyết; rồi viết lab, chạy thật, dựng bài giảng từ <code>lab-runs/</code>, code review 5 người soát. Không commit, không push.</p>
+  </div>
+  <p class="muted">Hợp đồng gốc (tiếng Anh, giữ nguyên): <code>plans/261024-1435-lesson-12-transaction-teacher-guide/brainstorm/candidate-E.md</code>. Bằng chứng: <code>evidence-packet.md</code>, <code>probes/probe-anomaly-matrix.out.txt</code>, <code>brainstorm/verdict.md</code>.</p>
+</section>
+
+</main>
+<script>
+(() => {
+  // Keep the embedded diagram in the same light/dark theme as the page.
+  const dark = document.documentElement.dataset.theme === 'dark'
+    || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('.ak-diagram-root').forEach((el) => { el.dataset.theme = dark ? 'dark' : 'light'; });
+  // Fill-in cells of the mock remember what was typed, in this browser only.
+  document.querySelectorAll('.steps input').forEach((input, i) => {
+    const key = `l12-brief-step-${i}`;
+    try { input.value = localStorage.getItem(key) ?? ''; } catch { /* storage blocked */ }
+    input.addEventListener('input', () => { try { localStorage.setItem(key, input.value); } catch { /* storage blocked */ } });
+  });
+})();
+</script>
+</body>
+</html>

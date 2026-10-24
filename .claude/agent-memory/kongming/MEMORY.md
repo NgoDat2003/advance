@@ -1,0 +1,1 @@
+- [Lab DB traps](project-lab-db-traps.md) — advance_be_lab has DB-level search_path=lab03_indexing; shares server with maycha_lease; TypeORM is 1.x not 0.3

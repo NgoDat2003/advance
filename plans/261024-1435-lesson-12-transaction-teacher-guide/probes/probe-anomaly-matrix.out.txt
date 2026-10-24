@@ -1,0 +1,37 @@
+┌─────────┬────────────────────┬───────┬────────────────────┬───────────┬─────────┬─────────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ (index) │ level              │ dirty │ shown              │ nonrep    │ phantom │ lost                                                        │ skew                                                                                             │
+├─────────┼────────────────────┼───────┼────────────────────┼───────────┼─────────┼─────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 0       │ 'READ UNCOMMITTED' │ 100   │ 'read uncommitted' │ '100→50'  │ '2→3'   │ 'final 80'                                                  │ 'on_call=0'                                                                                      │
+│ 1       │ 'READ COMMITTED'   │ 100   │ 'read committed'   │ '100→50'  │ '2→3'   │ 'final 80'                                                  │ 'on_call=0'                                                                                      │
+│ 2       │ 'REPEATABLE READ'  │ 100   │ 'repeatable read'  │ '100→100' │ '2→2'   │ '40001 could not serialize access due to concurrent update' │ 'on_call=0'                                                                                      │
+│ 3       │ 'SERIALIZABLE'     │ 100   │ 'serializable'     │ '100→100' │ '2→2'   │ '40001 could not serialize access due to concurrent update' │ 'on_call=1 B:40001 could not serialize access due to read/write dependencies among transactions' │
+└─────────┴────────────────────┴───────┴────────────────────┴───────────┴─────────┴─────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┘
+RR reader before: { xmin: '935', xmax: '0', ctid: '(0,1)', balance: 100 } | writer new version: { xmin: '936', ctid: '(0,3)', balance: 101 } | writer took 2.3 ms
+RR reader again : { xmin: '935', xmax: '936', ctid: '(0,1)', balance: 100 } | after reader commit: { xmin: '936', xmax: '0', ctid: '(0,3)', balance: 101 }
+B blocked by A: true ({"state":"active","wait_event_type":"Lock","wait_event":"transactionid"}) → after A commits B gets { balance: 98 }
+error in tx: 22012 division by zero | next statement: 25P02 current transaction is aborted, commands ignored until end of transaction block
+notices: [
+  'admin: NOTICE table "probe_acc" does not exist, skipping',
+  'admin: NOTICE table "probe_oncall" does not exist, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'admin: NOTICE schema "lab12_transaction" already exists, skipping',
+  'A: WARNING SET TRANSACTION can only be used in transaction blocks'
+]

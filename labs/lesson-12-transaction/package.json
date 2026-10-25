@@ -1,0 +1,25 @@
+{
+  "name": "lesson-12-transaction-labs",
+  "private": true,
+  "type": "module",
+  "description": "Runnable two-session labs for lesson 12 (Transaction) on the advance_be_lab Postgres (schema lab12_transaction). Needs PG_URL.",
+  "scripts": {
+    "setup": "node 00-setup-dataset.mjs",
+    "check": "node check-lab-state.mjs",
+    "reset": "node check-lab-state.mjs --reset",
+    "lab1": "node 01-atomicity-pg-rules.mjs",
+    "lab2": "node 02-wal-records.mjs",
+    "lab3": "node 03-mvcc-two-sessions.mjs",
+    "lab4": "node 04-dead-versions-horizon.mjs",
+    "lab5": "node 05-big-and-idle-tx.mjs",
+    "lab6": "node 06-levels-read-anomalies.mjs",
+    "lab7": "node 07-lost-update.mjs",
+    "lab8": "node 08-write-skew.mjs",
+    "homework": "node homework-runner.mjs homework-predictions.mine.mjs",
+    "homework:draft": "node homework-ai-draft.mjs",
+    "homework:solution": "node homework-runner.mjs homework-predictions.solution.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

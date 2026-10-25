@@ -1,0 +1,1366 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sổ tay Transaction &amp; MVCC</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eceff4; --fg: #1a1d24; --muted: #596172; --line: #d8dde6;
+  --accent: #1f5fa8; --accent-soft: #e5eefa; --accent-fg: #ffffff;
+  --ok: #1d7a4c; --ok-soft: #e2f3e9; --bad: #b3261e; --bad-soft: #fbe8e6; --warn: #8f5407; --warn-soft: #fcf0da;
+  --code-bg: #1c1f26; --code-fg: #e9ecf2; --code-muted: #9aa3b2;
+  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+    --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+    --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+    --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+  --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+  --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+  --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 400 16px/1.7 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font: 800 clamp(2.4rem, 6vw, 3.6rem)/1.05 var(--font-display); letter-spacing: -0.02em; }
+h2 { font: 800 clamp(1.6rem, 3.4vw, 2.1rem)/1.15 var(--font-display); letter-spacing: -0.01em; }
+h3 { font: 700 1.2rem/1.35 var(--font-body); margin-top: 2.2rem; }
+h4 { font: 700 1rem/1.4 var(--font-body); margin-top: 1.4rem; }
+p { margin: 0.75rem 0; }
+ul, ol { margin: 0.6rem 0; padding-left: 1.3rem; }
+li { margin: 0.3rem 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.eyebrow { font: 600 0.74rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.shell { max-width: 920px; margin: 0 auto; display: block; width: 100%; overflow-x: clip; }
+main { min-width: 0; padding-block: 28px; width: 100%; }
+.col { max-width: 100%; min-width: 0; }
+.wide { max-width: 100%; min-width: 0; }
+.hero { padding: 24px 0 8px; display: grid; gap: 16px; }
+.hero .lead { font-size: 1.12rem; color: var(--muted); max-width: 100%; margin: 0; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 500 0.88rem/1.4 var(--font-mono); color: var(--muted); }
+.hero-meta b { color: var(--fg); font-weight: 600; }
+.epigraph { font-style: italic; color: var(--muted); border-left: 2px solid var(--line); padding-left: 14px; margin: 4px 0 0; font-size: 0.95rem; }
+.stage { margin-top: 72px; scroll-margin-top: 16px; }
+.stage-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; align-items: end; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.stage-no { font: 800 clamp(3rem, 8vw, 4.6rem)/0.85 var(--font-display); color: var(--accent); grid-row: span 2; }
+.stage-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 0.8rem/1.4 var(--font-mono); color: var(--muted); }
+.goal { margin: 14px 0 0; font-size: 0.98rem; }
+.goal b { color: var(--accent); }
+.slide-ref { font: 600 0.72rem/1 var(--font-mono); color: var(--muted); background: var(--surface-2); border-radius: 99px; padding: 4px 8px; vertical-align: middle; margin-left: 6px; white-space: nowrap; }
+.callout { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; }
+.callout > .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px; }
+.callout.teacher .tag { background: var(--accent-soft); color: var(--accent); }
+.callout.warn { background: var(--warn-soft); border-color: transparent; }
+.callout.warn .tag { background: var(--surface); color: var(--warn); }
+.callout.key .tag { background: var(--surface); color: var(--ok); }
+.callout.pg { background: var(--surface); border-left: 3px solid var(--accent); }
+.callout.pg .tag { background: var(--accent-soft); color: var(--accent); }
+.wwh { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px 16px; margin: 14px 0; padding: 14px 0; border-block: 1px solid var(--line); }
+.wwh dt { font: 600 0.78rem/1.7 var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.wwh dd { margin: 0; }
+.table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 0.78rem/1.4 var(--font-body); color: var(--muted); background: var(--surface-2); text-transform: uppercase; letter-spacing: 0.03em; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.code { position: relative; margin: 14px 0; }
+.code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 16px; overflow-x: auto; font: 400 0.82rem/1.6 var(--font-mono); tab-size: 2; }
+.code pre code { background: none; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+.terminal pre { border-left: 3px solid var(--ok); }
+.widget { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin: 22px 0; overflow: hidden; }
+.widget-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.widget-head h4 { margin: 0; font-size: 1rem; }
+.widget-head .eyebrow { color: var(--accent); }
+.widget-body { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 600 0.86rem/1 var(--font-body); padding: 12px 16px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.wrong { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+.quiz { margin: 26px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.quiz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.quiz-head h4 { margin: 0; }
+.quiz-score { font: 600 0.84rem var(--font-mono); color: var(--muted); }
+.q { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.q:last-child { border-bottom: 0; }
+.q-text { font-weight: 600; margin: 0 0 10px; }
+.q-opts { display: grid; gap: 6px; }
+.q-opt { text-align: left; font: 400 0.92rem/1.45 var(--font-body); padding: 11px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.q-opt:hover:not(:disabled) { border-color: var(--accent); }
+.q-opt:disabled { cursor: default; }
+.q-opt.right { background: var(--ok-soft); border-color: var(--ok); }
+.q-opt.wrong { background: var(--bad-soft); border-color: var(--bad); }
+.q-explain { margin-top: 10px; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
+details.fold { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: 10px 0; }
+details.fold > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .fold-body { padding: 4px 14px 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 0.8rem/1.3 var(--font-mono); padding: 8px 12px; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; background: var(--surface-2); color: var(--fg); text-decoration: none; }
+a.chip:hover { background: var(--accent-soft); }
+a.chip.pg { box-shadow: inset 0 -2px 0 var(--accent); }
+.vchip { display: inline-block; font: 600 0.7rem/1 var(--font-mono); padding: 5px 8px; border-radius: 99px; white-space: nowrap; vertical-align: middle; }
+.vchip.ok { background: var(--ok-soft); color: var(--ok); }
+.vchip.diff { background: var(--accent-soft); color: var(--accent); }
+.vchip.fix { background: var(--bad-soft); color: var(--bad); }
+.good { color: var(--ok); font-weight: 600; }
+.badx { color: var(--bad); font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; margin: 14px 0; }
+.panel h4 { margin-top: 0; }
+.field { font: 400 0.92rem var(--font-body); padding: 10px 12px; min-height: 44px; min-width: 140px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%; }
+textarea.field { min-height: 92px; resize: vertical; line-height: 1.5; }
+b.m { color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
+@media (max-width: 560px) {
+  body { font-size: 15.5px; }
+  .wwh { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .stage-head { grid-template-columns: minmax(0, 1fr); }
+  .stage-no { grid-row: auto; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<main>
+
+<header class="hero col">
+  <p class="eyebrow">Advance Backend · Bài 12 / 16 · sau Bài 3 Index</p>
+  <h1>Transaction &amp; MVCC</h1>
+  <p class="lead">Học xong bài này, bạn hiểu rõ COMMIT bảo đảm những gì ở tầng đĩa (WAL flush), đọc hiểu các trường ẩn xmin/xmax/ctid trên Heap Tuple, tự tin dự đoán và triệt tiêu 6 dị thường đồng thời (Dirty, Non-repeatable, Phantom, Lost Update, Write Skew), và review chuẩn chỉ mã nguồn TypeORM trong NestJS.</p>
+  <div class="hero-meta">
+    <span><b>26</b> slide</span><span><b>8</b> chặng</span><span><b>~4,75</b> giờ</span><span><b>8</b> lab chạy thật</span><span><b>25</b> câu quiz + <b>10</b> câu phỏng vấn</span>
+  </div>
+  <p class="epigraph">"Stop thinking, and end your problems." · Lão Tử (slide 1)</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Bài 3 kết thúc ở hiện tượng: UPDATE trong Postgres không ghi đè tại chỗ mà tạo ra một tuple mới ở ctid mới, dẫn tới bloat. Bài 12 giải mã chính cơ chế bên dưới: tại sao phải tạo bản ghi mới (MVCC), hai giao dịch đồng thời đọc ghi thấy gì (xmin, xmax), và cơ chế nào bảo vệ dữ liệu khi mất điện (Write-Ahead Logging).</p>
+  <p>Toàn bộ 8 bài lab chạy trực tiếp trên cơ sở dữ liệu <code>advance_be_lab</code> của bạn trong Docker <code>quan-ly-hop-dong-postgres-1</code>. Lưu ý: cơ sở dữ liệu này có cài đặt mặc định <code>search_path = lab03_indexing, public</code>, do đó <strong>mọi cửa sổ psql hay kết nối mới bắt buộc phải chạy lệnh</strong>: <code>SET search_path = lab12_transaction;</code> để không ghi nhầm vào dữ liệu Bài 3.</p>
+  <p>Slide gốc viết theo <strong>MySQL (InnoDB)</strong>, nhưng bạn thực hành trên <strong>PostgreSQL 16</strong>. Khác biệt cốt lõi giữa hai engine được đánh dấu rõ bằng các nhãn:</p>
+  <p><span class="vchip ok">Đúng trên PG16</span> &nbsp;<span class="vchip diff">MySQL đúng, PG khác</span> &nbsp;<span class="vchip fix">Cần sửa</span></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Chặng</th><th>Nội dung</th><th>Thời gian</th><th>Thao tác thực hành</th><th>Nghiệm thu</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>0–5</strong></td><td>Day 02: ACID, WAL, MVCC xmin/xmax, Chân trời Horizon, Tx lớn &amp; Treo</td><td class="n">135 phút</td><td>Mở 2 psql terminal chạy kịch bản M1 &amp; M2</td><td>Tận mắt thấy Readers never block Writers</td></tr>
+        <tr><td><strong>6–8</strong></td><td>Day 03: 4 Mức cô lập, Lost Update, Write Skew &amp; NestJS Drill</td><td class="n">150 phút</td><td>Chạy kịch bản M3 tái hiện Write Skew trên RR &amp; SER</td><td>Thấy lỗi 40001 xuất hiện ở COMMIT thứ hai</td></tr>
+      </tbody>
+    </table>
+  <div class="panel">
+    <h4>Chuẩn bị môi trường &amp; Lệnh chạy nhanh</h4>
+    <p>Mở terminal tại thư mục <code>labs/lesson-12-transaction</code> (đặt biến <code>PG_URL</code> giống Bài 3 mục 6.3, container <code>quan-ly-hop-dong-postgres-1</code>): chạy <code>npm run setup</code> để dựng bảng mẫu, <code>npm run lab1</code> … <code>npm run lab8</code> cho từng chặng, và <code>npm run check</code> để kiểm tra bất biến.</p>
+  </div>
+  </div>
+  <p>Tổng thời lượng: <strong>285 phút (~4,75 giờ)</strong> phân bổ cho 2 buổi học tác chiến.</p>
+  <textarea id="warmup" class="field" placeholder="Ghi chú mở đầu hoặc câu hỏi bạn muốn giải tỏa trước khi bắt đầu học..."></textarea>
+</section>
+
+<!-- CHẶNG 1 -->
+<section id="chang-1" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">01</span>
+    <div>
+      <div class="stage-meta"><span>Slide 3–5</span><span>20 phút</span><span>Day 02</span></div>
+      <h2>Transaction &amp; ACID trên PostgreSQL 16</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Nắm vững định nghĩa All-or-Nothing, mã lỗi 25P02 khi câu lệnh trong transaction gặp lỗi, SAVEPOINT để cứu giao dịch, và Transactional DDL trên Postgres.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Giao dịch là một chuỗi các câu lệnh SQL được thực thi nguyên tử (All or Nothing): hoặc tất cả thành công, hoặc không có thay đổi nào được ghi nhận.</dd>
+    <dt>TẠI SAO?</dt><dd>Để bảo vệ tính nhất quán dữ liệu trước sự cố mất điện, sập mạng hoặc lỗi ứng dụng giữa chừng.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Không bọc giao dịch cho các tác vụ tốn thời gian như gọi HTTP API bên thứ ba, gửi mail hay xử lý file lớn vì sẽ giữ khóa dòng và làm nghẽn connection pool.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Đặc thù PostgreSQL 16</span>
+    <p>Khi một câu lệnh bên trong transaction gặp lỗi (ví dụ chia cho 0 mã <b class="m" data-run="lab01">22012</b>), toàn bộ transaction chuyển sang trạng thái <em>aborted</em>. Mọi câu lệnh tiếp theo sẽ bị từ chối với mã <b class="m" data-run="lab01">25P02</b> (in_failed_sql_transaction) và lệnh COMMIT cuối cùng sẽ trả về tag <b class="m" data-run="lab01">ROLLBACK</b>. Khác với MySQL, DDL trong Postgres có tính Transactional (hoàn tác được CREATE TABLE), còn Sequence thì không quay lui.</p>
+  </div>
+
+  <div class="widget" id="w1">
+    <div class="widget-head">
+      <h4>Mô phỏng máy trạng thái Transaction &amp; Dấu nhắc psql</h4>
+      <span class="eyebrow">Interactive Widget 1</span>
+    </div>
+    <div class="widget-body">
+      <p>Chọn lệnh SQL để quan sát sự thay đổi trạng thái trong <code>pg_stat_activity</code> và ký hiệu dấu nhắc psql:</p>
+      <div class="btns">
+        <button type="button" class="btn" id="w1-btn-begin">BEGIN</button>
+        <button type="button" class="btn" id="w1-btn-err">SELECT 1/0 (Lỗi)</button>
+        <button type="button" class="btn" id="w1-btn-commit">COMMIT</button>
+        <button type="button" class="btn" id="w1-btn-rollback">ROLLBACK</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Lệnh vừa chạy</th><th>Trạng thái (pg_stat_activity.state)</th><th>Dấu nhắc psql</th><th>Ý nghĩa dấu nhắc</th></tr></thead>
+          <tbody>
+            <tr><td id="w1-cmd">Mới kết nối</td><td id="w1-state"><code>idle</code></td><td id="w1-prompt"><code>=#</code></td><td id="w1-desc">Bình thường, sẵn sàng</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab01.txt">Lab 12.01 — Atomicity, SAVEPOINT, Transactional DDL &amp; Sequence trên PostgreSQL 16 (slide 4–5)
+
+A. Lỗi trong giao dịch: mọi câu lệnh sau đó bị từ chối, COMMIT thực chất là ROLLBACK
+────────────────────────────────────────────────────────────────────────────────────
+   SELECT 1/0                                -&gt; SQLSTATE 22012
+   INSERT sau lỗi                            -&gt; SQLSTATE 25P02
+   COMMIT trả về command tag                 -&gt; ROLLBACK
+   Số dòng trong l01_items sau đó            -&gt; 0
+   =&gt; ✔ Chia cho 0 (22012) làm hỏng giao dịch; lệnh kế tiếp bị chặn bởi 25P02 (in_failed_sql_transaction)
+   =&gt; ✔ COMMIT trên giao dịch hỏng trả về tag ROLLBACK, không phải COMMIT
+   =&gt; ✔ Dòng INSERT (1) đã chạy thành công trước lỗi cũng biến mất: tất cả hoặc không gì cả
+
+B. SAVEPOINT: hoàn tác một phần để giao dịch tiếp tục sống
+──────────────────────────────────────────────────────────
+   INSERT trùng khóa chính                   -&gt; SQLSTATE 23505
+   Số dòng sau COMMIT                        -&gt; 2
+   =&gt; ✔ ROLLBACK TO SAVEPOINT cứu giao dịch sau lỗi 23505: COMMIT thật, còn đủ 2 dòng
+
+C. Transactional DDL: CREATE TABLE trong giao dịch bị ROLLBACK thì bảng không tồn tại
+─────────────────────────────────────────────────────────────────────────────────────
+   to_regclass('lab12_transaction.l01_ddl_test') -&gt; NULL (không có bảng)
+   =&gt; ✔ DDL được hoàn tác cùng giao dịch: to_regclass trả về NULL
+
+D. Sequence: nextval không được hoàn tác khi ROLLBACK (thủng số là bình thường)
+───────────────────────────────────────────────────────────────────────────────
+   nextval ngoài giao dịch: 1; trong giao dịch bị ROLLBACK: 2; sau ROLLBACK: 3
+   =&gt; ✔ Sequence không quay lui: sau ROLLBACK nhận 3 &gt; 2, giá trị 2 bị bỏ trống
+
+E. pg_stat_activity.state của phiên A và ký hiệu dấu nhắc psql (%x) tương ứng
+─────────────────────────────────────────────────────────────────────────────
+│ Bước         │ Lệnh          │ state                         │ Dấu nhắc psql │
+├──────────────┼───────────────┼───────────────────────────────┼───────────────┤
+│ Chưa BEGIN   │ (kết nối mới) │ idle                          │ =#            │
+│ Sau BEGIN    │ BEGIN         │ idle in transaction           │ =*#           │
+│ Sau lệnh lỗi │ SELECT 1/0    │ idle in transaction (aborted) │ =!#           │
+│ Sau ROLLBACK │ ROLLBACK      │ idle                          │ =#            │
+   Dấu nhắc psql theo tài liệu psql: = bình thường, * đang trong giao dịch, ! giao dịch hỏng, # là superuser.
+   =&gt; ✔ State đổi đúng chuỗi idle -&gt; idle in transaction -&gt; idle in transaction (aborted) -&gt; idle
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="1"></div>
+</section>
+
+<!-- CHẶNG 2 -->
+<section id="chang-2" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">02</span>
+    <div>
+      <div class="stage-meta"><span>Slide 11–12</span><span>20 phút</span><span>Day 02</span></div>
+      <h2>WAL: Ghi log trước, COMMIT flush &amp; ROLLBACK không cần Undo</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Hiểu cơ chế Write-Ahead Logging: mọi thay đổi dữ liệu phải nằm trên log đĩa trước khi ghi đĩa thật, và chi phí fsync của <code>synchronous_commit</code>.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Write-Ahead Log (WAL) là nhật ký ghi nối tiếp (append-only) lưu lại mọi hành động thay đổi dữ liệu trước khi các trang dữ liệu trong Heap được ghi xuống đĩa.</dd>
+    <dt>TẠI SAO?</dt><dd>Ghi tuần tự (sequential I/O) nhanh hơn ghi ngẫu nhiên hàng nghìn lần. Nhờ WAL, Postgres chỉ cần flush một đoạn log nhỏ lúc COMMIT là bảo đảm tính Durability (bền bỉ).</dd>
+    <dt>CÁI GIÁ</dt><dd>Mỗi lệnh COMMIT phải chờ ổ cứng xác nhận ghi đĩa (fsync). Tắt <code>synchronous_commit = off</code> giúp tăng tốc gấp nhiều lần nhưng chấp nhận mất vài giao dịch cuối nếu sập nguồn đột ngột (không bao giờ hỏng dữ liệu).</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">PostgreSQL vs MySQL</span>
+    <p>PostgreSQL không có Undo Log! Khi ROLLBACK, Postgres chỉ ghi một bản ghi <b class="m" data-run="lab02">ABORT</b> vào WAL và đánh dấu transaction ID là đã hủy. Không có bước hoàn tác lùi từng dòng như MySQL/Oracle, vì vậy ROLLBACK trên Postgres diễn ra tức thì dù giao dịch sửa hàng triệu dòng.</p>
+  </div>
+
+  <div class="widget" id="w2">
+    <div class="widget-head">
+      <h4>So sánh độ trễ COMMIT: synchronous_commit ON vs OFF</h4>
+      <span class="eyebrow">Interactive Widget 2</span>
+    </div>
+    <div class="widget-body">
+      <p>Chọn chế độ để mô phỏng sự đánh đổi giữa tốc độ COMMIT và độ bền dữ liệu khi sập nguồn:</p>
+      <div class="btns">
+        <button type="button" class="btn primary" id="w2-btn-on">synchronous_commit = on</button>
+        <button type="button" class="btn" id="w2-btn-off">synchronous_commit = off</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Chế độ</th><th>Số giao dịch</th><th>Thời gian thực thi</th><th>Hành vi khi mất điện</th></tr></thead>
+          <tbody id="w2-tbody">
+            <tr><td><code>synchronous_commit = on</code></td><td class="n">100</td><td class="n">302 ms</td><td>An toàn tuyệt đối, zero data loss (chờ fsync WAL xuống đĩa)</td></tr>
+            <tr><td><code>synchronous_commit = off</code></td><td class="n">100</td><td class="n">154 ms</td><td>Nhanh gấp ~2×; có thể mất tối đa ~600ms giao dịch cuối nếu sập nguồn (không hỏng dữ liệu)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p id="w2-note" class="muted">Đang chọn: <code>synchronous_commit = on</code> — COMMIT chỉ trả về sau khi bản ghi WAL đã flush xuống đĩa.</p>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab02.txt">Lab 12.02 — Write-Ahead Log (WAL): Ghi log trước, COMMIT flush &amp; ROLLBACK không cần Undo (slide 5, 12)
+
+A. COMMIT: bản ghi Heap được ghi trước, rồi tới bản ghi COMMIT (flush khi commit)
+─────────────────────────────────────────────────────────────────────────────────
+   Khoảng WAL của giao dịch: 0/36D7F4D8 -&gt; 0/36D7F5D8, xid=5606, flush tới 0/36D7F5D8
+│ RMGR        │ Loại bản ghi │ Δ LSN │ Bytes (không FPI) │
+├─────────────┼──────────────┼───────┼───────────────────┤
+│ Heap        │ HOT_UPDATE   │     0 │                71 │
+│ Heap        │ HOT_UPDATE   │    72 │                71 │
+│ Heap        │ HOT_UPDATE   │   144 │                71 │
+│ Transaction │ COMMIT       │   216 │                34 │
+   =&gt; ✔ Các bản ghi Heap/Heap2 (dữ liệu) nằm trước bản ghi COMMIT; COMMIT là bản ghi cuối của giao dịch
+   =&gt; ✔ LSN đã flush &gt;= LSN cuối giao dịch: COMMIT chỉ trả về sau khi WAL xuống đĩa
+
+B. ROLLBACK: chỉ có bản ghi ABORT, không cần ghi Undo như Oracle/MySQL
+──────────────────────────────────────────────────────────────────────
+   Khoảng WAL của giao dịch: 0/36D7F628 -&gt; 0/36D7F798, xid=5607
+│ RMGR        │ Loại bản ghi │ Δ LSN │ Bytes (không FPI) │
+├─────────────┼──────────────┼───────┼───────────────────┤
+│ Heap        │ HOT_UPDATE   │     0 │                71 │
+│ Heap        │ HOT_UPDATE   │    72 │                71 │
+│ Heap        │ HOT_UPDATE   │   144 │                71 │
+│ Transaction │ ABORT        │   216 │                34 │
+   =&gt; ✔ Giao dịch bị ROLLBACK để lại đúng một bản ghi ABORT trong WAL
+   =&gt; ✔ Sau ABORT có 0 bản ghi Heap hoàn tác: dòng cũ vẫn nằm đó, chỉ cần coi xid là đã hủy
+
+C. Chi phí flush: 100 giao dịch UPDATE 1 dòng với synchronous_commit = on và off
+────────────────────────────────────────────────────────────────────────────────
+│ Chế độ                   │ Số giao dịch │     ms │
+├──────────────────────────┼──────────────┼────────┤
+│ synchronous_commit = on  │          100 │ 302 ms │
+│ synchronous_commit = off │          100 │ 154 ms │
+   Chế độ off bỏ qua việc chờ fsync lúc COMMIT; đổi lại có thể mất vài giao dịch cuối khi sập nguồn (không hỏng dữ liệu).
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="2"></div>
+</section>
+
+<!-- CHẶNG 3 -->
+<section id="chang-3" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">03</span>
+    <div>
+      <div class="stage-meta"><span>Slide 13–15</span><span>40 phút</span><span>Day 02</span></div>
+      <h2>MVCC: Tuple xmin, xmax, ctid &amp; Snapshot RC vs RR</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Mổ xẻ 3 trường ẩn <code>xmin</code>, <code>xmax</code>, <code>ctid</code> trên từng dòng trong Heap; kiểm chứng nguyên lý kinh điển "Readers never block Writers".</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Multi-Version Concurrency Control (MVCC) là kỹ thuật lưu nhiều phiên bản của cùng một bản ghi đồng thời trên đĩa để phục vụ các phiên đọc ở các thời điểm khác nhau.</dd>
+    <dt>TẠI SAO?</dt><dd>Giúp các câu lệnh đọc (SELECT) không bao giờ phải chờ câu lệnh ghi (UPDATE/DELETE) và ngược lại.</dd>
+    <dt>CƠ CHẾ</dt><dd>Mỗi tuple có <code>xmin</code> (ID transaction tạo ra dòng) và <code>xmax</code> (ID transaction xóa/sửa dòng). Khi UPDATE, dòng cũ được gán xmax, dòng mới sinh ra ở ctid mới với xmin mới.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Khắc phục Slide 15 trống</span>
+    <p>Slide 15 trong giáo trình gốc bị để trống với lỗi chính tả "MVVC". Bài giảng bổ sung toàn bộ cơ chế thực tế: ở mức <strong>Read Committed</strong>, mỗi câu lệnh SELECT lấy một snapshot mới; ở mức <strong>Repeatable Read</strong>, snapshot được chụp cố định tại câu lệnh đọc/ghi đầu tiên của giao dịch.</p>
+  </div>
+
+  <div class="widget" id="w3">
+    <div class="widget-head">
+      <h4>Trình soi phiên bản Tuple Heap (Lab 03 Inspector)</h4>
+      <span class="eyebrow">Interactive Widget 3</span>
+    </div>
+    <div class="widget-body">
+      <p>Chọn mức cô lập của Phiên A để quan sát Phiên A nhìn thấy bản ghi nào khi Phiên B đã cập nhật:</p>
+      <div class="btns">
+        <button type="button" class="btn primary" id="w3-btn-rc">READ COMMITTED</button>
+        <button type="button" class="btn" id="w3-btn-rr">REPEATABLE READ</button>
+      </div>
+      <div id="w3-display" class="table-wrap"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h4>Thực hành thủ công 2 cửa sổ psql — Kịch bản M1 (Day 02 DoD)</h4>
+    <p>Mở 2 cửa sổ terminal vào container: <code>docker exec -it quan-ly-hop-dong-postgres-1 psql -U postgres -d advance_be_lab</code> và nhập <code>SET search_path = lab12_transaction;</code></p>
+    <div class="table-wrap">
+      <table data-walk="M1">
+        <thead><tr><th>Bước</th><th>Cửa sổ A</th><th>Cửa sổ B</th><th>Quan sát &amp; Ghi nhận</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>BEGIN; SELECT xmin, xmax, ctid, total FROM contracts WHERE id = 1;</code></td><td>(chờ)</td><td><input class="field" data-store="l12-m1-step1" placeholder="Điền xmin, xmax, ctid..."></td></tr>
+          <tr><td>2</td><td>(đang mở)</td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid;</code></td><td><input class="field" data-store="l12-m1-step2" placeholder="B có bị chặn không? xmin mới?"></td></tr>
+          <tr><td>3</td><td><code>SELECT xmin, xmax, ctid, total FROM contracts WHERE id = 1; COMMIT;</code></td><td>(chờ)</td><td><input class="field" data-store="l12-m1-step3" placeholder="A thấy bản ghi cũ hay mới?"></td></tr>
+          <tr><td>4</td><td>Lặp lại với <code>BEGIN ISOLATION LEVEL REPEATABLE READ;</code></td><td>(lặp lại UPDATE)</td><td><input class="field" data-store="l12-m1-step4" placeholder="A ở RR thấy bản ghi nào? xmax là bao nhiêu?"></td></tr>
+          <tr><td>5</td><td><code>SELECT xmin, xmax, ctid, total FROM contracts WHERE id = 1;</code> rồi <code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code> (bị chặn chờ B)</td><td>Mở trước: <code>BEGIN; UPDATE contracts SET total = total + 1 WHERE id = 1;</code> (để mở, sau đó gõ <code>COMMIT;</code> để giải phóng A)</td><td><input class="field" data-store="l12-m1-step5" placeholder="A đọc có bị chặn? Khi A update thì chờ ai?"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab03.txt">Lab 12.03 — MVCC trên PostgreSQL: Tuple xmin/xmax/ctid, Snapshot RC vs RR &amp; Khóa dòng (slide 13–15)
+Cài đặt: search_path = lab12_transaction; l03_contracts có 1,000 dòng, autovacuum_enabled = off; phiên A/B mặc định read committed.
+
+A. READ COMMITTED: A mở transaction, B UPDATE dòng id=1, A đọc lại
+──────────────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                                                     │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────┼──────────┤
+│ 1 │ A     │ BEGIN;                                                               │ BEGIN                                                       │ 0.611 ms │
+│ 2 │ A     │ SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;      │ SELECT (1): xmin=6015, xmax=0, ctid=(0,1), total=478461.34  │   1.6 ms │
+│ 3 │ B     │ UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING... │ UPDATE (1): xmin=6016, ctid=(15,1), total=478462.34         │   3.3 ms │
+│ 4 │ A     │ SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;      │ SELECT (1): xmin=6016, xmax=0, ctid=(15,1), total=478462.34 │ 0.851 ms │
+│ 5 │ A     │ COMMIT;                                                              │ COMMIT                                                      │ 0.525 ms │
+   =&gt; ✔ Writer B không bị reader A chặn: UPDATE xong sau 3.3 ms dù A đang mở transaction
+   =&gt; ✔ RC: SELECT thứ hai của A thấy bản mới do B tạo: xmin=6015 → xmin=6016, ctid (0,1) → (15,1)
+
+B. REPEATABLE READ: cùng kịch bản, A giữ snapshot từ câu SELECT đầu tiên
+────────────────────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                                                        │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┼──────────┤
+│ 1 │ A     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                               │ BEGIN                                                          │ 0.620 ms │
+│ 2 │ A     │ SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;      │ SELECT (1): xmin=6016, xmax=0, ctid=(15,1), total=478462.34    │ 0.923 ms │
+│ 3 │ B     │ UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING... │ UPDATE (1): xmin=6017, ctid=(15,2), total=478463.34            │   2.1 ms │
+│ 4 │ A     │ SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;      │ SELECT (1): xmin=6016, xmax=6017, ctid=(15,1), total=478462.34 │ 0.674 ms │
+│ 5 │ A     │ COMMIT;                                                              │ COMMIT                                                         │ 0.416 ms │
+   =&gt; ✔ RR: SELECT thứ hai của A vẫn thấy bản cũ (cùng total, cùng ctid (15,1)) dù B đã tạo bản mới ở ctid (15,2)
+   =&gt; ✔ RR: xmax=6017 của bản cũ trùng xmin=6017 của bản mới: B là người đóng dấu bản cũ
+
+C. pageinspect: soi heap page — bản cũ và bản mới của id=1 (A giữ RR nên chưa dọn được)
+───────────────────────────────────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                            │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼────────────────────────────────────┼──────────┤
+│ 1 │ A     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                               │ BEGIN                              │ 0.419 ms │
+│ 2 │ A     │ SELECT ctid FROM l03_contracts WHERE id = 1;                         │ SELECT (1): ctid=(15,2)            │ 0.531 ms │
+│ 3 │ B     │ UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING... │ UPDATE (1): xmin=6018, ctid=(15,3) │   1.6 ms │
+│ Phiên bản │ ctid   │ lp │ t_ctid │ t_xmin │ t_xmax │
+├───────────┼────────┼────┼────────┼────────┼────────┤
+│ bản cũ    │ (15,2) │  2 │ (15,3) │   6017 │   6018 │
+│ bản mới   │ (15,3) │  3 │ (15,3) │   6018 │      0 │
+   =&gt; ✔ Hai phiên bản cùng tồn tại trên heap: t_ctid của bản cũ (15,2) trỏ sang (15,3), t_xmax=6018 = xmin=6018 của bản mới
+
+D. Writer vs Writer: B giữ UPDATE chưa commit, A đọc rồi A UPDATE cùng dòng
+───────────────────────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                                                        │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┼──────────┤
+│ 1 │ B     │ BEGIN;                                                               │ BEGIN                                                          │ 0.474 ms │
+│ 2 │ B     │ UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING... │ UPDATE (1): xmin=6019, ctid=(15,4)                             │ 0.642 ms │
+│ 3 │ A     │ SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;      │ SELECT (1): xmin=6018, xmax=6019, ctid=(15,3), total=478464.34 │ 0.711 ms │
+│ 4 │ A     │ UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING... │ ⏳ chờ B (Lock/transactionid)                                   │   4.5 ms │
+│ 5 │ B     │ COMMIT;                                                              │ COMMIT                                                         │   1.6 ms │
+│ 6 │ A     │ (await) UPDATE l03_contracts SET total = total + 1 WHERE id = 1 R... │ UPDATE (1): xmin=6020, ctid=(15,5)                             │   7.5 ms │
+   =&gt; ✔ Reader A không bị chặn bởi UPDATE đang mở của B: SELECT xong sau 0.711 ms, thấy bản cũ (xmin=6018, chưa thấy xmin=6019)
+   =&gt; ✔ Writer A bị chặn chờ B trên Lock/transactionid (chờ transactionid của B, không phải khóa bảng)
+   =&gt; ✔ Sau khi B COMMIT, UPDATE của A hoàn tất (chờ 7.5 ms) và cả hai thay đổi đều được ghi nhận, không mất cập nhật
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="3"></div>
+</section>
+
+<!-- CHẶNG 4 -->
+<section id="chang-4" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">04</span>
+    <div>
+      <div class="stage-meta"><span>Slide 14, 16</span><span>20 phút</span><span>Day 02</span></div>
+      <h2>Phiên bản chết (Dead Tuples), VACUUM &amp; Chân trời Horizon</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Thấu hiểu vì sao một transaction treo (dù chỉ đọc) có thể giữ chân trời (xmin horizon) khiến VACUUM không thể dọn dẹp tuple rác, gây phình to bảng và chậm index.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Chân trời Snapshot (xmin horizon) là Transaction ID nhỏ nhất của một transaction còn đang sống trong hệ thống. VACUUM không được phép xóa bất kỳ tuple nào có xmax lớn hơn chân trời này.</dd>
+    <dt>HẬU QUẢ</dt><dd>Một phiên REPEATABLE READ bị treo quên đóng sẽ ghìm chặt horizon. Hàng triệu bản ghi đã bị DELETE/UPDATE sau đó biến thành tuple rác "dead but <b class="m" data-run="lab04">not yet removable</b>", làm phình bảng (bloat).</dd>
+    <dt>GIẢI PHÁP</dt><dd>Đặt <code>idle_in_transaction_session_timeout</code>, giám sát <code>pg_stat_activity.backend_xmin</code> và diệt phiên treo kịp thời.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">PostgreSQL vs MySQL HLL</span>
+    <p>Slide 16 nhắc tới chỉ số HLL (History List Length) của InnoDB. Trên PostgreSQL không có khái niệm HLL, tương đương trực tiếp là số lượng tuple chết chưa thể dọn (dead but not yet removable) trong báo cáo của <code>VACUUM (VERBOSE)</code>.</p>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab04.txt">Lab 12.04 — Phiên bản chết (Dead Tuples), VACUUM &amp; Chân trời Snapshot (Horizon) (slide 13–14, 16)
+Cài đặt: search_path = lab12_transaction; l04_contracts có 10,000 dòng, autovacuum_enabled = off; VACUUM chạy thủ công trên O.
+
+A. UPDATE toàn bảng rồi ROLLBACK: phiên bản chết nằm lại trên heap
+──────────────────────────────────────────────────────────────────
+   dead_tuple_count trước VACUUM: 10,000; sau VACUUM: 0
+   tuples: 10000 removed, 10000 remain, 0 are dead but not yet removable
+   =&gt; ✔ Sau ROLLBACK, 10,000 phiên bản chết vẫn nằm trên heap (bằng số dòng 10,000 đã UPDATE)
+   =&gt; ✔ VACUUM dọn 10,000 phiên bản chết, dead_tuple_count về 0
+
+B. READ COMMITTED idle (chỉ đọc): không giữ chân trời snapshot
+──────────────────────────────────────────────────────────────
+   A: state=idle in transaction, backend_xmin=không (RC, đã xong SELECT, idle in transaction)
+   B UPDATE 500 dòng; dead_tuple_count trước VACUUM: 500; sau VACUUM: 0
+   =&gt; ✔ A ở RC idle in transaction nhưng backend_xmin rỗng: không giữ horizon
+   =&gt; ✔ VACUUM dọn đủ 500/500 phiên bản chết dù A còn mở transaction
+
+C. REPEATABLE READ idle: snapshot cố định giữ chân trời lại
+───────────────────────────────────────────────────────────
+   A: state=idle in transaction, backend_xmin=có (RR, snapshot giữ từ SELECT đầu tiên)
+   B UPDATE 500 dòng; dead_tuple_count sau VACUUM khi A còn giữ snapshot: 500
+   tuples: 0 removed, 10001 remain, 500 are dead but not yet removable
+   A COMMIT rồi VACUUM lại: dead_tuple_count = 0
+   =&gt; ✔ A ở RR idle in transaction có backend_xmin: giữ horizon dù chỉ đọc một lần
+   =&gt; ✔ VACUUM thấy 500 phiên bản "not yet removable", removed=0; heap vẫn còn 500 tuple chết
+   =&gt; ✔ A COMMIT xong, VACUUM dọn sạch: dead_tuple_count = 0
+
+D. Chi phí đọc một dòng khi A giữ snapshot RR và B UPDATE id=1 nhiều lần
+────────────────────────────────────────────────────────────────────────
+│ Mốc đo                  │ Buffers (hit+read) │
+├─────────────────────────┼────────────────────┤
+│ Chưa UPDATE (A giữ RR)  │                  6 │
+│ 100 UPDATE (A giữ RR)   │                  6 │
+│ 1,000 UPDATE (A giữ RR) │                 16 │
+│ A COMMIT + VACUUM       │                  3 │
+   =&gt; ✔ Với 1,000 UPDATE, tra cứu id=1 chạm 16 buffer, nhiều hơn mức gốc 6: phải bước qua chuỗi phiên bản chưa dọn
+   =&gt; ✔ Sau VACUUM, tra cứu id=1 chỉ còn 3 buffer (từ 16), về gần mức gốc 6
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="4"></div>
+</section>
+
+<!-- CHẶNG 5 -->
+<section id="chang-5" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">05</span>
+    <div>
+      <div class="stage-meta"><span>Slide 17–21</span><span>30 phút</span><span>Day 02</span></div>
+      <h2>Transaction lớn, Treo &amp; Bộ ba Timeout phòng thủ</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Làm chủ kỹ thuật Batching khi cập nhật dữ liệu lớn, xử lý lỗi lock timeout <b class="m" data-run="lab05">55P03</b>, admin shutdown <b class="m" data-run="lab05">57P01</b> và tự ngắt phiên treo <b class="m" data-run="lab05">25P03</b>.</p>
+  <dl class="wwh">
+    <dt>VẤN ĐỀ</dt><dd>Chạy một câu lệnh UPDATE 20,000 dòng giữ khóa độc quyền trên toàn bộ 20,000 dòng cùng lúc và nhân đôi kích thước bảng do không thể tái sử dụng không gian giữa chừng.</dd>
+    <dt>GIẢI PHÁP</dt><dd>Chia nhỏ thành nhiều lô (Batching) ví dụ 2,000 dòng/lô kèm VACUUM giữa các lô. Tổng lượng WAL không giảm nhưng giải phóng khóa dòng sớm và tái sử dụng trang đĩa ngay lập tức.</dd>
+    <dt>PHÒNG THỦ</dt><dd>Cài đặt 3 chốt chặn: <code>lock_timeout</code> (chống chờ khóa vô tận), <code>statement_timeout</code> (chống câu query chạy quá lâu), và <code>idle_in_transaction_session_timeout</code> (chống bỏ quên transaction).</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Slide 20 · MySQL đúng, PG khác (Lab 12.05)</span>
+    <p>PostgreSQL không có <em>Gap Lock</em> ở mức Read Committed hay Repeatable Read (MySQL InnoDB dùng Gap Lock / Next-Key Lock — <em>không đo trên máy này</em>). Trên Postgres, mối nguy hiểm thực sự của giao dịch treo là giữ khóa dòng (<code>Lock/transactionid</code>) và ghìm chặt chân trời <code>backend_xmin</code>.</p>
+  </div>
+  <div class="widget" id="w5">
+    <div class="widget-head">
+      <h4>Bảng điều khiển xử lý phiên treo (Lab 05 Monitor)</h4>
+      <span class="eyebrow">Interactive Widget 5</span>
+    </div>
+    <div class="widget-body">
+      <p>Giả lập phát hiện phiên <code>idle in transaction</code> đang giữ khóa khiến các phiên khác bị chặn:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PID</th><th>Ứng dụng</th><th>Trạng thái</th><th>Khóa đang giữ</th><th>Hành động đề xuất</th></tr></thead>
+          <tbody>
+            <tr><td><code>33568</code></td><td>lesson-12-lab05-A</td><td><span class="vchip fix">idle in transaction</span></td><td>ExclusiveLock trên transactionid (khóa dòng id=1)</td><td><button type="button" class="btn primary" id="w5-btn-kill">pg_terminate_backend(33568)</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p id="w5-log" class="muted">Nhấn nút để thực thi ngắt kết nối an toàn từ phiên quan sát O.</p>
+    </div>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab05.txt">Lab 12.05 — Transaction lớn (Batching vs Big UPDATE) &amp; Phiên treo Idle in Transaction (slide 17–21)
+───────────────────────────────────────────────────────────────────────────────────────────────────
+Thiết lập liên quan: wal_level=replica, full_page_writes=on; autovacuum tắt trên l05_*, VACUUM chạy tay.
+
+A. UPDATE 20,000 dòng: 1 transaction lớn vs 10 lô × 2,000 dòng (VACUUM sau mỗi lô)
+──────────────────────────────────────────────────────────────────────────────────
+│ Kịch bản       │ Số tx │ Dòng khóa tối đa/tx │ Bản ghi WAL │ WAL (không FPI) │ Trang heap trước │ Trang heap sau │
+├────────────────┼───────┼─────────────────────┼─────────────┼─────────────────┼──────────────────┼────────────────┤
+│ 1 UPDATE lớn   │     1 │              20,000 │      60,068 │          5.0 MB │              256 │            481 │
+│ 10 lô + VACUUM │    10 │               2,000 │      59,711 │          4.9 MB │              256 │            278 │
+   =&gt; ✔ Số bản ghi WAL của hai cách chênh nhau không quá 5%: chia lô không làm giảm tổng công việc ghi, chỉ chia nhỏ nó.
+   =&gt; ✔ Chia lô + VACUUM tái sử dụng chỗ của bản ghi chết nên heap sau khi sửa nhỏ hơn hẳn UPDATE lớn (UPDATE lớn nhân đôi bảng).
+   =&gt; ✔ Mỗi lô chỉ khóa tối đa 2,000 dòng, UPDATE lớn khóa 20,000 dòng cùng lúc: ít xung đột hơn và không tích tụ 20,000 bản ghi chết cùng lúc.
+
+B1–B2. Phiên A bỏ quên transaction đang mở (kịch bản M2)
+────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                                              │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────┼──────────┤
+│ 1 │ A     │ BEGIN;                                                               │ BEGIN                                                │ 0.529 ms │
+│ 2 │ A     │ UPDATE l05_contracts SET total = total + 10 WHERE id = 1 RETURNIN... │ UPDATE (1): xmin=9634, total=478471.34               │   2.0 ms │
+│ 3 │ O     │ SELECT state FROM pg_stat_activity WHERE pid = 44394                 │ SELECT (1): state=idle in transaction                │   1.2 ms │
+│ 4 │ B     │ SET lock_timeout = '3s';                                             │ SET                                                  │ 0.418 ms │
+│ 5 │ B     │ UPDATE l05_contracts SET total = total + 20 WHERE id = 1;            │ ⏳ chờ A (Lock/transactionid)                         │  37.6 ms │
+│ 6 │ B     │ (await) UPDATE l05_contracts SET total = total + 20 WHERE id = 1;    │ ERROR 55P03: canceling statement due to lock timeout │  3152 ms │
+│ 7 │ O     │ SELECT pg_terminate_backend(44394) AS terminated;                    │ SELECT (1): terminated=true                          │   1.7 ms │
+│ 8 │ B     │ UPDATE l05_contracts SET total = total + 20 WHERE id = 1 RETURNIN... │ UPDATE (1): xmin=9636, total=478481.34               │   5.7 ms │
+
+B1. Phiên treo "idle in transaction" giữ khóa dòng, B hết lock_timeout
+──────────────────────────────────────────────────────────────────────
+   =&gt; ✔ Observer O thấy phiên A ở trạng thái "idle in transaction": A đã UPDATE xong nhưng chưa COMMIT/ROLLBACK nên vẫn giữ khóa dòng.
+   =&gt; ✔ UPDATE của B bị A chặn rồi hết lock_timeout sau 3152 ms với SQLSTATE 55P03 (lock_not_available).
+
+B2. O ngắt phiên treo bằng pg_terminate_backend
+───────────────────────────────────────────────
+Sự kiện bắt được trên A: 57P01 — terminating connection due to administrator command
+   =&gt; ✔ pg_terminate_backend trả về true; A nhận lỗi 57P01 (admin_shutdown) qua listener và Node không bị sập.
+   =&gt; ✔ UPDATE thử lại của B chạy ngay sau 5.7 ms và thay đổi +10 của A đã bị rollback cùng phiên.
+
+B3. idle_in_transaction_session_timeout = '1s': server tự cắt phiên treo
+────────────────────────────────────────────────────────────────────────
+Ngay sau UPDATE, O thấy C ở trạng thái "idle in transaction" (pid=44403).
+Mã lỗi C nhận được: 25P03 — terminating connection due to idle-in-transaction timeout
+   =&gt; ✔ Sau 1050 ms phiên C biến mất khỏi pg_stat_activity; C nhận SQLSTATE 25P03 (idle_in_transaction_session_timeout).
+   =&gt; ✔ B UPDATE đúng dòng id = 2 ngay sau 1.8 ms mà không phải chờ: khóa của C đã được giải phóng.
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="5"></div>
+</section>
+
+<!-- CHẶNG 6 -->
+<section id="chang-6" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">06</span>
+    <div>
+      <div class="stage-meta"><span>Slide 6–9, 22</span><span>30 phút</span><span>Day 03</span></div>
+      <h2>4 Cấp độ cô lập &amp; Các dị thường khi đọc</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Kiểm chứng 5 vị trí đặt <code>SET TRANSACTION</code>, bản chất mức <b class="m" data-run="lab06">read uncommitted</b> trên Postgres, và 3 dị thường đọc: Dirty Read, Non-Repeatable Read, Phantom Read.</p>
+  <dl class="wwh">
+    <dt>4 CẤP ĐỘ</dt><dd>Read Uncommitted, Read Committed, Repeatable Read, Serializable.</dd>
+    <dt>ĐẶC THÙ PG</dt><dd>Postgres chỉ hỗ trợ 3 mức vật lý thực sự: Read Uncommitted được tự động nâng lên thành Read Committed. Do đó trên Postgres <strong>không bao giờ có Dirty Read</strong> ở bất kỳ mức nào!</dd>
+    <dt>PHANTOM TRÊN RR</dt><dd>Khác với MySQL InnoDB cần Gap Lock, Postgres chặn đứng Phantom Read ngay từ mức Repeatable Read nhờ kỹ thuật snapshot cố định.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Vị trí đặt SET TRANSACTION</span>
+    <p>Lệnh <code>SET TRANSACTION ISOLATION LEVEL</code> chỉ có hiệu lực bên trong khối giao dịch và phải được gọi <strong>trước câu truy vấn dữ liệu đầu tiên</strong>. Nếu gọi ngoài khối giao dịch, Postgres chỉ phát cảnh báo 25P01 và bỏ qua lệnh. Nếu gọi sau khi đã SELECT, Postgres sẽ ném lỗi 25001.</p>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab06.txt">Lab 12.06 — Đặt mức cô lập (SET TRANSACTION) &amp; Các dị thường khi đọc (Dirty, Non-Repeatable, Phantom) (slide 6–9, 22)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Máy chủ: default_transaction_isolation = read committed; mọi phiên lab đặt lock_timeout = 5s.
+
+A. Năm vị trí đặt SET TRANSACTION ISOLATION LEVEL
+─────────────────────────────────────────────────
+│ # │ Vị trí đặt                                                                  │ Kết quả                                                                    │
+├───┼─────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────┤
+│ 1 │ SET TRANSACTION ... SERIALIZABLE (ngoài khối giao dịch)                     │ cảnh báo 25P01, mức vẫn là read committed                                  │
+│ 2 │ BEGIN; SET TRANSACTION ... SERIALIZABLE; SHOW                               │ serializable                                                               │
+│ 3 │ BEGIN; SELECT 1; SET TRANSACTION ... SERIALIZABLE                           │ lỗi 25001: SET TRANSACTION ISOLATION LEVEL must be called before any query │
+│ 4 │ START TRANSACTION; SET TRANSACTION ... REPEATABLE READ; SHOW (kiểu TypeORM) │ repeatable read                                                            │
+│ 5 │ SET SESSION CHARACTERISTICS ... REPEATABLE READ; BEGIN; SHOW; rồi RESET     │ repeatable read; sau DEFAULT: read committed                               │
+   =&gt; ✔ 1) Ngoài khối giao dịch: cảnh báo 25P01, mức vẫn là read committed (lệnh bị bỏ phí)
+   =&gt; ✔ 2) Ngay sau BEGIN: SHOW cho serializable (cách đặt đúng)
+   =&gt; ✔ 3) Sau câu truy vấn đầu: lỗi 25001 "SET TRANSACTION ISOLATION LEVEL must be called before any query"
+   =&gt; ✔ 4) Chuỗi START TRANSACTION + SET TRANSACTION (kiểu TypeORM): repeatable read
+   =&gt; ✔ 5) SET SESSION CHARACTERISTICS: giao dịch sau đó là repeatable read; sau khi trả DEFAULT là read committed
+
+B. Dirty Read (Đọc bẩn dữ liệu chưa COMMIT) (slide 7)
+─────────────────────────────────────────────────────
+│ Mức cô lập       │ Quan sát                             │ Kết luận │
+├──────────────────┼──────────────────────────────────────┼──────────┤
+│ READ UNCOMMITTED │ A đọc 100 (B đã ghi 999 chưa COMMIT) │ không    │
+│ READ COMMITTED   │ A đọc 100 (B đã ghi 999 chưa COMMIT) │ không    │
+│ REPEATABLE READ  │ A đọc 100 (B đã ghi 999 chưa COMMIT) │ không    │
+│ SERIALIZABLE     │ A đọc 100 (B đã ghi 999 chưa COMMIT) │ không    │
+   =&gt; ✔ Dirty Read: không xảy ra ở cả 4 mức (PostgreSQL không bao giờ đọc dữ liệu chưa COMMIT)
+   =&gt; ✔ READ UNCOMMITTED được chấp nhận (SHOW cho read uncommitted) nhưng hành xử y hệt READ COMMITTED: Dirty Read = không
+
+C. Non-Repeatable Read (Đọc không lặp lại trên 1 dòng) (slide 8)
+────────────────────────────────────────────────────────────────
+│ Mức cô lập       │ Quan sát  │ Kết luận │
+├──────────────────┼───────────┼──────────┤
+│ READ UNCOMMITTED │ 100 → 50  │ xảy ra   │
+│ READ COMMITTED   │ 100 → 50  │ xảy ra   │
+│ REPEATABLE READ  │ 100 → 100 │ không    │
+│ SERIALIZABLE     │ 100 → 100 │ không    │
+   =&gt; ✔ Non-Repeatable Read: xảy ra ở RU/RC (mỗi câu lệnh một snapshot mới), không xảy ra ở RR/SER (một snapshot cho cả giao dịch)
+
+D. Phantom Read (Bóng ma xuất hiện khi đếm tập dòng) (slide 9)
+──────────────────────────────────────────────────────────────
+│ Mức cô lập       │ Quan sát   │ Kết luận │
+├──────────────────┼────────────┼──────────┤
+│ READ UNCOMMITTED │ 0 → 1 dòng │ xảy ra   │
+│ READ COMMITTED   │ 0 → 1 dòng │ xảy ra   │
+│ REPEATABLE READ  │ 0 → 0 dòng │ không    │
+│ SERIALIZABLE     │ 0 → 0 dòng │ không    │
+   =&gt; ✔ Phantom Read: xảy ra ở RU/RC, không xảy ra ở RR/SER (PostgreSQL chặn phantom từ REPEATABLE READ, chặt hơn chuẩn SQL)
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="6"></div>
+</section>
+
+<!-- CHẶNG 7 -->
+<section id="chang-7" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">07</span>
+    <div>
+      <div class="stage-meta"><span>Slide 8–10</span><span>40 phút</span><span>Day 03</span></div>
+      <h2>Lost Update, Dị thường Write Skew &amp; SSI (Serializable)</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Tái hiện thảm họa Lost Update khi ứng dụng Read-Modify-Write, dị thường Write Skew trên Repeatable Read, và cách thuật toán SSI của mức Serializable triệt tiêu nó bằng mã lỗi <b class="m" data-run="lab07">40001</b> do <b class="m" data-run="lab08">read/write dependencies</b>.</p>
+  <dl class="wwh">
+    <dt>WRITE SKEW LÀ GÌ?</dt><dd>Là hiện tượng hai giao dịch cùng đọc một điều kiện ràng buộc chung (ví dụ: cửa hàng luôn phải có ít nhất 1 người trực), sau đó mỗi bên cập nhật một dòng khác nhau (A cho rep 1 nghỉ, B cho rep 2 nghỉ). Vì sửa 2 dòng khác nhau nên khóa dòng không chặn nhau, dẫn đến kết quả vi phạm nghiệp vụ (cả 2 cùng nghỉ).</dd>
+    <dt>VÌ SAO RR BỊ?</dt><dd>Repeatable Read chỉ khóa các dòng bị cập nhật (Row Lock). Nó không theo dõi mối quan hệ giữa câu SELECT trước đó và câu UPDATE sau đó.</dd>
+    <dt>SERIALIZABLE GIẢI QUYẾT SAO?</dt><dd>Sử dụng cơ chế SSI (Serializable Snapshot Isolation) gắn các khóa ảo SIRead Lock. Khi phát hiện chu kỳ phụ thuộc đọc-ghi (rw-antidependency), Postgres chủ động hủy giao dịch ở <strong>COMMIT thứ hai</strong> với mã lỗi 40001 để ứng dụng retry.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Slide 10 · MySQL đúng, PG khác (Lab 12.08)</span>
+    <p>Trong MySQL InnoDB, mức Serializable biến mọi câu SELECT thành khóa đọc chặn người ghi (<em>không đo trên máy này</em>). Ngược lại, PostgreSQL 16 dùng thuật toán <strong>SSI (Serializable Snapshot Isolation)</strong> với khóa ảo <code>SIReadLock</code>: đọc vẫn không chặn ghi, nhưng nếu phát hiện chu kỳ phụ thuộc đọc-ghi thì một giao dịch sẽ bị hủy với mã <code>40001</code>.</p>
+  </div>
+
+  <div class="widget" id="w4">
+    <div class="widget-head">
+      <h4>Trình mô phỏng 2 phiên tương tác (Isolation Player · Labs 06–08)</h4>
+      <span class="eyebrow">Interactive Widget 4</span>
+    </div>
+    <div class="widget-body">
+      <p>Chọn hiện tượng đồng thời để xem sự khác biệt giữa các mức cô lập trên PostgreSQL 16:</p>
+      <div class="btns">
+        <button type="button" class="btn primary" id="w4-btn-skew">Write Skew (RR vs SER)</button>
+        <button type="button" class="btn" id="w4-btn-lost">App Lost Update (RC vs RR)</button>
+        <button type="button" class="btn" id="w4-btn-atomic">Atomic SQL Update (RC vs RR)</button>
+      </div>
+      <div id="w4-display" class="table-wrap"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h4>Thực hành thủ công 2 cửa sổ psql — Kịch bản M3 (Day 03 DoD)</h4>
+    <p>Mở 2 cửa sổ terminal chạy đồng thời kịch bản Write Skew tại cửa hàng 44:</p>
+    <div class="table-wrap">
+      <table data-walk="M3">
+        <thead><tr><th>Bước</th><th>Cửa sổ A</th><th>Cửa sổ B</th><th>Quan sát &amp; Ghi nhận</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT count(*) FROM store_reps WHERE store_id = 44 AND on_duty;</code></td><td><code>BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT count(*) FROM store_reps WHERE store_id = 44 AND on_duty;</code></td><td><input class="field" data-store="l12-m3-step1" placeholder="Cả 2 đều thấy count = 2?"></td></tr>
+          <tr><td>2</td><td><code>UPDATE store_reps SET on_duty = false WHERE store_id = 44 AND rep_id = 1;</code></td><td><code>UPDATE store_reps SET on_duty = false WHERE store_id = 44 AND rep_id = 2;</code></td><td><input class="field" data-store="l12-m3-step2" placeholder="Ghi nhận: B có bị chặn ở bước UPDATE không?"></td></tr>
+          <tr><td>3</td><td><code>COMMIT;</code></td><td><code>COMMIT;</code></td><td><input class="field" data-store="l12-m3-step3" placeholder="Ghi nhận kết quả COMMIT của A và B ở RR..."></td></tr>
+          <tr><td>4</td><td><code>SELECT count(*) FROM store_reps WHERE store_id = 44 AND on_duty;</code> rồi khôi phục: <code>UPDATE store_reps SET on_duty = true WHERE store_id = 44;</code></td><td>(chờ)</td><td><input class="field" data-store="l12-m3-step4" placeholder="Số người trực còn lại trước khi reset?"></td></tr>
+          <tr><td>5</td><td>Lặp lại bước 1–3 với <code>BEGIN ISOLATION LEVEL SERIALIZABLE;</code></td><td>Lặp lại bước 1–3 với <code>BEGIN ISOLATION LEVEL SERIALIZABLE;</code></td><td><input class="field" data-store="l12-m3-step5" placeholder="Ở mức SERIALIZABLE, câu lệnh nào bị lỗi 40001?"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="code terminal"><pre class="code terminal" data-run="lab07.txt">Lab 12.07 — Lost Update: Đọc-Sửa-Ghi ở App vs Atomic SQL Update &amp; Retry 40001 (slide 8–9)
+─────────────────────────────────────────────────────────────────────────────────────────
+Máy chủ: mặc định READ COMMITTED; B ghi cùng dòng với A nên phải chờ khóa dòng, lock_timeout = 5s.
+
+A. App Lost Update (Đọc-Sửa-Ghi từ phía ứng dụng) (slide 8)
+───────────────────────────────────────────────────────────
+│ Mức cô lập       │ A/B đọc │ B UPDATE                                                    │ final │ Kết luận │
+├──────────────────┼─────────┼─────────────────────────────────────────────────────────────┼───────┼──────────┤
+│ READ UNCOMMITTED │ 100/100 │ chờ A rồi ghi                                               │ 80    │ xảy ra   │
+│ READ COMMITTED   │ 100/100 │ chờ A rồi ghi                                               │ 80    │ xảy ra   │
+│ REPEATABLE READ  │ 100/100 │ 40001 (could not serialize access due to concurrent update) │ 90    │ 40001    │
+│ SERIALIZABLE     │ 100/100 │ 40001 (could not serialize access due to concurrent update) │ 90    │ 40001    │
+   =&gt; ✔ RU/RC: B chờ A COMMIT rồi ghi đè bằng giá trị cũ → final=80 thay vì 70, mất cập nhật của A
+   =&gt; ✔ RR/SER: B bị hủy với 40001 sau khi A COMMIT, final=90 (cập nhật của A được giữ, B phải thử lại)
+
+B. Atomic SQL Update (SET total = total - delta) (slide 8)
+──────────────────────────────────────────────────────────
+│ Mức cô lập       │ B UPDATE                                                    │ final │ Kết luận │
+├──────────────────┼─────────────────────────────────────────────────────────────┼───────┼──────────┤
+│ READ UNCOMMITTED │ chờ A rồi ghi                                               │ 70    │ không    │
+│ READ COMMITTED   │ chờ A rồi ghi                                               │ 70    │ không    │
+│ REPEATABLE READ  │ 40001 (could not serialize access due to concurrent update) │ 90    │ 40001    │
+│ SERIALIZABLE     │ 40001 (could not serialize access due to concurrent update) │ 90    │ 40001    │
+   =&gt; ✔ RU/RC: B chờ A rồi tính lại trên dòng mới (EvalPlanQual) → final=70, không mất cập nhật
+   =&gt; ✔ RR/SER: B bị hủy với 40001 (could not serialize access due to concurrent update), final=90
+
+C. Retry cả giao dịch sau 40001 ở REPEATABLE READ — lần 1
+─────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                         │ Kết quả                                                          │       ms │
+├────┼───────┼─────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────┼──────────┤
+│  1 │ O     │ UPDATE l07_contracts SET total = 100 WHERE id = 1;          │ UPDATE 1                                                         │   1.3 ms │
+│  2 │ A     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                      │ BEGIN                                                            │ 0.294 ms │
+│  3 │ B     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                      │ BEGIN                                                            │ 0.644 ms │
+│  4 │ A     │ SELECT total::int AS total FROM l07_contracts WHERE id = 1; │ SELECT (1): total=100                                            │ 0.577 ms │
+│  5 │ B     │ SELECT total::int AS total FROM l07_contracts WHERE id = 1; │ SELECT (1): total=100                                            │ 0.546 ms │
+│  6 │ A     │ UPDATE l07_contracts SET total = 90 WHERE id = 1;           │ UPDATE 1                                                         │ 0.507 ms │
+│  7 │ B     │ UPDATE l07_contracts SET total = 80 WHERE id = 1;           │ ⏳ chờ A (Lock/transactionid)                                     │   3.0 ms │
+│  8 │ A     │ COMMIT;                                                     │ COMMIT                                                           │   1.6 ms │
+│  9 │ B     │ (await) UPDATE l07_contracts SET total = 80 WHERE id = 1;   │ ERROR 40001: could not serialize access due to concurrent update │   4.7 ms │
+│ 10 │ B     │ ROLLBACK;                                                   │ ROLLBACK                                                         │ 0.349 ms │
+│ 11 │ O     │ SELECT total::int AS total FROM l07_contracts WHERE id = 1; │ SELECT (1): total=90                                             │ 0.498 ms │
+│ Lần thử │ B đọc │ B ghi │ Kết quả │
+├─────────┼───────┼───────┼─────────┤
+│       2 │    90 │    70 │ OK      │
+   =&gt; ✔ Lần 1 gặp 40001, ROLLBACK rồi chạy lại cả giao dịch: lần 2 đọc 90, ghi 70 → final=70 (đúng 100 - 10 - 20)
+[exit 0]</pre></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab08.txt">Lab 12.08 — Write Skew trên Repeatable Read, SSI (Serializable) &amp; Bẫy False Positive (slide 9–10, 23)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Máy chủ: max_pred_locks_per_page = 2, max_pred_locks_per_relation = -2 (ngưỡng nâng khóa vị từ SIRead).
+
+A. REPEATABLE READ — A tắt rep 1, B tắt rep 2 (cửa hàng 44, bất biến: on_duty &gt;= 1)
+───────────────────────────────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                                  │ Kết quả               │       ms │
+├────┼───────┼──────────────────────────────────────────────────────────────────────┼───────────────────────┼──────────┤
+│  1 │ A     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                               │ BEGIN                 │ 0.830 ms │
+│  2 │ B     │ BEGIN ISOLATION LEVEL REPEATABLE READ;                               │ BEGIN                 │   1.1 ms │
+│  3 │ A     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2 │   2.6 ms │
+│  4 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2 │   2.1 ms │
+│  5 │ A     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1              │ 0.622 ms │
+│  6 │ B     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1              │ 0.640 ms │
+│  7 │ A     │ COMMIT;                                                              │ COMMIT                │   1.6 ms │
+│  8 │ B     │ COMMIT;                                                              │ COMMIT                │   1.5 ms │
+│  9 │ O     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=0 │ 0.945 ms │
+│ 10 │ O     │ UPDATE l08_reps SET on_duty = true WHERE store_id = 44;              │ UPDATE 2              │   1.9 ms │
+   =&gt; ✔ RR: A và B cùng thấy on_duty=2, cả hai COMMIT thành công → on_duty=0, vi phạm bất biến (Write Skew)
+
+B. SERIALIZABLE — cùng kịch bản, SSI theo dõi phụ thuộc đọc/ghi
+───────────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                                  │ Kết quả                                                                                   │       ms │
+├────┼───────┼──────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┼──────────┤
+│  1 │ A     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.721 ms │
+│  2 │ B     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.463 ms │
+│  3 │ A     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                                                                     │ 0.596 ms │
+│  4 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                                                                     │ 0.505 ms │
+│  5 │ A     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                                                                  │ 0.445 ms │
+│  6 │ B     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                                                                  │ 0.546 ms │
+│  7 │ A     │ COMMIT;                                                              │ COMMIT                                                                                    │   1.6 ms │
+│  8 │ B     │ COMMIT;                                                              │ ERROR 40001: could not serialize access due to read/write dependencies among transactions │ 0.841 ms │
+│  9 │ O     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=1                                                                     │ 0.546 ms │
+│ 10 │ O     │ UPDATE l08_reps SET on_duty = true WHERE store_id = 44;              │ UPDATE 2                                                                                  │   1.5 ms │
+   =&gt; ✔ SER: UPDATE của B chạy được, A COMMIT được, nhưng COMMIT của B bị hủy với 40001 (could not serialize access due to read/write dependencies among transactions)
+   =&gt; ✔ SER: bất biến được giữ, on_duty=1 (chỉ A thành công)
+
+C. SERIALIZABLE — B bắt 40001, ROLLBACK, chạy lại cả giao dịch
+──────────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                                  │ Kết quả                                                                                   │       ms │
+├────┼───────┼──────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┼──────────┤
+│  1 │ A     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.343 ms │
+│  2 │ B     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.308 ms │
+│  3 │ A     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                                                                     │ 0.433 ms │
+│  4 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                                                                     │ 0.385 ms │
+│  5 │ A     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                                                                  │ 0.452 ms │
+│  6 │ B     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                                                                  │ 0.404 ms │
+│  7 │ A     │ COMMIT;                                                              │ COMMIT                                                                                    │   1.5 ms │
+│  8 │ B     │ COMMIT;                                                              │ ERROR 40001: could not serialize access due to read/write dependencies among transactions │ 0.727 ms │
+│  9 │ B     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.477 ms │
+│ 10 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=1                                                                     │ 0.822 ms │
+│ 11 │ B     │ ROLLBACK;                                                            │ ROLLBACK                                                                                  │ 0.785 ms │
+│ 12 │ B     │ SELECT 1;                                                            │ SELECT (1): ?column?=1                                                                    │ 0.724 ms │
+│ 13 │ O     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=1                                                                     │ 0.765 ms │
+│ 14 │ O     │ UPDATE l08_reps SET on_duty = true WHERE store_id = 44;              │ UPDATE 2                                                                                  │   1.7 ms │
+   =&gt; ✔ Retry: lần 2 B thấy on_duty=1 nên không tắt rep 2 (ROLLBACK); on_duty=1 được giữ
+
+D. Cửa hàng 44 vs 45 ở SERIALIZABLE (ép Seq Scan) — tùy chọn
+────────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                                  │ Kết quả                                                                                   │       ms │
+├────┼───────┼──────────────────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┼──────────┤
+│  1 │ A     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.409 ms │
+│  2 │ B     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                                                                     │ 0.381 ms │
+│  3 │ A     │ SET LOCAL enable_indexscan = off;                                    │ SET                                                                                       │ 0.464 ms │
+│  4 │ A     │ SET LOCAL enable_bitmapscan = off;                                   │ SET                                                                                       │ 0.320 ms │
+│  5 │ B     │ SET LOCAL enable_indexscan = off;                                    │ SET                                                                                       │ 0.364 ms │
+│  6 │ B     │ SET LOCAL enable_bitmapscan = off;                                   │ SET                                                                                       │ 0.254 ms │
+│  7 │ A     │ EXPLAIN (COSTS OFF) SELECT count(*)::int AS on_duty FROM l08_reps... │ EXPLAIN (3): QUERY PLAN=Aggregate (+2 dòng)                                               │ 0.529 ms │
+│  8 │ A     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                                                                     │ 0.426 ms │
+│  9 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 45... │ SELECT (1): on_duty=2                                                                     │ 0.440 ms │
+│ 10 │ A     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                                                                  │ 0.412 ms │
+│ 11 │ B     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 45 AND rep_i... │ UPDATE 1                                                                                  │ 0.359 ms │
+│ 12 │ A     │ COMMIT;                                                              │ COMMIT                                                                                    │   1.3 ms │
+│ 13 │ B     │ COMMIT;                                                              │ ERROR 40001: could not serialize access due to read/write dependencies among transactions │ 0.753 ms │
+│ 14 │ O     │ UPDATE l08_reps SET on_duty = true;                                  │ UPDATE 4                                                                                  │   2.4 ms │
+
+D. Cửa hàng 44 vs 45 ở SERIALIZABLE (ép Index Scan) — tùy chọn
+──────────────────────────────────────────────────────────────
+│  # │ Phiên │ SQL                                                                  │ Kết quả                                     │       ms │
+├────┼───────┼──────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────┼──────────┤
+│  1 │ A     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                       │ 0.768 ms │
+│  2 │ B     │ BEGIN ISOLATION LEVEL SERIALIZABLE;                                  │ BEGIN                                       │ 0.586 ms │
+│  3 │ A     │ SET LOCAL enable_seqscan = off;                                      │ SET                                         │ 0.483 ms │
+│  4 │ A     │ SET LOCAL enable_bitmapscan = off;                                   │ SET                                         │ 0.413 ms │
+│  5 │ B     │ SET LOCAL enable_seqscan = off;                                      │ SET                                         │ 0.334 ms │
+│  6 │ B     │ SET LOCAL enable_bitmapscan = off;                                   │ SET                                         │ 0.325 ms │
+│  7 │ A     │ EXPLAIN (COSTS OFF) SELECT count(*)::int AS on_duty FROM l08_reps... │ EXPLAIN (4): QUERY PLAN=Aggregate (+3 dòng) │ 0.516 ms │
+│  8 │ A     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 44... │ SELECT (1): on_duty=2                       │ 0.405 ms │
+│  9 │ B     │ SELECT count(*)::int AS on_duty FROM l08_reps WHERE store_id = 45... │ SELECT (1): on_duty=2                       │ 0.567 ms │
+│ 10 │ A     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 44 AND rep_i... │ UPDATE 1                                    │ 0.470 ms │
+│ 11 │ B     │ UPDATE l08_reps SET on_duty = false WHERE store_id = 45 AND rep_i... │ UPDATE 1                                    │ 0.441 ms │
+│ 12 │ A     │ COMMIT;                                                              │ COMMIT                                      │   1.5 ms │
+│ 13 │ B     │ COMMIT;                                                              │ COMMIT                                      │   1.5 ms │
+│ 14 │ O     │ UPDATE l08_reps SET on_duty = true;                                  │ UPDATE 4                                    │   1.7 ms │
+   =&gt; ✔ (ép Seq Scan): kế hoạch "Aggregate /   -&gt;  Seq Scan on l08_reps /         Filter: (on_duty AND (store_id = 44))" khóa SIRead cả bảng → dù khác cửa hàng vẫn gặp 40001 ở bCommit (false positive)
+   =&gt; ✔ (ép Index Scan): kế hoạch "Aggregate /   -&gt;  Index Scan using l08_reps_pkey on l08_reps /         Index Cond: (store_id = 44) /         Filter: on_duty" chỉ khóa các dòng đã đọc → A và B đều COMMIT, không có 40001
+[exit 0]</pre></div>
+  <div class="quiz" data-quiz="7"></div>
+</section>
+
+<!-- CHẶNG 8 -->
+<section id="chang-8" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">08</span>
+    <div>
+      <div class="stage-meta"><span>Slide 23–26</span><span>80 phút</span><span>Day 03</span></div>
+      <h2>Tổng kết, Bài tập về nhà &amp; NestJS TypeORM Drill</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> Thực hành dự đoán ma trận dị thường, rà soát 4 lỗi đo đạc trong bản nháp AI, và bắt trọn 6 lỗi kinh điển khi viết Transaction trong dự án NestJS + TypeORM.</p>
+  <dl class="wwh">
+    <dt>TỔNG KẾT</dt><dd>Toàn bộ 6 dị thường và cách phòng thủ trên PostgreSQL: Dirty Read (không có), Non-Repeatable Read &amp; Phantom Read (hết ở RR), Lost Update (hết ở RR), Write Skew (hết ở Serializable).</dd>
+    <dt>THỰC CHIẾN</dt><dd>Rà soát mã nguồn NestJS TypeORM, loại bỏ thói quen dùng repository inject trong transaction và quên release QueryRunner.</dd>
+    <dt>TIẾP THEO</dt><dd>Sẵn sàng cho Bài 14: chuyên sâu về Database Locking, Row Locks và triệt tiêu Deadlock 40P01.</dd>
+  </dl>
+
+  <div class="callout pg">
+    <span class="tag">Slide 23 · Cần sửa trên PostgreSQL 16 (Lab 12.03 &amp; 12.08)</span>
+    <p>Slide 23 tóm tắt rằng Isolation dựa vào Undo Log. Trên PostgreSQL 16 hoàn toàn không có Undo Log: tính cô lập được thực thi bằng sự kết hợp giữa <strong>Heap Tuple Versioning + Snapshot Visibility</strong> (cho đọc), <strong>Row-level Transaction ID Locks</strong> (cho ghi đụng dòng), và <strong>SSI SIRead Predicate Locks</strong> (ở mức Serializable).</p>
+  </div>
+
+  <div id="bai-tap" class="panel">
+    <h3>Bài tập về nhà A, B, C (Slide 24)</h3>
+    <p><strong>Phần A — Thẻ dữ liệu:</strong> Chạy <code>npm run setup</code> trong <code>labs/lesson-12-transaction</code> để khởi tạo 100,000 dòng hợp đồng kế thừa từ Bài 3 và in thẻ Dataset Card.</p>
+    <p><strong>Phần B — Ma trận dự đoán:</strong> Mở file <code>labs/lesson-12-transaction/homework-predictions.mine.mjs</code>, điền 24 ô lựa chọn (<code>xảy ra</code> | <code>không</code> | <code>40001</code>) và 6 dòng giải thích lý do (why), sau đó chạy <code>npm run homework</code> để chấm điểm tự động.</p>
+    <p><strong>Phần C — Rà soát bản nháp AI:</strong> Chạy <code>npm run homework:draft</code> và đọc file <code>homework-ai-draft.mjs</code> để tìm 4 lỗi phương pháp đo khiến kết luận của AI bị sai lệch.</p>
+    <div class="code terminal"><pre class="code terminal" data-run="hw-mine.txt">Bài tập về nhà Bài 12 — kiểm tra file dự đoán
+─────────────────────────────────────────────
+Các ô cần sửa trước khi đo:
+  ✘ dirtyRead.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ dirtyRead.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ dirtyRead.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ dirtyRead.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ nonRepeatableRead.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ nonRepeatableRead.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ nonRepeatableRead.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ nonRepeatableRead.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ phantom.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ phantom.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ phantom.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ phantom.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ lostUpdate.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ lostUpdate.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ lostUpdate.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ lostUpdate.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ atomicUpdate.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ atomicUpdate.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ atomicUpdate.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ atomicUpdate.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ writeSkew.RU: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ writeSkew.RC: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ writeSkew.RR: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+  ✘ writeSkew.SER: còn để trống '???' (chọn: 'xảy ra' | 'không' | '40001')
+
+Không có dòng nào đủ 4 ô hợp lệ — từ chối chạy, chưa mở kết nối DB.
+[exit 1]</pre></div>
+    <details class="fold"><summary>Xem Đáp án mẫu Phần B, C &amp; D (Đo đạc thực tế · <code>npm run homework:solution</code>)</summary><div class="fold-body">
+    <div class="code terminal"><pre class="code terminal" data-run="hw-solution.txt">Bài tập về nhà Bài 12 — kiểm tra file dự đoán
+─────────────────────────────────────────────
+
+Ma trận 6 hiện tượng × 4 mức cô lập (✔ = dự đoán khớp thực tế, ✘ = lệch)
+────────────────────────────────────────────────────────────────────────
+│ Kịch bản          │ RU       │ RC       │ RR       │ SER     │ Giải thích (why)                                                                                                           │
+├───────────────────┼──────────┼──────────┼──────────┼─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ dirtyRead         │ không ✔  │ không ✔  │ không ✔  │ không ✔ │ PostgreSQL không có dirty read: READ UNCOMMITTED được nâng lên READ COMMITTED, snapshot chỉ thấy bản ghi đã COMMIT.        │
+│ nonRepeatableRead │ xảy ra ✔ │ xảy ra ✔ │ không ✔  │ không ✔ │ RC lấy snapshot mới cho từng câu lệnh nên thấy giá trị B vừa COMMIT; RR/SER giữ một snapshot cho cả transaction.           │
+│ phantom           │ xảy ra ✔ │ xảy ra ✔ │ không ✔  │ không ✔ │ Cùng cơ chế snapshot: RC thấy dòng B mới INSERT/COMMIT; RR của PostgreSQL dùng snapshot cố định nên không có phantom.      │
+│ lostUpdate        │ xảy ra ✔ │ xảy ra ✔ │ 40001 ✔  │ 40001 ✔ │ Ứng dụng đọc rồi ghi giá trị tự tính nên ở RC bản ghi của B đè mất của A; RR/SER phát hiện dòng đã bị sửa và ném 40001.    │
+│ atomicUpdate      │ không ✔  │ không ✔  │ 40001 ✔  │ 40001 ✔ │ SET total = total - delta chờ khóa dòng rồi đọc lại bản mới nhất ở RC nên đủ 70; RR/SER không đọc lại được nên ném 40001.  │
+│ writeSkew         │ xảy ra ✔ │ xảy ra ✔ │ xảy ra ✔ │ 40001 ✔ │ A và B sửa 2 dòng khác nhau nên không đụng khóa dòng; chỉ SERIALIZABLE (SSI) thấy rw-antidependency và ném 40001 ở COMMIT. │
+
+   =&gt; ✔ dirtyRead: dự đoán khớp thực tế 4/4 mức
+   =&gt; ✔ nonRepeatableRead: dự đoán khớp thực tế 4/4 mức
+   =&gt; ✔ phantom: dự đoán khớp thực tế 4/4 mức
+   =&gt; ✔ lostUpdate: dự đoán khớp thực tế 4/4 mức
+   =&gt; ✔ atomicUpdate: dự đoán khớp thực tế 4/4 mức
+   =&gt; ✔ writeSkew: dự đoán khớp thực tế 4/4 mức
+
+Phần C — Đáp án rà soát bản nháp AI (homework-ai-draft.mjs)
+───────────────────────────────────────────────────────────
+│ # │ Lỗi phương pháp                                                                                                                 │ Cách sửa                                                                                                               │
+├───┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1 │ Một kết nối duy nhất đóng vai cả phiên A lẫn phiên B (các UPDATE/SELECT cùng một transaction nên luôn thấy ghi của chính mình). │ Mở 2 kết nối riêng (A, B) và 1 phiên quan sát O; điều phối thứ tự bước như tx-runner, rồi mới kết luận dirty read.     │
+│ 2 │ SET TRANSACTION ISOLATION LEVEL SERIALIZABLE chạy TRƯỚC BEGIN: chỉ có WARNING, transaction vẫn ở READ COMMITTED.                │ Dùng BEGIN ISOLATION LEVEL SERIALIZABLE (hoặc SET ngay sau BEGIN) và kiểm tra SHOW transaction_isolation / đọc NOTICE. │
+│ 3 │ Thử write skew bằng cách sửa 2 dòng độc lập, không có bất biến chéo dòng (không có bước đọc-kiểm-tra trước khi ghi).            │ Dựng bất biến thật (cửa hàng 44 luôn còn &gt;= 1 người trực), cả A và B cùng đếm rồi mỗi bên sửa một dòng khác nhau.      │
+│ 4 │ COMMIT bọc trong .catch(() =&gt; {}) nên lỗi COMMIT (kể cả 40001) bị nuốt và script vẫn báo thành công.                            │ Bắt lỗi COMMIT, ghi nhận mã code (40001), ROLLBACK và để ứng dụng retry; không bao giờ nuốt lỗi.                       │
+
+Phần D — Giữ bất biến ở READ COMMITTED bằng SELECT ... FOR UPDATE
+─────────────────────────────────────────────────────────────────
+│ # │ Phiên │ SQL                                                                  │ Kết quả                        │       ms │
+├───┼───────┼──────────────────────────────────────────────────────────────────────┼────────────────────────────────┼──────────┤
+│ 1 │ A     │ BEGIN ISOLATION LEVEL READ COMMITTED;                                │ BEGIN                          │ 0.844 ms │
+│ 2 │ B     │ BEGIN ISOLATION LEVEL READ COMMITTED;                                │ BEGIN                          │ 0.601 ms │
+│ 3 │ A     │ SELECT rep_id FROM hw_reps WHERE store_id = 44 AND on_duty ORDER ... │ SELECT (2): rep_id=1 (+1 dòng) │   1.2 ms │
+│ 4 │ B     │ SELECT rep_id FROM hw_reps WHERE store_id = 44 AND on_duty ORDER ... │ ⏳ chờ A (Lock/transactionid)   │   2.4 ms │
+│ 5 │ A     │ UPDATE hw_reps SET on_duty = false WHERE store_id = 44 AND rep_id... │ UPDATE 1                       │ 0.582 ms │
+│ 6 │ A     │ COMMIT;                                                              │ COMMIT                         │   1.8 ms │
+│ 7 │ B     │ (await) SELECT rep_id FROM hw_reps WHERE store_id = 44 AND on_dut... │ SELECT (1): rep_id=2           │   4.9 ms │
+│ 8 │ B     │ ROLLBACK;                                                            │ ROLLBACK                       │ 0.485 ms │
+│ 9 │ O     │ SELECT count(*)::int AS on_duty FROM hw_reps WHERE store_id = 44 ... │ SELECT (1): on_duty=1          │ 0.733 ms │
+   =&gt; ✔ B bị chặn chờ khóa FOR UPDATE của A (quan sát qua pg_locks, phiên O)
+   =&gt; ✔ Sau khi A COMMIT, SELECT ... FOR UPDATE của B chỉ còn 1 dòng nên B ROLLBACK; số người trực còn 1 (&gt;= 1)
+   =&gt; ✔ Không phiên nào gặp 40001 (khóa dòng chặn trước thay vì phát hiện sau)
+[exit 0]</pre></div>
+    </div></details>
+  </div>
+
+  <div id="nestjs-drill" class="panel" style="margin-top:24px">
+    <h3>NestJS + TypeORM Code Review Drill (6 Bugs thường gặp)</h3>
+    <p class="muted">Đối chiếu mã nguồn TypeORM <code>0.3.20</code> và <code>1.1.2</code>: ở cả hai bản, <code>startTransaction(level)</code> đều phát lệnh <code>START TRANSACTION</code> rồi <code>SET TRANSACTION ISOLATION LEVEL</code>; điểm khác là bản <code>1.1.2</code> có thêm fallback <code>isolationLevel ??= this.dataSource.options.isolationLevel</code>, đổi <code>queryRunner.connection</code> thành <code>queryRunner.dataSource</code>, và yêu cầu Node &gt;= 20 kèm <code>@nestjs/typeorm</code> &gt;= 11.0.1.</p>
+
+    <details class="fold"><summary>1. Dùng Repository được Inject thay vì EntityManager của Transaction</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> Trong callback <code>dataSource.transaction(async (manager) => { await this.contractRepo.update(...) })</code>, lập trình viên gọi repository được inject ở constructor. Lệnh update chạy trên connection pool ngoài, hoàn toàn độc lập với transaction!</p>
+        <p><strong>Cách sửa:</strong> Bắt buộc dùng <code>manager.getRepository(Contract)</code> hoặc <code>manager.update()</code>.</p>
+      </div>
+    </details>
+
+    <details class="fold"><summary>2. Read-Modify-Write qua hàm save() gây mất cập nhật</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> <code>const c = await repo.findOne(...); c.total -= 10; await repo.save(c);</code> ở mức mặc định Read Committed sẽ bị ghi đè dữ liệu nếu 2 request cùng chạy.</p>
+        <p><strong>Cách sửa:</strong> Sử dụng câu lệnh nguyên tử <code>manager.decrement(Contract, { id }, 'total', 10)</code> hoặc đặt khóa <code>SELECT ... FOR UPDATE</code>.</p>
+      </div>
+    </details>
+
+    <details class="fold"><summary>3. Gọi HTTP API bên ngoài hoặc gửi mail bên trong DB Transaction</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> Đặt <code>await firstValueFrom(this.httpService.post('https://payment-gateway/...'))</code> bên trong transaction block khiến database connection bị giữ trong nhiều giây, dẫn tới cạn kiệt connection pool.</p>
+        <p><strong>Cách sửa:</strong> Dùng Transactional Outbox Pattern: ghi event vào bảng outbox trong transaction, sau đó worker chạy nền đọc outbox và gửi HTTP ra ngoài.</p>
+      </div>
+    </details>
+
+    <details class="fold"><summary>4. QueryRunner không được release trong khối finally</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> Mở transaction thủ công qua <code>queryRunner.connect(); await queryRunner.startTransaction();</code> nhưng quên <code>await queryRunner.release()</code> trong khối <code>finally</code> khi có exception.</p>
+        <p><strong>Hậu quả:</strong> Nếu quên cả <code>rollbackTransaction()</code> và <code>release()</code>, connection bị rò rỉ ở trạng thái <code>idle in transaction</code>, giữ khóa dòng và làm nghẽn chân trời horizon.</p>
+        <p><strong>Cách sửa:</strong> Bắt buộc bọc trong <code>try / catch / finally</code>: gọi <code>await queryRunner.rollbackTransaction()</code> trong <code>catch</code> và luôn gọi <code>await queryRunner.release()</code> trong <code>finally</code>.</p>
+      </div>
+    </details>
+
+    <details class="fold"><summary>5. Không viết vòng lặp Retry khi sử dụng SERIALIZABLE (mã lỗi 40001)</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> Bật mức cô lập SERIALIZABLE nhưng khi gặp lỗi <code>40001 could not serialize access</code> thì để ứng dụng ném 500 ra client.</p>
+        <p><strong>Cách sửa:</strong> Mức SERIALIZABLE bắt buộc phải đi kèm hàm retry (thử lại tối đa 3-5 lần) bao bọc toàn bộ callback giao dịch.</p>
+      </div>
+    </details>
+
+    <details class="fold"><summary>6. Nuốt lỗi (try/catch rỗng) dẫn tới lỗi dây chuyền 25P02</summary>
+      <div class="fold-body">
+        <p><strong>Lỗi:</strong> Bọc câu lệnh SQL bị lỗi bằng <code>try { ... } catch (e) {}</code> mà không rethrow hoặc không dùng SAVEPOINT.</p>
+        <p><strong>Hậu quả:</strong> Postgres đã đánh dấu transaction bị hỏng, câu lệnh tiếp theo trong hàm chắc chắn sẽ dính <code>25P02 in_failed_sql_transaction</code>.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="quiz" data-quiz="8"></div>
+</section>
+
+<!-- 10 CÂU PHỎNG VẤN -->
+<section id="phong-van" class="stage col">
+  <h2>Kiểm tra cuối bài: 10 Câu hỏi phỏng vấn kinh điển</h2>
+  <div id="examList"></div>
+</section>
+
+<!-- BÀI TẬP D -->
+<section id="bai-tap-d" class="stage col">
+  <div class="panel">
+    <h3>Bài tập D (Tùy chọn · Cầu nối sang Bài 14 Locking)</h3>
+    <p>Làm thế nào để bảo vệ bất biến của cửa hàng 44 ở mức mặc định <strong>Read Committed</strong> mà không cần nâng lên Serializable? Giải pháp: sử dụng khóa dòng chọn lọc <code>SELECT rep_id FROM store_reps WHERE store_id = 44 AND on_duty ORDER BY rep_id FOR UPDATE;</code></p>
+    <p>Khi đó, Phiên B sẽ bị chặn chờ khóa của Phiên A. Sau khi A commit cho rep 1 nghỉ, Phiên B đọc lại thấy chỉ còn 1 người trực và chủ động ROLLBACK từ chối cho rep 2 nghỉ — không cần trả giá bằng lỗi 40001 hay cơ chế retry.</p>
+  </div>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat-sheet" class="stage col">
+  <h2>Bảng tóm tắt kiến thức 1 trang (Cheat Sheet)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Hiện tượng dị thường</th><th>Mô tả bản chất</th><th>Hành vi trên PG 16</th><th>Cách phòng chống chuẩn Senior</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Dirty Read</strong></td><td>Đọc dữ liệu uncommitted</td><td><span class="vchip ok">Không bao giờ bị</span></td><td>Mặc định Read Committed đã chặn 100%</td></tr>
+        <tr><td><strong>Non-Repeatable Read</strong></td><td>Đọc lại 1 dòng thấy số đổi</td><td>Bị ở RU/RC, hết ở RR/SER</td><td>Nâng lên <code>REPEATABLE READ</code></td></tr>
+        <tr><td><strong>Phantom Read</strong></td><td>Đếm lại tập dòng thấy tăng/giảm</td><td>Bị ở RU/RC, hết ở RR/SER</td><td>Postgres chặn ngay từ <code>REPEATABLE READ</code></td></tr>
+        <tr><td><strong>Lost Update</strong></td><td>Ứng dụng đọc về rồi ghi đè</td><td>Bị ở RU/RC, RR/SER ném 40001</td><td>Atomic update (<code>SET c = c - 1</code>) hoặc <code>SELECT FOR UPDATE</code></td></tr>
+        <tr><td><strong>Write Skew</strong></td><td>Sửa 2 dòng khác nhau vi phạm luật</td><td>Bị ở RU/RC/RR, SER ném 40001</td><td>Dùng <code>SERIALIZABLE + Retry</code> hoặc <code>FOR UPDATE</code> (Bài 14)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- BẢN ĐỒ SLIDE -->
+<section id="ban-do-slide" class="stage col">
+  <h2>Bản đồ 26 slide bài giảng</h2>
+  <div class="chips" id="slideMap"></div>
+</section>
+
+<!-- TÀI LIỆU THAM KHẢO -->
+<section id="tham-khao" class="stage col">
+  <h2>Tài liệu tham khảo &amp; Đọc thêm</h2>
+  <ul>
+    <li><a href="https://www.postgresql.org/docs/16/transaction-iso.html" target="_blank" rel="noreferrer">PostgreSQL 16 Official Docs — Transaction Isolation</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/wal-intro.html" target="_blank" rel="noreferrer">PostgreSQL 16 Official Docs — Write-Ahead Logging (WAL)</a></li>
+    <li><a href="https://typeorm.io/transactions" target="_blank" rel="noreferrer">TypeORM Official Documentation — Transactions &amp; QueryRunner</a></li>
+    <li>Martin Kleppmann — <em>Designing Data-Intensive Applications</em>, Chapter 7: Transactions.</li>
+  </ul>
+</section>
+<!-- BÀI TIẾP THEO -->
+<section id="tiep-theo" class="stage col">
+  <div class="callout key">
+    <span class="tag">Tiếp theo: Bài 14</span>
+    <h3>Chặng tiếp theo trên lộ trình: Bài 14 — Database Locking &amp; Triệt tiêu Deadlock</h3>
+    <p>Ở Bài 12 bạn đã thấy: Writer chờ Writer trên <code>Lock/transactionid</code>, và <code>SELECT FOR UPDATE</code> chặn đứng Write Skew. Nhưng điều gì xảy ra nếu Phiên A khóa ID 1 rồi đòi khóa ID 2, trong khi Phiên B khóa ID 2 rồi đòi khóa ID 1? PostgreSQL sẽ phát hiện Deadlock sau 1 giây và ném lỗi <code>40P01</code>. Bài 14 sẽ hướng dẫn kỹ thuật sắp xếp thứ tự tài nguyên (Resource Ordering) để triệt tiêu hoàn toàn Deadlock.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Khối JSON nhúng cho các widget tương tác -->
+<script type="application/json" id="run-lab03">{"rc":[{"step":1,"who":"A","sql":"BEGIN;","summary":"BEGIN","ms":0.8474999999999966,"waitedFor":[]},{"step":2,"who":"A","sql":"SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;","summary":"SELECT (1): xmin=6029, xmax=0, ctid=(0,1), total=478461.34","ms":1.9636999999999887,"waitedFor":[]},{"step":3,"who":"B","sql":"UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid, total;","summary":"UPDATE (1): xmin=6030, ctid=(15,1), total=478462.34","ms":4.20920000000001,"waitedFor":[]},{"step":4,"who":"A","sql":"SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;","summary":"SELECT (1): xmin=6030, xmax=0, ctid=(15,1), total=478462.34","ms":0.9070000000000107,"waitedFor":[]},{"step":5,"who":"A","sql":"COMMIT;","summary":"COMMIT","ms":0.5379999999999825,"waitedFor":[]}],"rr":[{"step":1,"who":"A","sql":"BEGIN ISOLATION LEVEL REPEATABLE READ;","summary":"BEGIN","ms":0.38880000000000337,"waitedFor":[]},{"step":2,"who":"A","sql":"SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;","summary":"SELECT (1): xmin=6030, xmax=0, ctid=(15,1), total=478462.34","ms":0.4976000000000056,"waitedFor":[]},{"step":3,"who":"B","sql":"UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid, total;","summary":"UPDATE (1): xmin=6031, ctid=(15,2), total=478463.34","ms":1.7830999999999904,"waitedFor":[]},{"step":4,"who":"A","sql":"SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;","summary":"SELECT (1): xmin=6030, xmax=6031, ctid=(15,1), total=478462.34","ms":0.580600000000004,"waitedFor":[]},{"step":5,"who":"A","sql":"COMMIT;","summary":"COMMIT","ms":0.40690000000000737,"waitedFor":[]}],"writerWait":[{"step":1,"who":"B","sql":"BEGIN;","summary":"BEGIN","ms":0.39339999999998554,"waitedFor":[]},{"step":2,"who":"B","sql":"UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid;","summary":"UPDATE (1): xmin=6033, ctid=(15,4)","ms":0.5389000000000124,"waitedFor":[]},{"step":3,"who":"A","sql":"SELECT xmin, xmax, ctid, total FROM l03_contracts WHERE id = 1;","summary":"SELECT (1): xmin=6032, xmax=6033, ctid=(15,3), total=478464.34","ms":0.5863999999999976,"waitedFor":[]},{"step":4,"who":"A","sql":"UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid;","summary":"⏳ chờ B (Lock/transactionid)","ms":5.1906999999999925,"waitedFor":["B"],"waitEvent":"Lock/transactionid"},{"step":5,"who":"B","sql":"COMMIT;","summary":"COMMIT","ms":2.428200000000004,"waitedFor":[]},{"step":6,"who":"A","sql":"(await) UPDATE l03_contracts SET total = total + 1 WHERE id = 1 RETURNING xmin, ctid;","summary":"UPDATE (1): xmin=6034, ctid=(15,5)","ms":9.180999999999983,"waitedFor":["B"]}],"heapItems":[{"label":"bản cũ","ctid":"(15,2)","lp":2,"t_ctid":"(15,3)","t_xmin":"6031","t_xmax":"6032"},{"label":"bản mới","ctid":"(15,3)","lp":3,"t_ctid":"(15,3)","t_xmin":"6032","t_xmax":"0"}]}</script>
+<script type="application/json" id="run-lab05">{"lab":"12.05","bigVsBatch":[{"name":"1 UPDATE lớn","tx":1,"locked":20000,"recs":60068,"bytes":5206128,"b":256,"a":481},{"name":"10 lô + VACUUM","tx":10,"locked":2000,"recs":59711,"bytes":5170798,"b":256,"a":278}],"walRecordDiff":0.0059432643004594795,"idle":{"aState":"idle in transaction","bTimeout":{"code":"55P03","ms":3169.8793},"terminated":true,"aEvent":"57P01","retryMs":9.43040000000019,"cEvent":"25P03","cGoneMs":1055.6976999999997,"bAfterCMs":5.1850000000004},"verdicts":[true,true,true,true,true,true,true,true,true]}</script>
+<script type="application/json" id="run-lab06">{"lab":"12.06","placements":[{"id":1,"sql":"SET TRANSACTION ... SERIALIZABLE (ngoài khối giao dịch)","notice":"25P01","level":"read committed"},{"id":2,"sql":"BEGIN; SET TRANSACTION ... SERIALIZABLE; SHOW","level":"serializable"},{"id":3,"sql":"BEGIN; SELECT 1; SET TRANSACTION ... SERIALIZABLE","error":"25001","message":"SET TRANSACTION ISOLATION LEVEL must be called before any query"},{"id":4,"sql":"START TRANSACTION; SET TRANSACTION ... REPEATABLE READ; SHOW (kiểu TypeORM)","level":"repeatable read"},{"id":5,"sql":"SET SESSION CHARACTERISTICS ... REPEATABLE READ; BEGIN; SHOW; rồi RESET","level":"repeatable read","after":"read committed"}],"matrices":{"dirtyRead":{"RU":{"result":"không","seen":"A đọc 100 (B đã ghi 999 chưa COMMIT)"},"RC":{"result":"không","seen":"A đọc 100 (B đã ghi 999 chưa COMMIT)"},"RR":{"result":"không","seen":"A đọc 100 (B đã ghi 999 chưa COMMIT)"},"SER":{"result":"không","seen":"A đọc 100 (B đã ghi 999 chưa COMMIT)"}},"nonRepeatableRead":{"RU":{"result":"xảy ra","seen":"100 → 50"},"RC":{"result":"xảy ra","seen":"100 → 50"},"RR":{"result":"không","seen":"100 → 100"},"SER":{"result":"không","seen":"100 → 100"}},"phantom":{"RU":{"result":"xảy ra","seen":"0 → 1 dòng"},"RC":{"result":"xảy ra","seen":"0 → 1 dòng"},"RR":{"result":"không","seen":"0 → 0 dòng"},"SER":{"result":"không","seen":"0 → 0 dòng"}}},"readUncommittedShow":"read uncommitted","verdicts":[true,true,true,true,true,true,true,true,true]}</script>
+<script type="application/json" id="run-lab07">{"lab":"12.07","lostUpdate":{"RU":{"result":"xảy ra","code":null,"message":null,"waited":true,"aRead":100,"bRead":100,"final":80},"RC":{"result":"xảy ra","code":null,"message":null,"waited":true,"aRead":100,"bRead":100,"final":80},"RR":{"result":"40001","code":"40001","message":"could not serialize access due to concurrent update","waited":true,"aRead":100,"bRead":100,"final":90},"SER":{"result":"40001","code":"40001","message":"could not serialize access due to concurrent update","waited":true,"aRead":100,"bRead":100,"final":90}},"atomicUpdate":{"RU":{"result":"không","code":null,"message":null,"waited":true,"aRead":null,"bRead":null,"final":70},"RC":{"result":"không","code":null,"message":null,"waited":true,"aRead":null,"bRead":null,"final":70},"RR":{"result":"40001","code":"40001","message":"could not serialize access due to concurrent update","waited":true,"aRead":null,"bRead":null,"final":90},"SER":{"result":"40001","code":"40001","message":"could not serialize access due to concurrent update","waited":true,"aRead":null,"bRead":null,"final":90}},"retry":{"attempts":2,"codes":["40001","OK"],"final":70},"verdicts":[true,true,true,true,true]}</script>
+<script type="application/json" id="run-lab08">{"lab":"12.08","repeatableRead":{"final":0},"serializable":{"code":"40001","final":1},"retry":{"count":1,"decision":"ROLLBACK","final":1},"falsePositive":{"seq":{"label":"(ép Seq Scan)","plan":"Aggregate /   ->  Seq Scan on l08_reps /         Filter: (on_duty AND (store_id = 44))","planOk":true,"failedAt":"bCommit","aCommit":true,"bCommit":false},"index":{"label":"(ép Index Scan)","plan":"Aggregate /   ->  Index Scan using l08_reps_pkey on l08_reps /         Index Cond: (store_id = 44) /         Filter: on_duty","planOk":true,"failedAt":null,"aCommit":true,"bCommit":true}},"verdicts":[true,true,true,true,true,true]}</script>
+
+<script>
+/* === GUIDE_DATA_START === */
+var SLIDES = [
+  { n: 1, title: 'Mở đầu', href: '#cach-hoc', pg: false },
+  { n: 2, title: 'Outline', href: '#cach-hoc', pg: false },
+  { n: 3, title: 'Introduction', href: '#chang-1', pg: false },
+  { n: 4, title: 'Definition', href: '#chang-1', pg: false },
+  { n: 5, title: 'ACID', href: '#chang-1', pg: false },
+  { n: 6, title: 'Isolation Levels', href: '#chang-6', pg: false },
+  { n: 7, title: 'Read Uncommitted', href: '#chang-6', pg: true },
+  { n: 8, title: 'Read Committed', href: '#chang-6', pg: false },
+  { n: 9, title: 'Repeatable Read', href: '#chang-6', pg: true },
+  { n: 10, title: 'Serializable', href: '#chang-7', pg: true },
+  { n: 11, title: 'How Transactions Work', href: '#chang-2', pg: false },
+  { n: 12, title: 'WAL & Durability', href: '#chang-2', pg: false },
+  { n: 13, title: 'MVCC & Undo Log', href: '#chang-3', pg: true },
+  { n: 14, title: 'Purge & Vacuum', href: '#chang-4', pg: true },
+  { n: 15, title: 'MVVC trong Postgres', href: '#chang-3', pg: true },
+  { n: 16, title: 'History List Length', href: '#chang-4', pg: true },
+  { n: 17, title: 'Common Problems', href: '#chang-5', pg: false },
+  { n: 18, title: 'Transaction lớn', href: '#chang-5', pg: false },
+  { n: 19, title: 'Transaction dài', href: '#chang-5', pg: false },
+  { n: 20, title: 'Khóa khoảng trống (Gap Lock)', href: '#chang-5', pg: true },
+  { n: 21, title: 'Transaction bị bỏ rơi', href: '#chang-5', pg: false },
+  { n: 22, title: 'Đặt Isolation Level', href: '#chang-6', pg: true },
+  { n: 23, title: 'Recap ACID & Locks', href: '#chang-8', pg: true },
+  { n: 24, title: 'Bài tập thực hành', href: '#bai-tap', pg: false },
+  { n: 25, title: 'Tài liệu tham khảo', href: '#tham-khao', pg: false },
+  { n: 26, title: 'Thank you', href: '#tiep-theo', pg: false },
+];
+
+var QUIZ = {
+  1: [
+    { q: 'Lệnh SELECT 1/0 bị lỗi trong transaction Postgres. Lệnh INSERT tiếp theo sẽ thế nào?', opts: ['Chạy bình thường nếu đúng cú pháp', 'Bị từ chối với lỗi 25P02', 'Tự động mở transaction mới', 'Làm sập database'], ans: 1, why: 'Postgres chuyển sang trạng thái in_failed_sql_transaction (25P02), từ chối mọi lệnh tiếp theo cho tới khi ROLLBACK.' },
+    { q: 'Lệnh COMMIT chạy sau khi có câu lệnh bị lỗi trong transaction sẽ trả về command tag gì?', opts: ['COMMIT', 'ROLLBACK', 'ERROR', 'SUCCESS'], ans: 1, why: 'Khi transaction đã hỏng, lệnh COMMIT thực chất thực hiện hoàn tác và trả về tag ROLLBACK.' },
+    { q: 'SAVEPOINT dùng để làm gì trong PostgreSQL?', opts: ['Tăng tốc độ ghi dữ liệu', 'Lưu transaction xuống ổ cứng vĩnh viễn', 'Tạo điểm đánh dấu để hoàn tác một phần transaction khi gặp lỗi', 'Khóa bảng độc quyền'], ans: 2, why: 'ROLLBACK TO SAVEPOINT cứu transaction tiếp tục chạy mà không phải hủy toàn bộ các câu lệnh trước đó.' },
+    { q: 'Một bảng được tạo bằng CREATE TABLE bên trong transaction bị ROLLBACK thì bảng đó ra sao?', opts: ['Vẫn tồn tại rỗng', 'Không tồn tại (được hoàn tác hoàn toàn)', 'Bị chuyển vào schema public', 'Bị khóa vĩnh viễn'], ans: 1, why: 'PostgreSQL hỗ trợ Transactional DDL: các lệnh tạo/sửa bảng đều được hoàn tác sạch sẽ khi ROLLBACK.' }
+  ],
+  2: [
+    { q: 'Tại sao PostgreSQL có thể báo COMMIT thành công chỉ trong vài mili-giây?', opts: ['Vì dữ liệu đã được ghi đè vào bảng trên đĩa', 'Vì Postgres chỉ cần flush bản ghi COMMIT vào WAL trên đĩa', 'Vì Postgres bỏ qua bước ghi đĩa', 'Do RAM tự lưu vĩnh viễn'], ans: 1, why: 'Nguyên lý Write-Ahead Log: chỉ cần bảo đảm log tuần tự nằm trên đĩa là bảo đảm tính Durability.' },
+    { q: 'Khi ROLLBACK một transaction, PostgreSQL tốn bao nhiêu chi phí hoàn tác so với MySQL?', opts: ['Gấp đôi vì phải xóa các dòng mới', 'Bằng nhau', 'Gần như bằng 0 vì chỉ cần ghi bản ghi ABORT vào WAL', 'Tùy thuộc vào số dòng đã cập nhật'], ans: 2, why: 'Postgres không có Undo log; dòng cũ vẫn nằm nguyên trên heap, chỉ cần đánh dấu xid đã bị hủy là xong.' },
+    { q: 'Tùy chọn synchronous_commit = off mang lại lợi ích và rủi ro gì?', opts: ['Tăng tốc ghi gấp nhiều lần; mất vài giao dịch cuối nếu sập nguồn đột ngột', 'Làm hỏng cấu trúc bảng nếu mất điện', 'Chỉ dùng được cho tài khoản admin', 'Không có tác dụng gì'], ans: 0, why: 'Chế độ off không chờ fsync lúc commit; dữ liệu không bao giờ bị hỏng vì WAL vẫn toàn vẹn theo từng block.' }
+  ],
+  3: [
+    { q: 'Trong PostgreSQL, câu lệnh SELECT đọc dữ liệu có bao giờ bị câu lệnh UPDATE chặn không?', opts: ['Có, luôn bị chặn nếu UPDATE chưa commit', 'Không bao giờ: Readers never block Writers và ngược lại', 'Chỉ bị chặn khi bảng quá lớn', 'Chỉ bị chặn ở mức Serializable'], ans: 1, why: 'Nhờ MVCC, câu lệnh đọc luôn nhìn thấy một snapshot phiên bản cũ hợp lệ mà không cần chờ người ghi commit.' },
+    { q: 'Khi 2 phiên cùng chạy UPDATE trên cùng 1 dòng, phiên thứ hai sẽ ở trạng thái chờ gì?', opts: ['Chờ khóa bảng AccessExclusiveLock', 'Chờ trên Lock loại transactionid của phiên thứ nhất', 'Bị từ chối ngay lập tức', 'Tự động tạo bản ghi mới'], ans: 1, why: 'Phiên B chờ trực tiếp trên Transaction ID của Phiên A. Khi A commit/rollback, B mới được chạy tiếp.' },
+    { q: 'Trường xmax trên một Heap Tuple mang ý nghĩa gì?', opts: ['Số lượng cột tối đa của bảng', 'Thời gian tạo bản ghi', 'ID của transaction đã xóa hoặc cập nhật phiên bản dòng này', 'Giá trị lớn nhất của khóa chính'], ans: 2, why: 'xmax lưu Transaction ID của giao dịch đã đánh dấu xóa/cập nhật bản ghi đó.' }
+  ],
+  4: [
+    { q: 'Một transaction ở mức REPEATABLE READ chỉ SELECT một lần rồi bỏ quên không đóng (idle) sẽ gây tác hại gì?', opts: ['Không tác hại vì không ghi dữ liệu', 'Ghìm chân trời xmin horizon, khiến VACUUM không thể dọn dẹp các tuple chết sau đó', 'Tự động bị PostgreSQL đóng sau 5 giây', 'Làm khóa toàn bộ bảng'], ans: 1, why: 'Snapshot của transaction RR chụp từ câu query đầu tiên giữ chặt xmin horizon, khiến VACUUM phải bỏ qua các tuple chết.' },
+    { q: 'Điều gì xảy ra với các bản ghi UPDATE khi transaction bị ROLLBACK?', opts: ['Biến mất ngay lập tức khỏi đĩa', 'Nằm lại trên heap dưới dạng dead tuples cho tới khi VACUUM dọn dẹp', 'Được hoàn tác vào file tạm', 'Chuyển sang bảng khác'], ans: 1, why: 'Rollback tức thì không xóa đĩa; bản ghi mới sinh ra trở thành dead tuple và chờ VACUUM thu hồi không gian.' },
+    { q: 'Tại sao việc tích tụ nhiều dead tuples lại khiến câu lệnh SELECT id = 1 chạy chậm hơn?', opts: ['Do CPU bị nghẽn', 'Do câu truy vấn phải bước qua chuỗi phiên bản chết (version chain) trên các trang đĩa', 'Do index bị mất', 'Do bảng bị phân mảnh mạng'], ans: 1, why: 'Index vẫn trỏ vào chuỗi tuple cũ trên heap; Postgres phải đọc các trang heap đó để kiểm tra visibility.' }
+  ],
+  5: [
+    { q: 'Tại sao nên chia nhỏ 1 câu lệnh UPDATE 20,000 dòng thành 10 lô 2,000 dòng kèm VACUUM?', opts: ['Để giảm tổng dung lượng WAL xuống bằng 0', 'Để mỗi lô giải phóng khóa dòng sớm và cho phép VACUUM tái sử dụng không gian trang đĩa từ tuple chết', 'Vì Postgres giới hạn 2,000 dòng/lệnh', 'Để tránh phải ghi WAL'], ans: 1, why: 'Lab 05 chứng minh tổng lượng WAL của hai cách gần như bằng nhau; lợi ích thực sự của chia lô là rút ngắn thời gian giữ khóa dòng và giúp VACUUM thu hồi trang heap giữa các lô.' },
+    { q: 'Chốt chặn nào tự động ngắt kết nối client khi lập trình viên bỏ quên transaction mở?', opts: ['lock_timeout', 'statement_timeout', 'idle_in_transaction_session_timeout', 'deadlock_timeout'], ans: 2, why: 'idle_in_transaction_session_timeout tự động đóng phiên và ném lỗi 25P03 sau thời gian cấu hình.' },
+    { q: 'Câu lệnh an toàn để admin ngắt một transaction treo từ xa là gì?', opts: ['DROP TRANSACTION', 'SELECT pg_terminate_backend(pid)', 'DELETE FROM pg_stat_activity', 'KILL CONNECTION'], ans: 1, why: 'pg_terminate_backend gửi tín hiệu ngắt an toàn, phiên bị đóng sẽ tự ROLLBACK và giải phóng toàn bộ khóa.' }
+  ],
+  6: [
+    { q: 'Trên PostgreSQL 16, hiện tượng Dirty Read có thể xảy ra ở mức nào?', opts: ['READ UNCOMMITTED', 'READ COMMITTED', 'Cả 4 mức', 'Không mức nào (PostgreSQL không bao giờ bị Dirty Read)'], ans: 3, why: 'Postgres nâng mức READ UNCOMMITTED lên thành READ COMMITTED nên không bao giờ đọc dữ liệu chưa commit.' },
+    { q: 'Lệnh SET TRANSACTION ISOLATION LEVEL đặt sau câu lệnh SELECT đầu tiên trong transaction sẽ thế nào?', opts: ['Đổi mức cô lập cho các câu lệnh sau', 'Bị từ chối với lỗi 25001', 'Tự động commit câu lệnh trước', 'Không có tác dụng gì'], ans: 1, why: 'Postgres yêu cầu mức cô lập phải được xác lập trước khi câu truy vấn dữ liệu đầu tiên bắt đầu.' },
+    { q: 'Dị thường Non-Repeatable Read khác Phantom Read ở điểm nào?', opts: ['Non-Repeatable Read xảy ra trên 1 dòng cụ thể; Phantom Read xảy ra trên tập dòng thoả mãn điều kiện', 'Cả hai là một', 'Phantom Read chỉ có trên MySQL', 'Non-Repeatable Read chỉ xảy ra khi DELETE'], ans: 0, why: 'Non-repeatable read là sửa giá trị của 1 dòng; Phantom read là chèn/xóa dòng mới làm thay đổi số lượng đếm.' }
+  ],
+  7: [
+    { q: 'Dị thường Write Skew là gì?', opts: ['Hai phiên cùng sửa 1 dòng dữ liệu', 'Hai phiên cùng đọc điều kiện chung rồi mỗi phiên sửa một dòng khác nhau, dẫn tới vi phạm ràng buộc', 'Một phiên bị mất kết nối mạng', 'Ghi sai kiểu dữ liệu'], ans: 1, why: 'Vì sửa 2 dòng khác nhau nên khóa dòng không chặn nhau; chỉ có mức Serializable mới phát hiện được.' },
+    { q: 'Trong kịch bản Write Skew (Lab 08), khi cả A và B cùng đọc rồi sửa 2 dòng khác nhau ở mức SERIALIZABLE, điều gì xảy ra?', opts: ['Khóa phiên B chờ phiên A', 'Postgres phát hiện phụ thuộc đọc-ghi (SSI) và hủy giao dịch bằng mã lỗi 40001 (ở kịch bản này rơi vào lệnh COMMIT thứ hai)', 'Ghi đè cả hai thay đổi', 'Báo lỗi deadlock 40P01'], ans: 1, why: 'Thuật toán SSI gắn khóa ảo SIRead và ném mã lỗi 40001 (có thể xảy ra ở COMMIT hoặc câu lệnh đọc/ghi phát hiện chu kỳ, nên ứng dụng phải bọc retry cho toàn bộ giao dịch).' },
+    { q: 'Cơ chế giải quyết triệt để khi sử dụng mức cô lập SERIALIZABLE trong ứng dụng là gì?', opts: ['Bỏ qua lỗi', 'Bọc transaction trong vòng lặp thử lại (Retry loop) khi gặp mã lỗi 40001', 'Tăng timeout lên vô hạn', 'Dùng Redis khóa ngoài'], ans: 1, why: 'Mức Serializable đi liền với nguyên lý chấp nhận xung đột và tự động retry toàn bộ giao dịch.' }
+  ],
+  8: [
+    { q: 'Lỗi tai hại nhất khi sử dụng dataSource.transaction trong NestJS TypeORM là gì?', opts: ['Đặt tên biến quá dài', 'Dùng Repository được inject ở Constructor thay vì EntityManager/Repository của transaction', 'Không dùng async/await', 'Dùng log console'], ans: 1, why: 'Repository được inject chạy trên connection pool riêng, nằm hoàn toàn ngoài transaction đang mở.' },
+    { q: 'Tại sao hàm save() trong TypeORM dễ gây Lost Update?', opts: ['Vì save() không chạy SQL', 'Vì save() thực hiện Read-Modify-Write: đọc về rồi ghi đè nguyên object, ghi đè thay đổi của phiên khác', 'Do save() tự động rollback', 'Do TypeORM chỉ hỗ trợ MySQL'], ans: 1, why: 'Thao tác đọc-sửa-ghi từ phía app không giữ khóa dòng ở mức Read Committed, dẫn tới mất cập nhật.' },
+    { q: 'Để vừa giữ được tính nhất quán nghiệp vụ ở mức Read Committed vừa không phải retry 40001, ta dùng kỹ thuật gì?', opts: ['SELECT ... FOR UPDATE trên các dòng liên quan', 'Tắt transaction', 'Dùng setTimeout', 'Dùng MongoDB'], ans: 0, why: 'Khóa bi quan SELECT FOR UPDATE chặn các phiên khác cũng muốn khóa hoặc sửa các dòng đó (SELECT thường vẫn đọc được nhờ MVCC), giúp tuần tự hóa bước kiểm tra và cập nhật.' }
+  ]
+};
+
+var EXAM = [
+  { q: '1. Giải thích nguyên lý "Readers never block Writers, Writers never block Readers" trong PostgreSQL.', a: 'Nhờ MVCC, câu lệnh đọc (SELECT) luôn đọc một snapshot phiên bản dữ liệu hợp lệ trong quá khứ mà không cần đặt khóa đọc chặn người ghi. Ngược lại, câu lệnh UPDATE tạo một tuple mới trên heap và chỉ khóa dòng đang ghi; người đọc khác vẫn truy cập vào tuple phiên bản cũ. Hai bên hoàn toàn không chặn nhau.' },
+  { q: '2. Tại sao PostgreSQL không cần Undo Log như InnoDB (MySQL) mà vẫn Rollback được tức thì?', a: 'PostgreSQL ghi trực tiếp phiên bản mới vào Heap Page và lưu vết xmin/xmax. Khi ROLLBACK, Postgres chỉ cần ghi một bản ghi ABORT vào WAL và cập nhật trạng thái transaction trong clog (pg_xact) là đã hủy. Dữ liệu cũ vẫn nằm nguyên vị trí trên heap, không phải tốn I/O chạy ngược các thao tác như Undo Log.' },
+  { q: '3. Phân biệt snapshot của mức READ COMMITTED và REPEATABLE READ trong Postgres.', a: 'Ở mức Read Committed, mỗi câu lệnh SQL đơn lẻ bên trong transaction sẽ chụp một snapshot mới tại thời điểm câu lệnh đó bắt đầu chạy. Ở mức Repeatable Read, snapshot được chụp cố định tại thời điểm câu lệnh đọc/ghi đầu tiên của transaction chạy và được giữ nguyên vẹn cho tới khi transaction kết thúc.' },
+  { q: '4. Hiện tượng "Chân trời Snapshot" (xmin horizon) là gì và vì sao transaction treo lại nguy hiểm?', a: 'Chân trời xmin là Transaction ID nhỏ nhất của một giao dịch còn sống trong database. VACUUM chỉ được dọn các bản ghi chết có xmax nhỏ hơn chân trời này. Một transaction REPEATABLE READ mở ra rồi bị treo (dù chỉ đọc) sẽ ghìm chân trời xmin lại, khiến toàn bộ các bản ghi chết sinh ra sau đó không thể dọn dẹp, gây phình to bảng (bloat).' },
+  { q: '5. Mã lỗi 25P02 trong PostgreSQL là gì và cách ứng phó trong code?', a: 'Mã 25P02 (current transaction is aborted, commands ignored until end of transaction block) xuất hiện khi một câu lệnh trước đó trong transaction bị lỗi nhưng ứng dụng vẫn cố gửi tiếp câu lệnh SQL khác. Toàn bộ transaction đã chết; bắt buộc phải ROLLBACK (hoặc dùng SAVEPOINT trước lệnh nhạy cảm để cứu).' },
+  { q: '6. Phân tích nguyên nhân và cách giải quyết dị thường Write Skew.', a: 'Write Skew xảy ra khi 2 transaction đồng thời đọc cùng một điều kiện kiểm tra nghiệp vụ, sau đó mỗi transaction cập nhật một dòng dữ liệu khác nhau. Vì sửa khác dòng nên khóa dòng không xung đột, dẫn tới vi phạm ràng buộc tổng thể. Giải pháp: nâng lên mức SERIALIZABLE (Postgres sẽ phát hiện và ném 40001 ở commit thứ hai) hoặc dùng SELECT ... FOR UPDATE khóa các dòng điều kiện ngay từ đầu.' },
+  { q: '7. Khi sử dụng mức cô lập SERIALIZABLE, phía Backend bắt buộc phải có cơ chế gì?', a: 'Bắt buộc phải có cơ chế Retry Loop (vòng lặp thử lại). Mức Serializable của Postgres sử dụng SSI để phát hiện xung đột phụ thuộc đọc-ghi và chủ động hủy giao dịch với mã lỗi 40001 (serialization_failure). Ứng dụng phải bắt mã lỗi 40001, rollback và chạy lại toàn bộ nghiệp vụ từ đầu.' },
+  { q: '8. Tác hại của việc để lọt lệnh gọi HTTP API hoặc gửi mail bên trong Database Transaction?', a: 'Giữ database connection trong thời gian dài chờ I/O mạng bên ngoài. Nếu dịch vụ ngoài phản hồi chậm 2-3 giây, connection pool của database sẽ nhanh chóng cạn kiệt, các request khác phải xếp hàng chờ, dẫn tới sập toàn bộ hệ thống (cascading failure).' },
+  { q: '9. Kể tên 3 timeout phòng thủ cốt lõi của PostgreSQL và vai trò từng loại.', a: '1) lock_timeout: giới hạn thời gian tối đa chờ giành khóa dòng/bảng (chống treo vĩnh viễn, ném 55P03). 2) statement_timeout: giới hạn thời gian chạy của 1 câu query (chống query quét bảng quá lâu). 3) idle_in_transaction_session_timeout: tự động ngắt kết nối nếu transaction mở bị bỏ rơi không commit/rollback (chống giữ horizon, ném 25P03).' },
+  { q: '10. Trong TypeORM / NestJS, lỗi phổ biến nhất dẫn tới việc Transaction bị vô hiệu hóa là gì?', a: 'Lập trình viên bọc logic trong dataSource.transaction(async (manager) => { ... }) nhưng bên trong callback lại sử dụng this.userRepository (được inject ở constructor) thay vì manager.getRepository(User). Lệnh gọi qua this.userRepository sẽ lấy connection mới từ pool và chạy hoàn toàn ngoài transaction!' }
+];
+/* === GUIDE_DATA_END === */
+
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Warmup persistence (l12-warmup)
+  const warm = $('#warmup');
+  if (warm) {
+    warm.value = store.get('l12-warmup') ?? '';
+    warm.addEventListener('input', () => store.set('l12-warmup', warm.value));
+  }
+
+  // Walkthrough input persistence (l12-m1-*, l12-m3-*)
+  $$('input[data-store]').forEach((inp) => {
+    inp.value = store.get(inp.dataset.store) ?? '';
+    inp.addEventListener('input', () => store.set(inp.dataset.store, inp.value));
+  });
+
+  // Render Quizzes
+  $$('.quiz[data-quiz]').forEach((box) => {
+    const n = box.dataset.quiz;
+    const qs = QUIZ[n];
+    if (!qs) return;
+    let score = 0, answered = 0;
+    box.innerHTML = `<div class="quiz-head"><h4>Tự kiểm tra Chặng ${n}</h4><span class="quiz-score num">0/${qs.length}</span></div>` +
+      qs.map((x, i) => {
+        const order = x.opts.map((_, j) => j).sort(() => Math.random() - 0.5);
+        return `<div class="q" data-i="${i}"><p class="q-text">${i + 1}. ${esc(x.q)}</p><div class="q-opts">${order.map((j) => `<button type="button" class="q-opt" data-j="${j}">${esc(x.opts[j])}</button>`).join('')}</div></div>`;
+      }).join('');
+    $$('.q', box).forEach((qel) => {
+      const x = qs[+qel.dataset.i];
+      $$('.q-opt', qel).forEach((btn) => btn.addEventListener('click', () => {
+        const j = +btn.dataset.j;
+        $$('.q-opt', qel).forEach((b) => { b.disabled = true; if (+b.dataset.j === x.ans) b.classList.add('right'); });
+        if (j === x.ans) score++; else btn.classList.add('wrong');
+        answered++;
+        const ex = document.createElement('div');
+        ex.className = 'q-explain';
+        ex.innerHTML = `<strong>${j === x.ans ? 'Đúng.' : 'Chưa đúng.'}</strong> ${esc(x.why)}`;
+        qel.appendChild(ex);
+        $('.quiz-score', box).textContent = `${score}/${qs.length}${answered === qs.length ? (score === qs.length ? ' · Đạt' : ' · Xem lại phần sai') : ''}`;
+      }));
+    });
+  });
+
+  // Render Exam
+  $('#examList').innerHTML = EXAM.map((e) => `<details class="fold"><summary>${esc(e.q)}</summary><div class="fold-body"><p>${esc(e.a)}</p></div></details>`).join('');
+  // Render Slide Map
+  $('#slideMap').innerHTML = SLIDES.map((s) => `<a class="chip${s.pg ? ' pg' : ''}" href="${s.href}"><b>${s.n}</b> ${esc(s.title)}</a>`).join('');
+
+  // Widget 1 Logic
+  // Widget 1 Logic (Stateful transaction state machine)
+  const w1State = $('#w1-state'), w1Prompt = $('#w1-prompt'), w1Cmd = $('#w1-cmd'), w1Desc = $('#w1-desc');
+  let txState = 'idle'; // 'idle' | 'tx' | 'aborted'
+  $('#w1-btn-begin')?.addEventListener('click', () => {
+    w1Cmd.textContent = 'BEGIN;';
+    if (txState === 'idle') {
+      txState = 'tx';
+      w1State.innerHTML = '<code>idle in transaction</code>'; w1Prompt.innerHTML = '<code>=*#</code>';
+      w1Desc.textContent = 'Đang mở transaction (* biểu thị transaction active)';
+    } else if (txState === 'tx') {
+      w1Desc.textContent = 'WARNING 25001: there is already a transaction in progress (vẫn ở =*#)';
+    } else {
+      w1Desc.textContent = 'ERROR 25P02: giao dịch đang hỏng, phải ROLLBACK trước';
+    }
+  });
+  $('#w1-btn-err')?.addEventListener('click', () => {
+    w1Cmd.textContent = 'SELECT 1/0;';
+    if (txState === 'idle') {
+      w1State.innerHTML = '<code>idle</code>'; w1Prompt.innerHTML = '<code>=#</code>';
+      w1Desc.textContent = 'ERROR 22012 (autocommit): câu lệnh đơn lẻ tự hủy, phiên vẫn ở trạng thái idle (=#)';
+    } else {
+      txState = 'aborted';
+      w1State.innerHTML = '<code>idle in transaction (aborted)</code>'; w1Prompt.innerHTML = '<code>=!#</code>';
+      w1Desc.textContent = 'ERROR 22012: Transaction chuyển sang trạng thái hỏng (! biểu thị mọi lệnh tiếp theo sẽ bị chặn bởi 25P02)';
+    }
+  });
+  $('#w1-btn-commit')?.addEventListener('click', () => {
+    w1Cmd.textContent = 'COMMIT;';
+    if (txState === 'tx') {
+      txState = 'idle';
+      w1State.innerHTML = '<code>idle</code>'; w1Prompt.innerHTML = '<code>=#</code>';
+      w1Desc.textContent = 'Tag trả về: COMMIT — Đã lưu thay đổi và kết thúc transaction';
+    } else if (txState === 'aborted') {
+      txState = 'idle';
+      w1State.innerHTML = '<code>idle</code>'; w1Prompt.innerHTML = '<code>=#</code>';
+      w1Desc.textContent = 'Tag trả về: ROLLBACK — Giao dịch đang hỏng nên lệnh COMMIT thực chất bị biến thành ROLLBACK!';
+    } else {
+      w1Desc.textContent = 'WARNING 25P01: there is no transaction in progress';
+    }
+  });
+  $('#w1-btn-rollback')?.addEventListener('click', () => {
+    w1Cmd.textContent = 'ROLLBACK;';
+    txState = 'idle';
+    w1State.innerHTML = '<code>idle</code>'; w1Prompt.innerHTML = '<code>=#</code>';
+    w1Desc.textContent = 'Tag trả về: ROLLBACK — Đã hoàn tác giao dịch và trở về trạng thái idle (=#)';
+  });
+
+  // Widget 2 Logic
+  const w2Note = $('#w2-note');
+  $('#w2-btn-on')?.addEventListener('click', (e) => {
+    e.currentTarget.classList.add('primary'); $('#w2-btn-off')?.classList.remove('primary');
+    if (w2Note) w2Note.innerHTML = 'Đang chọn: <code>synchronous_commit = on</code> (302 ms / 100 tx) — COMMIT chờ WAL flush xuống đĩa, bảo đảm không mất giao dịch nào khi sập nguồn.';
+  });
+  $('#w2-btn-off')?.addEventListener('click', (e) => {
+    e.currentTarget.classList.add('primary'); $('#w2-btn-on')?.classList.remove('primary');
+    if (w2Note) w2Note.innerHTML = 'Đang chọn: <code>synchronous_commit = off</code> (154 ms / 100 tx) — COMMIT trả về ngay khi ghi vào WAL buffer; nếu mất điện đột ngột có thể mất vài giao dịch trong ~600ms cuối nhưng không bao giờ gây hỏng trang dữ liệu.';
+  });
+
+  // Widget 3 Logic
+  const w3Display = $('#w3-display');
+  const paintW3 = (mode) => {
+    if (!w3Display) return;
+    if (mode === 'rc') {
+      w3Display.innerHTML = '<table><thead><tr><th>Phiên A bước 2</th><th>Phiên B bước 3</th><th>Phiên A bước 4 (Đọc lại ở READ COMMITTED)</th></tr></thead><tbody><tr><td><code>SELECT id=1 -> total=478461.34 (ctid=(0,1), xmin=6015)</code></td><td><code>UPDATE id=1 SET total=478462.34 RETURNING ctid=(15,1), xmin=6016</code></td><td><strong>Thấy bản ghi mới:</strong> <code>total=478462.34 (ctid=(15,1), xmin=6016)</code><br><small class="muted">RC lấy snapshot mới cho câu SELECT thứ hai nên nhìn thấy ngay thay đổi vừa commit của B.</small></td></tr></tbody></table>';
+    } else {
+      w3Display.innerHTML = '<table><thead><tr><th>Phiên A bước 2</th><th>Phiên B bước 3</th><th>Phiên A bước 4 (Đọc lại ở REPEATABLE READ)</th></tr></thead><tbody><tr><td><code>SELECT id=1 -> total=478462.34 (ctid=(15,1), xmin=6016)</code></td><td><code>UPDATE id=1 SET total=478463.34 RETURNING ctid=(15,2), xmin=6017</code></td><td><strong>Vẫn thấy bản ghi cũ:</strong> <code>total=478462.34 (ctid=(15,1), xmin=6016, xmax=6017)</code><br><small class="muted">RR giữ snapshot cố định từ câu query đầu tiên. B đã đóng dấu xmax=6017 lên dòng cũ nhưng A chưa nhìn thấy dòng mới.</small></td></tr></tbody></table>';
+    }
+  };
+  paintW3('rc');
+  $('#w3-btn-rc')?.addEventListener('click', (e) => { e.target.classList.add('primary'); $('#w3-btn-rr').classList.remove('primary'); paintW3('rc'); });
+  $('#w3-btn-rr')?.addEventListener('click', (e) => { e.target.classList.add('primary'); $('#w3-btn-rc').classList.remove('primary'); paintW3('rr'); });
+
+  // Widget 5 Logic
+  $('#w5-btn-kill')?.addEventListener('click', () => {
+    const l = $('#w5-log');
+    if (l) l.innerHTML = '<span class="good">✔ Đã chạy pg_terminate_backend(33568) thành công! Phiên A bị hủy với mã lỗi 57P01, khóa dòng được giải phóng lập tức.</span>';
+  });
+  // Widget 4 Logic
+  const w4Display = $('#w4-display');
+  const paintW4 = (kind) => {
+    if (!w4Display) return;
+    if (kind === 'skew') {
+      w4Display.innerHTML = '<table><thead><tr><th>Mức cô lập</th><th>Bước 1–2 (A &amp; B đọc + sửa 2 dòng khác nhau)</th><th>Bước 3 (A &amp; B COMMIT)</th><th>Kết quả cuối</th></tr></thead><tbody><tr><td><code>REPEATABLE READ</code></td><td>Cả hai đọc thấy <code>on_duty = 2</code>; A tắt rep 1, B tắt rep 2 (không chặn nhau)</td><td>Cả A và B đều COMMIT thành công</td><td><span class="vchip diff">on_duty = 0 (Vi phạm!)</span></td></tr><tr><td><code>SERIALIZABLE</code></td><td>Cả hai gắn khóa đọc ảo SIRead; A tắt rep 1, B tắt rep 2</td><td>A COMMIT thành công; <strong>B COMMIT bị hủy với 40001</strong></td><td><span class="vchip ok">on_duty = 1 (An toàn!)</span></td></tr></tbody></table>';
+    } else if (kind === 'lost') {
+      w4Display.innerHTML = '<table><thead><tr><th>Mức cô lập</th><th>A &amp; B đọc total=100</th><th>A trừ 10 (ghi 90) &amp; COMMIT; B trừ 20 (ghi 80)</th><th>Kết quả cuối</th></tr></thead><tbody><tr><td><code>READ COMMITTED</code></td><td>Cùng đọc 100 về biến ứng dụng</td><td>B chờ A xong rồi ghi đè 80 lên 90</td><td><span class="vchip diff">total = 80 (Mất -10 của A!)</span></td></tr><tr><td><code>REPEATABLE READ</code></td><td>Cùng đọc 100 trong snapshot</td><td>Khi A commit, B đang chờ bị hủy ngay với <strong>40001</strong></td><td><span class="vchip ok">total = 90 (Bảo toàn!)</span></td></tr></tbody></table>';
+    } else {
+      w4Display.innerHTML = '<table><thead><tr><th>Mức cô lập</th><th>Câu lệnh nguyên tử: SET total = total - delta</th><th>Cơ chế xử lý xung đột</th><th>Kết quả cuối</th></tr></thead><tbody><tr><td><code>READ COMMITTED</code></td><td>A trừ 10, B trừ 20 trực tiếp trong SQL</td><td>B chờ A commit rồi dùng EvalPlanQual đọc lại 90 để trừ tiếp 20</td><td><span class="vchip ok">total = 70 (Chính xác!)</span></td></tr><tr><td><code>REPEATABLE READ</code></td><td>A trừ 10, B trừ 20 trực tiếp trong SQL</td><td>Snapshot RR không cho phép đọc lại dòng mới -> ném <strong>40001</strong></td><td><span class="vchip ok">total = 90 (Cần retry B!)</span></td></tr></tbody></table>';
+    }
+  };
+  paintW4('skew');
+  ['skew', 'lost', 'atomic'].forEach((k) => {
+    $(`#w4-btn-${k}`)?.addEventListener('click', (e) => {
+      ['skew', 'lost', 'atomic'].forEach((x) => $(`#w4-btn-${x}`)?.classList.remove('primary'));
+      e.target.classList.add('primary');
+      paintW4(k);
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2645 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sổ tay Locking · Bài 14</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eceff4; --fg: #1a1d24; --muted: #596172; --line: #d8dde6;
+  --accent: #1f5fa8; --accent-soft: #e5eefa; --accent-fg: #ffffff;
+  --ok: #1d7a4c; --ok-soft: #e2f3e9; --bad: #b3261e; --bad-soft: #fbe8e6; --warn: #8f5407; --warn-soft: #fcf0da;
+  --code-bg: #1c1f26; --code-fg: #e9ecf2; --code-muted: #9aa3b2;
+  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+    --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+    --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+    --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #191c22; --surface-2: #22262e; --fg: #e8ebf1; --muted: #a0a8b6; --line: #313641;
+  --accent: #8fb8f0; --accent-soft: #1e2a3d; --accent-fg: #111318;
+  --ok: #5ccb93; --ok-soft: #15291f; --bad: #f2877c; --bad-soft: #351a1a; --warn: #e8ad55; --warn-soft: #302512;
+  --code-bg: #0d0f13; --code-fg: #e9ecf2; --code-muted: #8a93a3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 400 16px/1.7 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font: 800 clamp(2.4rem, 6vw, 3.6rem)/1.05 var(--font-display); letter-spacing: -0.02em; }
+h2 { font: 800 clamp(1.6rem, 3.4vw, 2.1rem)/1.15 var(--font-display); letter-spacing: -0.01em; }
+h3 { font: 700 1.2rem/1.35 var(--font-body); margin-top: 2.2rem; }
+h4 { font: 700 1rem/1.4 var(--font-body); margin-top: 1.4rem; }
+p { margin: 0.75rem 0; }
+ul, ol { margin: 0.6rem 0; padding-left: 1.3rem; }
+li { margin: 0.3rem 0; }
+code, pre { font-variant-ligatures: none; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.eyebrow { font: 600 0.74rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.shell { max-width: 920px; margin: 0 auto; display: block; width: 100%; overflow-x: clip; }
+main { min-width: 0; padding-block: 28px; width: 100%; }
+.col { max-width: 100%; min-width: 0; }
+.hero { padding: 24px 0 8px; display: grid; gap: 16px; position: relative; }
+.hero .lead { font-size: 1.12rem; color: var(--muted); max-width: 100%; margin: 0; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font: 500 0.88rem/1.4 var(--font-mono); color: var(--muted); }
+.hero-meta b { color: var(--fg); font-weight: 600; }
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.epigraph { font-style: italic; color: var(--muted); border-left: 2px solid var(--line); padding-left: 14px; margin: 4px 0 0; font-size: 0.95rem; }
+.stage { margin-top: 72px; scroll-margin-top: 16px; }
+.stage-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; align-items: end; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.stage-no { font: 800 clamp(3rem, 8vw, 4.6rem)/0.85 var(--font-display); color: var(--accent); grid-row: span 2; }
+.stage-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 500 0.8rem/1.4 var(--font-mono); color: var(--muted); }
+.goal { margin: 14px 0 0; font-size: 0.98rem; }
+.goal b { color: var(--accent); }
+.callout { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; scroll-margin-top: 16px; }
+.callout > .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px; }
+.callout.teacher .tag { background: var(--accent-soft); color: var(--accent); }
+.callout.warn { background: var(--warn-soft); border-color: transparent; }
+.callout.warn .tag { background: var(--surface); color: var(--warn); }
+.callout.key .tag { background: var(--surface); color: var(--ok); }
+.callout.key { border-left: 3px solid var(--ok); }
+.callout.pg { background: var(--surface); border-left: 3px solid var(--accent); }
+.callout.pg .tag { background: var(--accent-soft); color: var(--accent); }
+.callout.cite-mysql { background: var(--surface-2); border-style: dashed; }
+.callout.cite-mysql .tag { background: var(--warn-soft); color: var(--warn); }
+.callout p:first-of-type { margin-top: 4px; }
+.callout ul { margin-bottom: 0; }
+.sayvs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 16px; margin-top: 8px; }
+.sayvs > div { min-width: 0; }
+.sayvs h5 { margin: 0 0 4px; font: 600 0.74rem/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.sayvs p { margin: 0.3rem 0; }
+.wwh { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 16px; margin: 14px 0; padding: 14px 0; border-block: 1px solid var(--line); }
+.wwh dt { font: 600 0.78rem/1.7 var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.wwh dd { margin: 0; }
+.table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 0.78rem/1.4 var(--font-body); color: var(--muted); background: var(--surface-2); text-transform: uppercase; letter-spacing: 0.03em; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr[data-spill] td { background: var(--warn-soft); }
+tr[data-total] td { font-weight: 700; background: var(--surface-2); }
+.code { position: relative; margin: 14px 0; }
+.code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 16px; overflow-x: auto; font: 400 0.82rem/1.6 var(--font-mono); tab-size: 2; }
+.code pre code { background: none; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+.terminal pre { border-left: 3px solid var(--ok); }
+.run-label { font: 500 0.78rem/1.4 var(--font-mono); color: var(--muted); margin: 20px 0 -6px; }
+.run-label code { background: none; padding: 0; color: var(--ok); font-weight: 600; }
+.widget { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin: 22px 0; overflow: hidden; }
+.widget-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.widget-head h4 { margin: 0; font-size: 1rem; }
+.widget-head .eyebrow { color: var(--accent); }
+.widget-body { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.widget-body > * { min-width: 0; margin: 0; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 600 0.86rem/1.2 var(--font-body); padding: 11px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; text-align: left; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary, .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.right { background: var(--ok-soft); border-color: var(--ok); color: var(--fg); }
+.btn.wrong { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.toggle { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 600; font-size: 0.92rem; }
+.toggle input { appearance: none; -webkit-appearance: none; flex: none; width: 44px; height: 44px; margin: 0 -6px 0 -10px; cursor: pointer; border-radius: 8px;
+  background: no-repeat center / 22px 22px linear-gradient(var(--surface), var(--surface)), no-repeat center / 26px 26px linear-gradient(var(--muted), var(--muted)); }
+.toggle input:checked { background: no-repeat center / 20px 20px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6' fill='none' stroke='%23ffffff' stroke-width='3.2'/%3E%3C/svg%3E"), no-repeat center / 26px 26px linear-gradient(var(--accent), var(--accent)); }
+.out { padding: 12px 14px; border-radius: 8px; background: var(--surface-2); font-size: 0.93rem; }
+.out p { margin: 0.35rem 0; }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 52px minmax(0, 1fr) 56px; align-items: center; gap: 8px; font: 500 0.84rem var(--font-mono); }
+.bar-track { position: relative; height: 18px; background: var(--bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.bar-zero { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--muted); }
+.bar-fill { position: absolute; top: 2px; bottom: 2px; background: var(--accent); border-radius: 3px; }
+.bar-fill.neg { background: var(--bad); }
+.bar-val { text-align: right; }
+.mx { table-layout: fixed; }
+.mx th { font-size: 0.68rem; overflow-wrap: anywhere; }
+.mx th:first-child { width: 28%; }
+.mx th, .mx td { padding: 6px; text-align: center; }
+.mx th:first-child, .mx td:first-child { text-align: left; }
+.cellbtn { width: 100%; min-height: 44px; border-radius: 6px; border: 1px solid var(--line); font: 600 0.8rem var(--font-mono); cursor: pointer; color: var(--fg); background: var(--surface); }
+.cellbtn.ok { background: var(--ok-soft); color: var(--ok); }
+.cellbtn.bad { background: var(--bad-soft); color: var(--bad); }
+.cellbtn[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lanes { display: grid; gap: 8px; }
+.lane { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+.lane .who { font: 800 1.1rem var(--font-display); color: var(--accent); }
+.lane .what { min-width: 0; overflow-wrap: anywhere; font-size: 0.9rem; }
+.pill { font: 600 0.72rem/1 var(--font-mono); padding: 6px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.wait { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.wfg { width: 100%; height: auto; max-height: 230px; display: block; }
+.wfg .node circle { fill: var(--surface); stroke: var(--accent); stroke-width: 3; }
+.wfg .node text { fill: var(--fg); font: 800 22px var(--font-display); }
+.wfg .node.dead circle { stroke: var(--bad); fill: var(--bad-soft); }
+.wfg .edge { stroke: var(--warn); stroke-width: 3; fill: none; }
+.wfg .edge.cycle { stroke: var(--bad); }
+.wfg .elabel { fill: var(--muted); font: 600 12px var(--font-mono); }
+.steps { font: 400 0.82rem/1.5 var(--font-mono); }
+.steps td { padding: 6px 10px; }
+.steps tr.now td { background: var(--accent-soft); }
+.steps tr.future td { opacity: 0.4; }
+.walk .field { min-width: 180px; }
+.walk td:first-child { width: 2.4rem; font-family: var(--font-mono); }
+.walk td:last-child { width: 38%; }
+.walk code { white-space: normal; overflow-wrap: break-word; }
+.toggle span { min-width: 0; }
+.quiz { margin: 26px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.quiz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.quiz-head h4 { margin: 0; }
+.quiz-score { font: 600 0.84rem var(--font-mono); color: var(--muted); }
+.q { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.q:last-child { border-bottom: 0; }
+.q-text { font-weight: 600; margin: 0 0 10px; }
+.q-opts { display: grid; gap: 6px; }
+.q-opt { text-align: left; font: 400 0.92rem/1.45 var(--font-body); padding: 11px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.q-opt:hover:not(:disabled) { border-color: var(--accent); }
+.q-opt:disabled { cursor: default; }
+.q-opt.right { background: var(--ok-soft); border-color: var(--ok); }
+.q-opt.wrong { background: var(--bad-soft); border-color: var(--bad); }
+.q-explain { margin-top: 10px; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
+details.fold { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: 10px 0; }
+details.fold > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; min-height: 44px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .fold-body { padding: 4px 14px 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 0.8rem/1.3 var(--font-mono); padding: 8px 12px; min-height: 44px; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; border-radius: 6px; background: var(--surface-2); color: var(--fg); text-decoration: none; max-width: 100%; }
+a.chip:hover { background: var(--accent-soft); }
+a.chip.pg { box-shadow: inset 0 -2px 0 var(--accent); }
+.vchip { display: inline-block; font: 600 0.7rem/1 var(--font-mono); padding: 5px 8px; border-radius: 99px; white-space: nowrap; vertical-align: middle; }
+.vchip.ok { background: var(--ok-soft); color: var(--ok); }
+.vchip.diff { background: var(--accent-soft); color: var(--accent); }
+.vchip.fix { background: var(--bad-soft); color: var(--bad); }
+.vchip.none { background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+.good { color: var(--ok); font-weight: 600; }
+.badx { color: var(--bad); font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; margin: 14px 0; }
+.panel h4 { margin-top: 0; }
+.field { font: 400 0.92rem var(--font-body); padding: 10px 12px; min-height: 44px; min-width: 140px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%; }
+textarea.field { min-height: 76px; resize: vertical; line-height: 1.5; }
+select.field { min-width: 0; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.fields label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; }
+b.m { color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
+figure.slide-fig { margin: 16px 0; background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+figure.slide-fig img { display: block; max-width: 100%; height: auto; max-height: 340px; margin: 0 auto; }
+figure.slide-fig figcaption { font: 500 0.76rem/1.4 var(--font-mono); color: #596172; margin-top: 6px; }
+main p a, main li a, .callout a { padding-block: 12px; }
+td a.stage-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -12px -8px; font-weight: 700; }
+#tham-khao ul a { display: inline-flex; align-items: center; min-height: 44px; padding-block: 0; }
+.theme-btn { font: 600 0.8rem/1 var(--font-mono); min-height: 44px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 560px) {
+  body { font-size: 15.5px; }
+  .wwh { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .stage-head { grid-template-columns: minmax(0, 1fr); }
+  .stage-no { grid-row: auto; }
+  .sayvs { grid-template-columns: minmax(0, 1fr); }
+  .lane { grid-template-columns: 28px minmax(0, 1fr); }
+  .lane .pill { grid-column: 2; justify-self: start; }
+  .walk thead { display: none; }
+  .walk tr { display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .walk td { border: 0; padding: 6px 12px; width: auto !important; }
+  .walk td:empty { display: none; }
+  .walk td[data-label]::before { content: attr(data-label); display: block; font: 600 0.68rem/1.4 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .walk .field { min-width: 0; }
+  .mx th, .mx td { padding: 4px 3px; }
+  .plan th:nth-child(5), .plan td:nth-child(5) { display: none; }
+  .plan th, .plan td { padding: 8px 8px; }
+  .cellbtn { font-size: 0.72rem; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<main>
+
+<header class="hero col">
+  <div class="hero-top">
+    <p class="eyebrow">Advance Backend · Bài 14 / 16 · sau Bài 12 Transaction</p>
+    <button type="button" class="theme-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">Sáng / Tối</button>
+  </div>
+  <h1>Locking</h1>
+  <p class="lead">Hai request cùng trừ tiền một ví. Bạn sẽ tự tạo ra ví âm, tự gây deadlock 40P01 trong hai cửa sổ psql, rồi xóa nó bằng một dòng <code>ORDER BY</code>. Mọi con số trong trang này đều đo trên PostgreSQL 16 của bạn.</p>
+  <div class="hero-meta">
+    <span><b>24</b> slide</span><span><b>8</b> chặng · Day 04</span><span><b>265</b> phút + 20 tùy chọn</span><span><b>8</b> lab chạy thật</span><span><b>32</b> câu quiz + <b>10</b> câu phỏng vấn</span>
+  </div>
+  <p class="epigraph">"Nhiều vấn đề nó nằm ở tâm lý, những cái định kiến sẽ là rào cản tâm lý." · slide 1</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Slide viết theo MySQL InnoDB, còn bạn chạy PostgreSQL 16. Mỗi slide có một nhãn: <span class="vchip ok">Đúng trên PG16</span> <span class="vchip diff">MySQL đúng, PG khác</span> <span class="vchip fix">Cần sửa</span>. Nhãn nào cũng có lab đo kèm.</p>
+  <p>Nhịp mỗi chặng: đọc 3 dòng LÀ GÌ / TẠI SAO / KHI NÀO KHÔNG, nhìn số đo, bấm widget, làm quiz. Chặng 5 bạn gõ tay trước trong 2 cửa sổ psql (làm mẫu), rồi mới chạy script.</p>
+
+  <div class="table-wrap">
+    <table class="plan">
+      <thead><tr><th>Chặng</th><th>Nội dung</th><th>Slide</th><th>Thời gian</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Mở 2 cửa sổ psql + DBX quan sát</td><td>1</td><td class="n">5 phút</td><td>thẻ setup</td></tr>
+        <tr><td><a class="stage-link" href="#chang-1">1</a></td><td>Ví âm: ai thật sự chặn được?</td><td>2, 4–5</td><td class="n">25 phút</td><td>W2 · Lab 14.01</td></tr>
+        <tr><td><a class="stage-link" href="#chang-2">2</a></td><td>S/X → 4 chế độ khóa dòng; khóa nằm ở xmax</td><td>3, 10, 14</td><td class="n">30 phút</td><td>W1 · Lab 14.02</td></tr>
+        <tr><td><a class="stage-link" href="#chang-3">3</a></td><td>Khóa bảng và hàng đợi DDL</td><td>6</td><td class="n">20 phút</td><td>W3 · Lab 14.03</td></tr>
+        <tr><td><a class="stage-link" href="#chang-4">4</a></td><td>Gap / next-key: vì sao PG không có</td><td>7–9, 11</td><td class="n">25 phút</td><td>Lab 14.04</td></tr>
+        <tr><td><a class="stage-link" href="#chang-5">5</a></td><td>Deadlock 40P01 và ORDER BY (DoD Day 04)</td><td>12, 14, 20, 22</td><td class="n">45 phút</td><td>M1, M2 · W4 · Lab 14.05</td></tr>
+        <tr><td><a class="stage-link" href="#chang-6">6</a></td><td>Bi quan: NOWAIT, SKIP LOCKED, dòng nóng</td><td>12–14</td><td class="n">30 phút</td><td>Lab 14.06, 14.08</td></tr>
+        <tr><td><a class="stage-link" href="#chang-7">7</a></td><td>Lạc quan: version CAS</td><td>15–18</td><td class="n">25 phút</td><td>W5 · Lab 14.07</td></tr>
+        <tr><td><a class="stage-link" href="#chang-8">8</a></td><td>Notes, recap, bài tập A–D, Prisma, phỏng vấn</td><td>19–24</td><td class="n">60 phút</td><td>hw-*.txt</td></tr>
+        <tr data-spill><td>+</td><td>Tối Day 04 · tùy chọn: D Advanced, C, M3</td><td>2, 22</td><td class="n">20 phút</td><td>hw-solution</td></tr>
+        <tr data-total><td></td><td>Tổng: lõi 265 + tùy chọn 20 = 285</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h4>Chuẩn bị (5 phút)</h4>
+    <ol>
+      <li>Bật DB: <code>docker start quan-ly-hop-dong-postgres-1</code>.</li>
+      <li>Mở Git Bash tại <code>labs/lesson-14-locking</code>, đặt biến <code>PG_URL</code> như Bài 3 mục 6.3, rồi <code>npm install</code>.</li>
+      <li>Dựng dữ liệu bằng <code>npm run setup</code>, kiểm tra bằng <code>npm run check</code> (phải ra 6 dấu ✔).</li>
+    </ol>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run setup</code></div>
+    <div class="code terminal"><pre class="code terminal" data-run="setup.txt">== Thẻ dữ liệu Bài 14 (schema lab14_locking) ==
+contracts      : 1000 dòng (chép từ lab03_indexing.hw_contracts, id ≤ 1.000)
+id 1 và 2      : 1: HD0000001, cửa hàng 44, ACTIVE, total 478461.34 | 2: HD0000002, cửa hàng 26, EXPIRED, total 856499.03
+cửa hàng 44    : 4 hợp đồng (store_id không có index)
+store_wallets  : A=50, B=0, C=0
+flights        : VN123 2 ghế (v0), VN456 2 ghế (v0)
+bookings       : 0 vé
+pgrowlocks     : đã cài trong lab14_locking
+[exit 0]</pre></div>
+  </div>
+
+  <div class="panel">
+    <h4>Hai cửa sổ psql A và B</h4>
+    <p>Mở 2 terminal, mỗi cái chạy <code>docker exec -it quan-ly-hop-dong-postgres-1 psql -U postgres -d advance_be_lab</code>. Dán đoạn sau (cửa sổ thứ hai đổi <code>psql-A</code> thành <code>psql-B</code>):</p>
+    <div class="code"><pre><code>SET application_name = 'psql-A';   -- cửa sổ B: 'psql-B'
+SET search_path = lab14_locking;     -- DB mặc định trỏ vào lab03_indexing
+SET lock_timeout = '30s';
+SET idle_in_transaction_session_timeout = '5min';
+\timing on
+\set VERBOSITY verbose</code></pre></div>
+    <p><code>lock_timeout '30s'</code> đủ dài để bạn kịp gõ, nhưng nhớ: chờ quá 30 s sẽ nhận 55P03, không phải 40P01. <code>\set VERBOSITY verbose</code> in kèm mã SQLSTATE vào mỗi lỗi.</p>
+    <h4>Cửa sổ quan sát O (DBX hoặc DBeaver, auto-commit ON)</h4>
+    <p>DBX/DBeaver phải giữ cùng một kết nối cho cửa sổ O (SET chỉ sống trong kết nối đó); các câu O trong bài vẫn ghi đủ <code>lab14_locking.</code> nên chạy được cả khi kết nối bị mở lại.</p>
+    <div class="code"><pre><code>SET search_path = lab14_locking;     -- DB mặc định trỏ vào lab03_indexing
+SELECT pid, application_name, state, wait_event_type, wait_event,
+       pg_blocking_pids(pid) AS blocked_by, left(query, 60) AS query
+FROM pg_stat_activity
+WHERE application_name LIKE 'psql-%'
+ORDER BY application_name;</code></pre></div>
+    <p>Chạy lại câu này sau mỗi bước để thấy ai đang chờ ai. Chơi tay xong, chạy <code>npm run setup -- --force</code> để trả dữ liệu playground về như cũ.</p>
+  </div>
+  <label class="fields"><span class="muted">Ghi chú trước khi học: điều bạn đang nghĩ về "khóa" (sẽ đối chiếu ở cuối bài)</span>
+    <textarea class="field" id="warmup" data-store="l14-warmup" placeholder="Ví dụ: tôi nghĩ FOR UPDATE chặn cả SELECT thường…"></textarea>
+  </label>
+</section>
+
+
+<!-- CHẶNG 1 -->
+<section id="chang-1" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">01</span>
+    <div>
+      <div class="stage-meta"><span>Slide 2, 4–5</span><span>25 phút</span><span>Day 04</span></div>
+      <h2>Ví âm −20: ai thật sự chặn được?</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> tái hiện đúng con số −20 của slide 2, rồi chỉ ra cơ chế nào chặn được nó và cơ chế nào không.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Race condition: hai request cùng kiểm tra "đủ tiền" trên số dư cũ, rồi cùng trừ.</dd>
+    <dt>TẠI SAO?</dt><dd>Kiểm tra và trừ là hai bước. Giữa hai bước, request kia chen vào.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng tự chế khóa trong app khi một câu <code>UPDATE … WHERE balance &gt;= 40</code> đã đủ.</dd>
+  </dl>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/14_Locking/page_02_img_01.png" alt="Slide 2: hai phiên cùng đọc 50, một phiên trừ 30, phiên kia trừ 40, số dư thành -20" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 2 · ví A có 50, hai request trừ 30 và 40 cùng lúc</figcaption></figure>
+
+  <p>Slide 2 kết luận "ví A = −20". Con số này chỉ ra khi có đủ hai điều kiện: kiểm tra trên số dư cũ (cả hai đọc 50), và trừ tương đối <code>balance = balance - 40</code>. Lab 14.01 chạy 5 cách viết trên cùng dữ liệu để bạn so.</p>
+
+  <div class="callout teacher">
+    <span class="tag">Đo trên máy bạn · Lab 14.01</span>
+    <ul>
+      <li><b>A.</b> Kiểm tra cũ + trừ tương đối: B chờ khóa dòng của A, rồi trừ 40 trên số dư mới 20 → ví A = <b class="m" data-run="lab01">-20</b>, tổng vẫn 50.</li>
+      <li><b>B.</b> App tự tính rồi ghi tuyệt đối <code>SET balance = 10</code>: ví A = <b class="m" data-run="lab01">10</b>, tổng = <b class="m" data-run="lab01">80</b> (in thêm 30 tiền).</li>
+      <li><b>C.</b> <code>SELECT … FOR UPDATE</code> rồi mới kiểm tra: B chờ, <b class="m" data-run="lab01">đọc 20, từ chối</b>.</li>
+      <li><b>D.</b> <code>UPDATE … AND balance &gt;= 40</code>: B được <b class="m" data-run="lab01">rowCount 0</b>, ví A = 20.</li>
+      <li><b>E.</b> <code>CHECK (balance &gt;= 0)</code>: B nhận <b class="m" data-run="lab01">23514</b>, ví A = 20.</li>
+    </ul>
+    <p>Cả 5 cách B đều chờ <b class="m" data-run="lab01">Lock/transactionid</b>. Khóa dòng của UPDATE luôn có; nó chỉ không kiểm tra hộ bạn.</p>
+  </div>
+
+  <div class="widget" id="w2">
+    <div class="widget-head"><h4>W2 · Ai chặn số âm?</h4><span class="eyebrow">Lab 14.01 · slide 2</span></div>
+    <div class="widget-body">
+      <p>Chọn một cách viết. Số dư lấy từ <code>npm run lab1 -- --json</code>.</p>
+      <div class="btns" id="w2-btns" role="group" aria-label="Chọn cách viết"></div>
+      <div class="bars" id="w2-bars" aria-live="polite"></div>
+      <div class="out" id="w2-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">Slide 4–5 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <p>Câu hỏi slide 4: dùng khóa loại gì? Đáp án slide 5: Exclusive lock, tức <code>SELECT … FOR UPDATE</code>. Cách C đúng như vậy. Nhưng cách D (một câu UPDATE có điều kiện) cũng đủ và nhẹ hơn; cách E là lưới an toàn cuối.</p>
+  </div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab1</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab01.txt">Lab 14.01 — Kiểm tra số dư sai chỗ làm ví âm hoặc mất tiền; FOR UPDATE, UPDATE có điều kiện và CHECK chặn được (slide 2, 4–5)
+…
+== A. Kiểm tra cũ (stale check) + trừ tương đối balance - 30 / balance - 40 ==
+A› BEGIN;
+A› SELECT balance FROM l01_wallets WHERE id = 1;
+B› BEGIN;
+B› SELECT balance FROM l01_wallets WHERE id = 1;
+  app: phiên A đọc 50 (≥ 30: đủ), phiên B đọc 50 (≥ 40: đủ) → cả hai cho chuyển
+A› UPDATE l01_wallets SET balance = balance - 30 WHERE id = 1;
+B› UPDATE l01_wallets SET balance = balance - 40 WHERE id = 1;
+A› UPDATE l01_wallets SET balance = balance + 30 WHERE id = 2;
+A› COMMIT;
+B› UPDATE l01_wallets SET balance = balance + 40 WHERE id = 3;
+B› COMMIT;
+  số dư cuối: ví A=-20 · ví B=30 · ví C=40 · tổng=50 (tiền phải được bảo toàn: tổng 50)
+✔ phiên B chờ Lock/transactionid (bị chặn bởi A), rồi trừ 40 trên số dư mới 20 → ví A = -20 (âm), tổng vẫn 50
+…
+Tóm tắt 5 cách (dữ liệu cho widget W2):
+cách                           │ ví A cuối │ tổng │ phiên B chờ?       │ phiên B
+───────────────────────────────┼───────────┼──────┼────────────────────┼──────────────────────────────────
+A. kiểm tra cũ + trừ tương đối │ -20       │ 50   │ Lock/transactionid │ trừ tiếp trên số dư mới, UPDATE 1
+B. ghi tuyệt đối (lost update) │ 10        │ 80   │ Lock/transactionid │ ghi đè số dư, UPDATE 1
+C. SELECT … FOR UPDATE         │ 20        │ 50   │ Lock/transactionid │ đọc 20, từ chối
+D. UPDATE … AND balance &gt;= 40  │ 20        │ 50   │ Lock/transactionid │ rowCount 0
+E. CHECK (balance &gt;= 0)        │ 20        │ 50   │ Lock/transactionid │ 23514, ROLLBACK
+…
+[exit 0]</pre></div>
+
+  <label class="fields"><span class="muted">Tự trả lời: vì sao cách B in thêm tiền còn cách A thì không?</span>
+    <textarea class="field" data-store="l14-c1-why" placeholder="Gợi ý: ai tính số mới, app hay DB?"></textarea>
+  </label>
+
+  <details class="fold"><summary>Làm thêm M3 (tùy chọn, tối Day 04): chuyển tiền slide 2 bằng FOR UPDATE trong 2 cửa sổ psql</summary><div class="fold-body">
+    <div class="table-wrap"><table class="walk">
+      <thead><tr><th>#</th><th>psql-A</th><th>psql-B</th><th>Ghi lại</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>BEGIN;</code> <code>SELECT balance FROM store_wallets WHERE id = 1 FOR UPDATE;</code></td><td></td><td><input class="field" data-store="l14-m3-step1" placeholder="A đọc bao nhiêu?"></td></tr>
+        <tr><td>2</td><td></td><td><code>BEGIN;</code> <code>SELECT balance FROM store_wallets WHERE id = 1 FOR UPDATE;</code></td><td><input class="field" data-store="l14-m3-step2" placeholder="B treo? O thấy wait_event gì?"></td></tr>
+        <tr><td>3</td><td><code>UPDATE store_wallets SET balance = balance - 30 WHERE id = 1;</code> <code>UPDATE store_wallets SET balance = balance + 30 WHERE id = 2;</code> <code>COMMIT;</code></td><td></td><td><input class="field" data-store="l14-m3-step3" placeholder="B nhận số dư nào ngay sau COMMIT?"></td></tr>
+        <tr><td>4</td><td></td><td>Số dư &lt; 40 nên <code>ROLLBACK;</code></td><td><input class="field" data-store="l14-m3-step4" placeholder="Ví A cuối cùng = ?"></td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Xong thì chạy <code>npm run setup -- --force</code> để ví A về 50.</p>
+  </div></details>
+
+  <div class="quiz" data-quiz="1"></div>
+</section>
+
+<!-- CHẶNG 2 -->
+<section id="chang-2" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">02</span>
+    <div>
+      <div class="stage-meta"><span>Slide 3, 10, 14</span><span>30 phút</span><span>Day 04</span></div>
+      <h2>S/X → 4 chế độ khóa dòng; khóa nằm ở xmax</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> đổi mô hình S/X của slide 3 sang 4 chế độ khóa dòng của PG, và tự liệt kê ai đang giữ khóa nào.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>PG có 4 chế độ khóa dòng, từ nhẹ đến nặng: <code>FOR KEY SHARE</code>, <code>FOR SHARE</code>, <code>FOR NO KEY UPDATE</code>, <code>FOR UPDATE</code>.</dd>
+    <dt>TẠI SAO?</dt><dd>Tách nhỏ để INSERT dòng con (kiểm tra FK) không phải chờ một UPDATE cột thường trên dòng cha.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>SELECT thường không xin khóa dòng: nó đọc snapshot nên không chờ người đang sửa dòng (vẫn lấy <code>AccessShareLock</code> mức bảng — chặng 3).</dd>
+  </dl>
+
+  <div class="callout pg" id="sl-3">
+    <span class="tag">Slide 3 · Lab 14.02</span> <span class="vchip fix">Cần sửa</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Chỉ có S và X; định nghĩa "Exclusive (Update): Lock to read and write", tức giữ X thì người khác không đọc được.</p></div>
+      <div><h5>PG 16 đo được</h5><p>A giữ <code>FOR UPDATE</code>, B <code>SELECT</code> thường <b class="m" data-run="lab02">trả về 1 dòng ngay, không chờ</b>. Có 4 chế độ, ma trận đo khớp tài liệu <b class="m" data-run="lab02">16/16 ô</b>.</p></div>
+    </div>
+  </div>
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>Trên InnoDB, SELECT thường cũng không chờ khóa X: đó là "consistent nonlocking read". S/X chỉ áp cho locking read (<code>FOR SHARE</code> / <code>FOR UPDATE</code>). Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html" target="_blank" rel="noreferrer">MySQL 8.4 · Consistent Nonlocking Reads</a>, <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html" target="_blank" rel="noreferrer">Locking Reads</a>.</p>
+  </div>
+
+  <div class="widget" id="w1">
+    <div class="widget-head"><h4>W1 · Ma trận khóa dòng: A giữ, B xin NOWAIT</h4><span class="eyebrow">Lab 14.02 · slide 3, 14</span></div>
+    <div class="widget-body">
+      <p>Bấm một ô để đọc kết quả đo. Đỏ = 55P03 (xung đột), xanh = ok.</p>
+      <div class="table-wrap" id="w1-matrix"></div>
+      <div class="out" id="w1-out" aria-live="polite">Chưa chọn ô nào.</div>
+      <label class="toggle"><input type="checkbox" id="w1-mysql"> <span>Xem kiểu MySQL S/X để so</span></label>
+      <div class="callout cite-mysql" id="w1-sx" hidden>
+        <span class="tag">InnoDB S/X · không đo trên máy này</span>
+        <p>S tương thích S; X xung đột với cả S và X. Gần đúng: S ≈ <code>FOR SHARE</code>, X ≈ <code>FOR UPDATE</code>. Hai mode giữa (KEY SHARE, NO KEY UPDATE) là phần riêng của PG. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html#innodb-shared-exclusive-locks" target="_blank" rel="noreferrer">MySQL 8.4 · Shared and Exclusive Locks</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>Câu lệnh nào lấy mode nào: UPDATE cột thường lấy <code>FOR NO KEY UPDATE</code>. UPDATE cột khóa chính (hoặc cột có unique index dùng được cho FK) hoặc DELETE lấy <code>FOR UPDATE</code>. INSERT dòng con kiểm tra FK lấy <code>FOR KEY SHARE</code> trên dòng cha.</p>
+  <p>Lab 14.02 C đo đúng điều đó trên bảng chuyến bay. UPDATE <code>seats</code> thì INSERT vé con chạy ngay. UPDATE <code>id</code> thì INSERT vé con phải chờ.</p>
+
+  <h3>Khóa dòng nằm ở đâu?</h3>
+  <p>PG không giữ danh sách từng khóa dòng trong bộ nhớ chung. Nó ghi xid của người khóa vào cột ẩn <code>xmax</code> của tuple. Vì vậy <code>pg_locks</code> của người giữ không có dòng <code>tuple</code> nào.</p>
+  <div class="callout pg" id="sl-10">
+    <span class="tag">Slide 10 · Lab 14.02</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Xem khóa bằng một bảng hệ thống của MySQL (chi tiết ở khung MySQL bên dưới).</p></div>
+      <div><h5>PG 16 đo được</h5><p>Người giữ chỉ có khóa bảng + <code>transactionid ExclusiveLock</code>. Dòng bị khóa có <b class="m" data-run="lab02">xmax của dòng 1 = xid(A)</b>. <code>pgrowlocks</code> đọc thẳng trang dữ liệu: <b class="m" data-run="lab02">1 dòng bị khóa, người khóa A, mode "No Key Update"</b>. Người chờ đầu tiên giữ <code>tuple ExclusiveLock</code> và chờ <code>transactionid ShareLock</code>.</p></div>
+    </div>
+  </div>
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>Slide 10 dùng <code>performance_schema.data_locks</code> (cột <code>lock_type</code>, <code>lock_mode</code>, <code>lock_data</code>). InnoDB liệt kê từng record lock ở đó. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-locks-table.html" target="_blank" rel="noreferrer">MySQL 8.4 · data_locks</a>.</p>
+  </div>
+  <p>Câu chẩn đoán dùng cả bài (chạy ở cửa sổ O):</p>
+  <div class="code"><pre><code>SELECT a.application_name, a.state, a.wait_event_type, a.wait_event,
+       pg_blocking_pids(a.pid) AS blocked_by, l.locktype, l.mode, l.granted
+FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+WHERE a.datname = current_database() AND a.pid &lt;&gt; pg_backend_pid()
+ORDER BY a.application_name, l.locktype;
+
+SELECT * FROM lab14_locking.pgrowlocks('lab14_locking.contracts');   -- dòng nào đang bị khóa, mode gì</code></pre></div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab2</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab02.txt">Lab 14.02 — Bốn chế độ khóa dòng: ai chặn ai, khóa FK và khóa dòng được lưu ở đâu (slide 3–5, 10, 14)
+…
+Đo được (hàng = A đang giữ, cột = B xin NOWAIT):
+A giữ \ B xin │ KEY SHARE │ SHARE │ NO KEY UPDATE │ UPDATE
+──────────────┼───────────┼───────┼───────────────┼───────
+KEY SHARE     │ ok        │ ok    │ ok            │ 55P03
+SHARE         │ ok        │ ok    │ 55P03         │ 55P03
+NO KEY UPDATE │ ok        │ 55P03 │ 55P03         │ 55P03
+UPDATE        │ 55P03     │ 55P03 │ 55P03         │ 55P03
+…
+✔ 16/16 ô khớp tài liệu: 10 ô 55P03, 6 ô ok (tài liệu: 10 xung đột / 6 không)
+  đọc nhanh: KEY SHARE chỉ đụng UPDATE; UPDATE thường = NO KEY UPDATE nên không đụng KEY SHARE (khóa của kiểm tra FK)
+…
+== C. Khóa ngoại: INSERT vé con xin FOR KEY SHARE trên chuyến bay cha ==
+A› BEGIN;
+A› UPDATE l02_flights SET seats = seats - 1 WHERE id = 1;
+B› BEGIN;
+B› INSERT INTO l02_bookings (flight_id, passenger) VALUES (1, 'Bình');
+B› ROLLBACK;
+A› ROLLBACK;
+✔ UPDATE cột thường (seats) giữ NO KEY UPDATE → INSERT con chạy ngay (INSERT 1), không chờ
+A› BEGIN;
+A› UPDATE l02_flights SET id = 10 WHERE id = 1;
+B› BEGIN;
+B› INSERT INTO l02_bookings (flight_id, passenger) VALUES (1, 'Bình');
+A› ROLLBACK;
+B› ROLLBACK;
+✔ UPDATE khóa chính (id) giữ FOR UPDATE → INSERT con chờ Lock/transactionid (bị chặn bởi A), chạy tiếp sau khi A ROLLBACK
+…
+== D. Khóa dòng nằm ở đâu: pg_locks, xmax, pgrowlocks ==
+A› BEGIN;
+A› UPDATE l02_contracts SET total = total + 1 WHERE id = 1;
+
+pg_locks của người giữ A (sau UPDATE id 1, chưa COMMIT):
+locktype      │ relation           │ mode             │ granted │ xid của
+──────────────┼────────────────────┼──────────────────┼─────────┼────────
+relation      │ l02_contracts      │ RowExclusiveLock │ có      │
+relation      │ l02_contracts_pkey │ RowExclusiveLock │ có      │
+transactionid │                    │ ExclusiveLock    │ có      │ A
+✔ A giữ RowExclusiveLock trên bảng + transactionid ExclusiveLock của chính mình; 0 dòng tuple → khóa dòng không nằm trong pg_locks
+
+O đọc phiên bản đã commit của dòng 1:
+id │ xmax  │ xmax = xid(A)?
+───┼───────┼───────────────
+1  │ 15596 │ đúng
+✔ xmax của dòng 1 = xid(A): khóa dòng được ghi ngay trên tuple
+
+pgrowlocks('l02_contracts') — đọc thẳng trên trang dữ liệu:
+ctid  │ xid   │ multi │ modes         │ của
+──────┼───────┼───────┼───────────────┼────
+(0,1) │ 15596 │ false │ No Key Update │ A
+✔ pgrowlocks: 1 dòng bị khóa, người khóa A, mode "No Key Update"
+B› BEGIN;
+B› UPDATE l02_contracts SET total = total + 1 WHERE id = 1;
+
+pg_locks của người chờ đầu tiên B (đang chờ Lock/transactionid):
+locktype      │ relation           │ mode             │ granted │ xid của
+──────────────┼────────────────────┼──────────────────┼─────────┼────────
+relation      │ l02_contracts      │ RowExclusiveLock │ có      │
+relation      │ l02_contracts_pkey │ RowExclusiveLock │ có      │
+transactionid │                    │ ExclusiveLock    │ có      │ B
+transactionid │                    │ ShareLock        │ CHỜ     │ A
+tuple         │ l02_contracts      │ ExclusiveLock    │ có      │
+✔ B giữ tuple ExclusiveLock (đứng đầu hàng chờ của dòng) và CHỜ transactionid ShareLock trên xid của A
+A› ROLLBACK;
+B› ROLLBACK;
+  A ROLLBACK → B chạy tiếp: UPDATE 1</pre></div>
+
+  <div class="quiz" data-quiz="2"></div>
+</section>
+
+<!-- CHẶNG 3 -->
+<section id="chang-3" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">03</span>
+    <div>
+      <div class="stage-meta"><span>Slide 6</span><span>20 phút</span><span>Day 04</span></div>
+      <h2>Khóa bảng và hàng đợi DDL làm treo cả SELECT</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> hiểu vì sao một <code>ALTER TABLE</code> đang chờ có thể làm treo mọi SELECT, và chặn sự cố đó bằng <code>lock_timeout</code>.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Mỗi câu lệnh lấy một khóa bảng: SELECT → <code>AccessShareLock</code>, SELECT FOR UPDATE → <code>RowShareLock</code>, UPDATE → <code>RowExclusiveLock</code>, <code>ALTER TABLE … ADD COLUMN</code> (và đa số dạng ALTER) → <code>AccessExclusiveLock</code>.</dd>
+    <dt>TẠI SAO?</dt><dd><code>AccessExclusiveLock</code> xung đột với mọi mode. ALTER xếp hàng, và mọi câu đến sau phải xếp sau nó.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng chạy migration khi có transaction dài đang mở, và đừng chạy migration không có <code>lock_timeout</code>.</dd>
+  </dl>
+
+  <div class="callout pg" id="sl-6">
+    <span class="tag">Slide 6 · Lab 14.03</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Phân loại khóa của MySQL: global, table, intention, AUTO-INC, rồi các loại khóa dòng.</p></div>
+      <div><h5>PG 16 đo được</h5><p>PG có 8 mode khóa bảng (tài liệu §13.3.1), không có global hay AUTO-INC lock riêng; vai trò intention lock (IS/IX) do <code>RowShareLock</code>/<code>RowExclusiveLock</code> đảm nhận. Lab đo: <b class="m" data-run="lab03">UPDATE → RowExclusiveLock</b>, <b class="m" data-run="lab03">SELECT … FOR UPDATE → RowShareLock</b>, <b class="m" data-run="lab03">SELECT thường → AccessShareLock</b>.</p></div>
+    </div>
+  </div>
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>InnoDB có intention lock (IS/IX) ở mức bảng trước khi khóa dòng, AUTO-INC lock cho cột tự tăng, và global lock kiểu <code>FLUSH TABLES WITH READ LOCK</code>. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html#innodb-intention-locks" target="_blank" rel="noreferrer">MySQL 8.4 · Intention Locks</a>, <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html#innodb-auto-inc-locks" target="_blank" rel="noreferrer">AUTO-INC Locks</a>, <a href="https://dev.mysql.com/doc/refman/8.4/en/flush.html" target="_blank" rel="noreferrer">FLUSH TABLES WITH READ LOCK</a>.</p>
+  </div>
+
+  <p>Sự cố thật: một báo cáo mở transaction rồi để đó. Bạn chạy migration <code>ALTER TABLE</code>. ALTER chờ báo cáo, còn mọi API SELECT bảng đó chờ ALTER.</p>
+
+  <div class="widget" id="w3">
+    <div class="widget-head"><h4>W3 · Hàng đợi khóa bảng</h4><span class="eyebrow">Lab 14.03 · slide 6</span></div>
+    <div class="widget-body">
+      <p>A đang "idle in transaction" sau một SELECT. B chạy ALTER, C chạy SELECT. Bật lock_timeout cho B để xem khác biệt.</p>
+      <label class="toggle"><input type="checkbox" id="w3-timeout"> <span>B chạy <code>SET lock_timeout = '1s'</code> trước ALTER</span></label>
+      <div class="lanes" id="w3-lanes" aria-live="polite"></div>
+      <div class="out" id="w3-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab3</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab03.txt">Lab 14.03 — Khóa mức bảng và hàng đợi DDL: ALTER chờ kéo theo cả SELECT (slide 6)
+…
+câu lệnh            │ mode trên l03_contracts
+────────────────────┼────────────────────────
+UPDATE              │ RowExclusiveLock
+SELECT … FOR UPDATE │ RowShareLock
+SELECT thường       │ AccessShareLock
+
+== B. Hàng đợi DDL: A giữ SELECT → B ALTER chờ → C SELECT xếp hàng sau B ==
+A› BEGIN;
+A› SELECT count(*) FROM l03_contracts;
+B› ALTER TABLE l03_contracts ADD COLUMN note text;
+✔ B (ALTER cần AccessExclusiveLock) chờ: Lock/relation, bị chặn bởi {A}
+C› SELECT count(*) FROM l03_contracts;
+✔ C (SELECT thường) chờ: Lock/relation, pg_blocking_pids(C) = {B} (kỳ vọng {B})
+vai │ mode                │ granted
+────┼─────────────────────┼─────────
+A   │ AccessShareLock     │ đã cấp
+B   │ AccessExclusiveLock │ ĐANG CHỜ
+C   │ AccessShareLock     │ ĐANG CHỜ
+A› COMMIT;
+✔ A COMMIT → B ALTER xong, rồi C đọc được 100 dòng
+
+== C. Chữa bằng lock_timeout: B bỏ cuộc 55P03, C chạy tiếp ==
+A› BEGIN;
+A› SELECT count(*) FROM l03_contracts;
+B› SET lock_timeout = '1s';
+B› ALTER TABLE l03_contracts ADD COLUMN note text;
+C› SELECT count(*) FROM l03_contracts;
+B chờ: Lock/relation · C chờ sau {B}
+B nhận 55P03 sau 1010 ms (mẫu trên máy này): canceling statement due to lock timeout
+✔ B (lock_timeout 1s) → 55P03; C trả 100 dòng trong khi A vẫn "idle in transaction"
+B› SET lock_timeout = '5s';</pre></div>
+
+  <div class="callout key">
+    <span class="tag">Công thức migration an toàn</span>
+    <div class="code"><pre><code>SET lock_timeout = '3s';              -- chờ tối đa 3 s rồi bỏ cuộc (55P03)
+ALTER TABLE contracts ADD COLUMN note text;
+-- 55P03? Tìm transaction dài bằng pg_stat_activity, đợi nó xong rồi chạy lại.</code></pre></div>
+    <p>Khi B bỏ cuộc, C chạy tiếp dù A vẫn mở: lab đo <b class="m" data-run="lab03">C trả 100 dòng trong khi A vẫn "idle in transaction"</b>.</p>
+  </div>
+
+  <div class="quiz" data-quiz="3"></div>
+</section>
+
+
+<!-- CHẶNG 4 -->
+<section id="chang-4" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">04</span>
+    <div>
+      <div class="stage-meta"><span>Slide 7–9, 11</span><span>25 phút</span><span>Day 04</span></div>
+      <h2>Record, gap, next-key: vì sao PG không có</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> thấy tận mắt PG không khóa "khe" giữa các id: INSERT vào khe chạy ngay, ở cả READ COMMITTED lẫn REPEATABLE READ.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>PG chỉ khóa những tuple có thật mà câu lệnh sửa hoặc khóa. Không có khóa cho khoảng trống giữa hai id.</dd>
+    <dt>TẠI SAO?</dt><dd>REPEATABLE READ của PG dựa vào snapshot, không cần khóa khe để chặn phantom. SERIALIZABLE dùng SIReadLock để phát hiện xung đột, không để chặn.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng mang mẹo chống khóa khe của InnoDB sang PG khi chưa đo.</dd>
+  </dl>
+
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>InnoDB có record lock, gap lock (khóa khe trước một record), next-key lock (record + khe trước nó) và insert intention lock. Ở REPEATABLE READ, <code>UPDATE … WHERE account_number BETWEEN 2 AND 5</code> lấy next-key lock, nên INSERT vào khe phải chờ. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html#innodb-gap-locks" target="_blank" rel="noreferrer">MySQL 8.4 · Gap Locks</a>.</p>
+  </div>
+
+  <p>Lab 14.04 dựng bảng có id 1, 2, 4, 5, 7. Phiên A chạy đúng câu của slide 7 trên dải 2..5. Phiên B thử INSERT id 3 (khe) và UPDATE id 4 (dòng có thật).</p>
+
+  <div class="callout pg" id="sl-7">
+    <span class="tag">Slide 7 · Lab 14.04</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Bốn loại khóa dòng: record, gap, next-key, insert intention.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Ở cả hai mức: <b class="m" data-run="lab04">B INSERT id 3 không bị chặn → INSERT 1</b>, còn <b class="m" data-run="lab04">B UPDATE id 4 chờ: Lock/transactionid, bị chặn bởi {A}</b>.</p></div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">Slide 8 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <p>Câu hỏi "dùng loại khóa dòng nào cho bài chuyển tiền?" vẫn đúng trên PG: chỉ cần khóa đúng dòng ví bị trừ.</p>
+  </div>
+
+  <div class="callout pg" id="sl-9">
+    <span class="tag">Slide 9 · Lab 14.04</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Đáp án: record lock, khóa từng record một.</p></div>
+      <div><h5>PG 16 đo được</h5><p>PG chỉ có một loại khóa dòng (4 mode), gắn trên tuple. Cả khi UPDATE theo cột không có index, nó vẫn chỉ khóa dòng khớp: <b class="m" data-run="lab04">pgrowlocks thấy 4 dòng bị khóa</b> sau khi quét tuần tự 1000 dòng.</p></div>
+    </div>
+  </div>
+
+  <div class="callout pg" id="sl-11">
+    <span class="tag">Slide 11 · Lab 14.04</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>InnoDB khóa thừa dòng "để bảo đảm Repeatable Read" (trích sách Efficient MySQL Performance).</p></div>
+      <div><h5>PG 16 đo được</h5><p>RR của PG là snapshot, không thêm khóa. SERIALIZABLE tạo SIReadLock nhưng <b class="m" data-run="lab04">B INSERT id 3 không bị chặn, B UPDATE id 4 không bị chặn</b>.</p></div>
+    </div>
+  </div>
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>Lý do InnoDB khóa thừa: locking read và UPDATE ở RR khóa mọi index record mà nó quét qua, kèm khe, để không ai chèn phantom. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html" target="_blank" rel="noreferrer">MySQL 8.4 · Locks Set by Different SQL Statements</a>.</p>
+  </div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab4</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab04.txt">Lab 14.04 — Không có gap lock: chỉ dòng có thật bị khóa, khe giữa các id vẫn INSERT được (slide 7–11, 20)
+l04_accounts có id: 1, 2, 4, 5, 7
+
+== A. UPDATE dải id 2..5: khe id 3 vẫn INSERT được, dòng id 4 bị khóa ==
+
+-- Mức cô lập READ COMMITTED --
+A› BEGIN ISOLATION LEVEL READ COMMITTED;
+A› UPDATE l04_accounts SET balance = balance + 10 WHERE id BETWEEN 2 AND 5;
+B› BEGIN ISOLATION LEVEL READ COMMITTED;
+B› INSERT INTO l04_accounts (id, balance) VALUES (3, 100);
+✔ READ COMMITTED: A UPDATE 3 dòng; B INSERT id 3 không bị chặn → INSERT 1
+B› UPDATE l04_accounts SET balance = balance - 1 WHERE id = 4;
+✔ READ COMMITTED: B UPDATE id 4 chờ: Lock/transactionid, bị chặn bởi {A}
+A› ROLLBACK;
+✔ READ COMMITTED: A ROLLBACK → B UPDATE id 4 xong (UPDATE 1)
+B› ROLLBACK;
+
+-- Mức cô lập REPEATABLE READ --
+A› BEGIN ISOLATION LEVEL REPEATABLE READ;
+A› UPDATE l04_accounts SET balance = balance + 10 WHERE id BETWEEN 2 AND 5;
+B› BEGIN ISOLATION LEVEL REPEATABLE READ;
+B› INSERT INTO l04_accounts (id, balance) VALUES (3, 100);
+✔ REPEATABLE READ: A UPDATE 3 dòng; B INSERT id 3 không bị chặn → INSERT 1
+B› UPDATE l04_accounts SET balance = balance - 1 WHERE id = 4;
+✔ REPEATABLE READ: B UPDATE id 4 chờ: Lock/transactionid, bị chặn bởi {A}
+A› ROLLBACK;
+✔ REPEATABLE READ: A ROLLBACK → B UPDATE id 4 xong (UPDATE 1)
+…
+== B. UPDATE theo cột không index (store_id = 44): chỉ khóa dòng khớp (pgrowlocks) ==
+Kế hoạch (O xem EXPLAIN): Update on l04_contracts / -&gt;  Seq Scan on l04_contracts / Filter: (store_id = 44)
+B› BEGIN;
+B› UPDATE l04_contracts SET total = total + 1 WHERE store_id = 44;
+id  │ modes             │ ctid
+────┼───────────────────┼───────
+1   │ {"No Key Update"} │ (0,1)
+78  │ {"No Key Update"} │ (0,78)
+404 │ {"No Key Update"} │ (4,51)
+873 │ {"No Key Update"} │ (9,78)
+✔ quét tuần tự cả 1000 dòng, UPDATE 4 dòng → pgrowlocks thấy 4 dòng bị khóa (kỳ vọng 4)
+A› BEGIN;
+A› UPDATE l04_contracts SET total = total + 1 WHERE id = 2;
+✔ A UPDATE id 2 (không khớp) không bị chặn → UPDATE 1
+…
+== C. SERIALIZABLE: SIReadLock có trong pg_locks nhưng không chặn ai ==
+A› BEGIN ISOLATION LEVEL SERIALIZABLE;
+A› SELECT id, balance FROM l04_accounts WHERE id BETWEEN 2 AND 5;
+locktype │ mode       │ n
+─────────┼────────────┼──
+relation │ SIReadLock │ 1
+B› INSERT INTO l04_accounts (id, balance) VALUES (3, 100);
+B› UPDATE l04_accounts SET balance = balance - 1 WHERE id = 4;
+✔ A đọc 3 dòng, giữ 1 SIReadLock; B INSERT id 3 không bị chặn, B UPDATE id 4 không bị chặn</pre></div>
+
+  <div class="quiz" data-quiz="4"></div>
+</section>
+
+<!-- CHẶNG 5 -->
+<section id="chang-5" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">05</span>
+    <div>
+      <div class="stage-meta"><span>Slide 12, 14, 20, 22</span><span>45 phút</span><span>Day 04 · DoD</span></div>
+      <h2>Deadlock 40P01 và Resource Ordering</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu (DoD Day 04):</b> tự gây 40P01 trong 2 cửa sổ psql, giải thích ai bị hủy và vì sao, rồi xóa deadlock bằng <code>ORDER BY id FOR UPDATE</code>.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>A giữ dòng 1 chờ dòng 2, B giữ dòng 2 chờ dòng 1. Không ai tự thoát, nên PG hủy một phiên với 40P01.</dd>
+    <dt>TẠI SAO?</dt><dd>Hai transaction khóa cùng các dòng theo thứ tự ngược nhau.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng "chữa" bằng tăng timeout hay retry vô hạn. Sửa thứ tự khóa trước, retry chỉ là lưới an toàn.</dd>
+  </dl>
+
+  <h3>Làm mẫu M1: gây deadlock bằng tay</h3>
+  <p>Dùng 2 cửa sổ psql đã dán preamble ở phần Cách học. Gõ từng hàng theo thứ tự, mỗi lần một cửa sổ. Dừng vài giây giữa các bước là bình thường.</p>
+  <div class="table-wrap"><table class="walk" data-walk="m1">
+    <thead><tr><th>#</th><th>psql-A</th><th>psql-B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>BEGIN;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code></td><td></td><td><input class="field" data-store="l14-m1-step1" placeholder="Kết quả: UPDATE ?"></td></tr>
+      <tr><td>2</td><td></td><td><code>BEGIN;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code></td><td><input class="field" data-store="l14-m1-step2" placeholder="Kết quả: UPDATE ?"></td></tr>
+      <tr><td>3</td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code> → treo</td><td></td><td><input class="field" data-store="l14-m1-step3" placeholder="O: psql-A chờ wait_event gì? blocked_by ai?"></td></tr>
+      <tr><td>4</td><td></td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code></td><td><input class="field" data-store="l14-m1-step4" placeholder="Sau bao nhiêu ms? Cửa sổ nào nhận 40P01? Chép 2 dòng DETAIL"></td></tr>
+      <tr><td>5</td><td>Người sống sót: <code>COMMIT;</code></td><td>Nạn nhân (dấu nhắc có dấu !): <code>ROLLBACK;</code></td><td><input class="field" data-store="l14-m1-step5" placeholder="Nếu nạn nhân là A thì đảo hai lệnh. total của id 1, 2 tăng mấy?"></td></tr>
+    </tbody>
+  </table></div>
+  <p>Dự đoán trước khi gõ hàng 4: cửa sổ nào sẽ bị hủy? Ghi vào ô dưới, rồi mới gõ.</p>
+  <input class="field" data-store="l14-m1-predict" placeholder="Tôi đoán nạn nhân là: …, vì …">
+
+  <h3>So với script</h3>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab5</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab05.txt">Lab 14.05 — Deadlock 40P01: ai bị hủy, và vì sao ORDER BY id FOR UPDATE xóa được deadlock (slide 12–22)
+…
+== A. deadlock_timeout mặc định (1s): ai bị hủy? ==
+A› BEGIN;
+A› UPDATE l05_contracts SET total = total + 1 WHERE id = 1;
+B› BEGIN;
+B› UPDATE l05_contracts SET total = total + 1 WHERE id = 2;
+A› UPDATE l05_contracts SET total = total + 1 WHERE id = 2;
+✔ A chờ: Lock/transactionid, bị chặn bởi B
+(A đã chờ 37 ms theo đồng hồ server trước khi B khép vòng)
+B› UPDATE l05_contracts SET total = total + 1 WHERE id = 1;
+✔ B chờ: Lock/transactionid, bị chặn bởi A → vòng tròn A → B → A
+40P01 × 1 — nạn nhân: A
+A nhận: ERROR 40P01: deadlock detected
+DETAIL (pid đã đổi thành vai):
+  Process A waits for ShareLock on transaction &lt;xid&gt;; blocked by process B.
+  Process B waits for ShareLock on transaction &lt;xid&gt;; blocked by process A.
+✔ đúng 1 lỗi 40P01, A bị hủy: A chờ trước nên deadlock_timeout của A hết trước, A tự kiểm tra và tự hủy (kỳ vọng A)
+✔ DETAIL có 2 dòng "Process X waits for ShareLock …", mỗi phiên chờ transaction của phiên kia
+✔ B sống sót: câu UPDATE đang treo trả về sau 957 ms, chưa cần nạn nhân ROLLBACK (chấp nhận từ 1 s − thời gian A chờ trước − 100 ms tới 2500 ms; mẫu trên máy này)
+B› COMMIT;
+A› ROLLBACK;</pre></div>
+
+  <div class="callout teacher">
+    <span class="tag">Vì sao bằng tay bạn thường thấy B bị hủy, còn script thấy A?</span>
+    <ol>
+      <li>PG không kiểm tra deadlock liên tục. Khi một phiên bắt đầu chờ, nó hẹn giờ <code>deadlock_timeout</code> (mặc định 1 s). Hết giờ, phiên đó kiểm tra <b>một lần</b>.</li>
+      <li>Bằng tay: A chờ từ hàng 3. Bạn mất hơn 1 s để chuyển cửa sổ, nên đồng hồ của A hết khi chưa có vòng. A không thấy gì và chờ tiếp, không kiểm tra lại.</li>
+      <li>B khép vòng ở hàng 4. 1 s sau, B kiểm tra, thấy vòng A → B → A, và tự hủy. Vậy nạn nhân là B. (Đã đo bằng probe ngày 24/10: cho B khép vòng 1,5 s sau khi A chờ → B nhận 40P01 cả 5/5 vòng.)</li>
+      <li>Script: A chỉ chờ <b class="m" data-run="lab05">37 ms</b> trước khi B khép vòng. Đồng hồ A hết trước, lúc đó vòng đã có, nên A tự hủy. B sống, câu UPDATE trả về sau <b class="m" data-run="lab05">957 ms</b> (mẫu trên máy này).</li>
+    </ol>
+    <p><b>Quy tắc rút ra:</b> PG chọn nạn nhân theo đồng hồ của từng phiên — đừng viết code dựa vào ai bị hủy. Mọi phiên đều phải sẵn sàng nhận 40P01 và thử lại.</p>
+  </div>
+
+  <p>Phần B của lab đảo kết quả bằng một dòng: A đặt <code>deadlock_timeout = '4s'</code>. B kiểm tra trước (1 s), nên <b class="m" data-run="lab05">nạn nhân: B</b>.</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab5</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab05.txt">== B. A đặt deadlock_timeout = 4s: nạn nhân đổi sang B? ==
+A› SET lock_timeout = '10s';
+B› SET lock_timeout = '10s';
+A› SET deadlock_timeout = '4s';
+…
+A› UPDATE l05_contracts SET total = total + 1 WHERE id = 2;
+✔ A chờ: Lock/transactionid, bị chặn bởi B
+(A đã chờ 29 ms theo đồng hồ server trước khi B khép vòng)
+B› UPDATE l05_contracts SET total = total + 1 WHERE id = 1;
+✔ B chờ: Lock/transactionid, bị chặn bởi A → vòng tròn A → B → A
+40P01 × 1 — nạn nhân: B
+B nhận: ERROR 40P01: deadlock detected
+DETAIL (pid đã đổi thành vai):
+  Process B waits for ShareLock on transaction &lt;xid&gt;; blocked by process A.
+  Process A waits for ShareLock on transaction &lt;xid&gt;; blocked by process B.
+✔ đúng 1 lỗi 40P01, B bị hủy: A chờ trước nhưng đợi 4s mới kiểm tra, B (1s) kiểm tra trước và tự hủy (kỳ vọng B)
+A sống sót sau 1029 ms (mẫu trên máy này)</pre></div>
+
+  <div class="widget" id="w4">
+    <div class="widget-head"><h4>W4 · Đồ thị chờ (wait-for graph)</h4><span class="eyebrow">Lab 14.05 · slide 12, 14, 22</span></div>
+    <div class="widget-body">
+      <p>Bấm "Bước tiếp" để chạy lại timeline đã đo. Mũi tên X → Y nghĩa là X đang chờ Y. Bật ORDER BY để xem bản đã sửa.</p>
+      <label class="toggle"><input type="checkbox" id="w4-order"> <span>Cả hai khóa bằng <code>… IN (…) ORDER BY id FOR UPDATE</code></span></label>
+      <div class="btns">
+        <button type="button" class="btn" id="w4-prev">◀ Bước trước</button>
+        <button type="button" class="btn primary" id="w4-next">Bước tiếp ▶</button>
+        <button type="button" class="btn" id="w4-reset">Về đầu</button>
+      </div>
+      <svg class="wfg" id="w4-svg" viewBox="0 0 400 190" role="img" aria-labelledby="w4-svg-title"><title id="w4-svg-title">Đồ thị chờ giữa phiên A và B</title></svg>
+      <div class="out" id="w4-out" aria-live="polite"></div>
+      <div class="table-wrap"><table class="steps" id="w4-steps"></table></div>
+      <h4>Coffman: ORDER BY phá điều kiện nào?</h4>
+      <div class="btns" id="w4-coffman" role="group" aria-label="Bốn điều kiện deadlock"></div>
+      <div class="out" id="w4-coffman-out" aria-live="polite">Chọn một điều kiện.</div>
+    </div>
+  </div>
+
+  <h3>Tự làm M2: cùng thứ tự thì không deadlock</h3>
+  <p>Hai phiên khóa cùng hai dòng, nhưng mỗi phiên đều xin bằng <code>ORDER BY id</code>. Thứ tự trong <code>IN (2, 1)</code> không quan trọng. Ghi kết quả từng bước, rồi lặp lại với B bắt đầu trước.</p>
+  <div class="table-wrap"><table class="walk" data-walk="m2">
+    <thead><tr><th>#</th><th>psql-A</th><th>psql-B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>BEGIN;</code> <code>SELECT id FROM contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;</code></td><td></td><td><input class="field" data-store="l14-m2-step1" placeholder="Mấy dòng?"></td></tr>
+      <tr><td>2</td><td></td><td><code>BEGIN;</code> <code>SELECT id FROM contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;</code> → treo</td><td><input class="field" data-store="l14-m2-step2" placeholder="O: SELECT * FROM lab14_locking.pgrowlocks('lab14_locking.contracts') thấy mấy dòng, ai giữ?"></td></tr>
+      <tr><td>3</td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code> <code>COMMIT;</code></td><td></td><td><input class="field" data-store="l14-m2-step3" placeholder="A có bị chặn không?"></td></tr>
+      <tr><td>4</td><td></td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code> <code>COMMIT;</code></td><td><input class="field" data-store="l14-m2-step4" placeholder="Có 40P01 không?"></td></tr>
+      <tr><td>5</td><td></td><td><code>BEGIN;</code> <code>SELECT id FROM contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;</code></td><td><input class="field" data-store="l14-m2-step5" placeholder="Lần này B đi trước"></td></tr>
+      <tr><td>6</td><td><code>BEGIN;</code> <code>SELECT id FROM contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;</code> → treo</td><td></td><td><input class="field" data-store="l14-m2-step6" placeholder="A chờ ai?"></td></tr>
+      <tr><td>7</td><td></td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code> <code>COMMIT;</code></td><td><input class="field" data-store="l14-m2-step7" placeholder="A nhận lại 2 dòng?"></td></tr>
+      <tr><td>8</td><td><code>UPDATE contracts SET total = total + 1 WHERE id = 2;</code> <code>UPDATE contracts SET total = total + 1 WHERE id = 1;</code> <code>COMMIT;</code></td><td></td><td><input class="field" data-store="l14-m2-step8" placeholder="Điều kiện Coffman nào đã bị phá?"></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab5</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab05.txt">== C. Cùng thứ tự ORDER BY id FOR UPDATE: phiên sau chờ, không deadlock ==
+A› BEGIN;
+A› SELECT id FROM l05_contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;
+B› BEGIN;
+B› SELECT id FROM l05_contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;
+✔ B chờ: Lock/transactionid, bị chặn bởi A
+✔ B chưa khóa được dòng nào: pgrowlocks thấy 2 dòng bị khóa, người giữ: A, A; B chỉ giữ chỗ đầu hàng chờ (tuple lock)
+…
+✔ vòng A khóa trước: 40P01 × 0, B nhận 2 dòng sau khi A COMMIT, cả hai COMMIT: có
+…
+✔ vòng B khóa trước: 40P01 × 0, A nhận 2 dòng sau khi B COMMIT, cả hai COMMIT: có
+✔ 10 vòng song song (không in từng câu): 40P01 × 0, lỗi khác 0
+✔ total của id 1 và 2 tăng 24 và 24 (kỳ vọng 24 = 12 vòng × 2 phiên): không lượt UPDATE nào bị mất
+
+== D. EXPLAIN: LockRows nằm trên Sort? ==
+A› EXPLAIN (COSTS OFF) SELECT id FROM l05_contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;
+QUERY PLAN
+────────────────────────────────────────────────────
+LockRows
+  -&gt;  Sort
+        Sort Key: id
+        -&gt;  Seq Scan on l05_contracts
+              Filter: (id = ANY ('{1,2}'::bigint[]))
+✔ LockRows nằm trên Sort: có — hàng đi qua Sort (theo id) rồi mới bị khóa, nên thứ tự khóa = ORDER BY (nút quét: Seq Scan on l05_contracts)</pre></div>
+
+  <div class="callout key">
+    <span class="tag">4 điều kiện Coffman · slide 22</span>
+    <ol>
+      <li><b>Loại trừ lẫn nhau</b>: khóa dòng UPDATE chỉ một phiên giữ.</li>
+      <li><b>Giữ và chờ</b>: A giữ dòng 1 trong khi xin dòng 2.</li>
+      <li><b>Không cướp được</b>: PG không giật khóa; nó chỉ hủy cả transaction.</li>
+      <li><b>Chờ vòng tròn</b>: A → B → A.</li>
+    </ol>
+    <p>Deadlock cần đủ cả 4. <code>ORDER BY id</code> phá điều kiện 4: mọi phiên xin dòng theo id tăng dần, nên không ai giữ id lớn rồi xin id nhỏ. Lab đo <b class="m" data-run="lab05">10 vòng song song (không in từng câu): 40P01 × 0</b>, và <code>EXPLAIN</code> cho thấy <code>LockRows</code> nằm trên <code>Sort</code>: dòng được sắp xếp rồi mới bị khóa.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">DoD Day 04 · tự đánh dấu</span>
+    <ul>
+      <li><label class="toggle"><input type="checkbox" data-store="l14-dod-1"> <span>M1: tôi đã thấy 40P01 và chép được 2 dòng DETAIL</span></label></li>
+      <li><label class="toggle"><input type="checkbox" data-store="l14-dod-2"> <span>Tôi giải thích được vì sao tay tôi thấy B, script thấy A</span></label></li>
+      <li><label class="toggle"><input type="checkbox" data-store="l14-dod-3"> <span>M2: cả hai thứ tự bắt đầu đều không có 40P01</span></label></li>
+      <li><label class="toggle"><input type="checkbox" data-store="l14-dod-4"> <span>Tôi nói được ORDER BY phá điều kiện Coffman nào</span></label></li>
+    </ul>
+    <p class="muted">Xong M1 + M2: chạy <code>npm run setup -- --force</code> để trả <code>contracts</code> về như cũ.</p>
+  </div>
+
+  <div class="quiz" data-quiz="5"></div>
+</section>
+
+<!-- CHẶNG 6 -->
+<section id="chang-6" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">06</span>
+    <div>
+      <div class="stage-meta"><span>Slide 12–14</span><span>30 phút</span><span>Day 04</span></div>
+      <h2>Bi quan: NOWAIT, lock_timeout, SKIP LOCKED và dòng nóng</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> chọn đúng cách "không chờ" cho từng tình huống, và thấy cái giá của một dòng nóng.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Pessimistic locking: khóa trước rồi mới đọc và ghi (<code>FOR UPDATE</code>, <code>FOR SHARE</code>).</dd>
+    <dt>TẠI SAO?</dt><dd>Dữ liệu luôn đúng. Đổi lại, người đến sau phải xếp hàng.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Tranh chấp thấp mà transaction dài (người dùng còn đang suy nghĩ): dùng optimistic ở chặng 7.</dd>
+  </dl>
+
+  <div class="callout key">
+    <span class="tag">Slide 13–14 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <p>Slide 14 liệt kê <code>FOR SHARE</code> / <code>FOR UPDATE</code>, ưu điểm toàn vẹn, nhược điểm nghẽn và deadlock. PG đo đúng như vậy. Riêng "synchronized" là khóa của ngôn ngữ, chỉ có tác dụng trong một process (chặng 8).</p>
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Cách</th><th>Hành vi đo được</th><th>Mã / thông điệp</th><th>Dùng khi</th></tr></thead>
+    <tbody>
+      <tr><td><code>FOR UPDATE NOWAIT</code></td><td>Báo lỗi ngay, không chờ</td><td>55P03 "could not obtain lock on row …"</td><td>UI cần báo "đang có người giữ" tức thì</td></tr>
+      <tr><td><code>SET lock_timeout = '1s'</code></td><td>Xếp hàng chờ, hết hạn thì bỏ</td><td>55P03 "canceling statement due to lock timeout"</td><td>API chấp nhận chờ ngắn; migration</td></tr>
+      <tr><td><code>FOR UPDATE SKIP LOCKED</code></td><td>Bỏ qua dòng đang bị khóa, lấy dòng kế</td><td>không lỗi</td><td>Hàng đợi job, chia ghế cho nhiều worker</td></tr>
+      <tr><td><code>count(*) … FOR UPDATE</code></td><td>Bị từ chối</td><td>0A000</td><td>Không bao giờ; khóa dòng cha thay vào đó</td></tr>
+    </tbody>
+  </table></div>
+  <p>Cùng mã 55P03 nhưng hai thông điệp khác nhau. Log phải đọc cả message mới biết là NOWAIT hay hết hạn chờ.</p>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab6</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab06.txt">Lab 14.06 — NOWAIT/lock_timeout báo 55P03 khác nhau, SKIP LOCKED chia ghế không chờ (slide 14, 20)
+…
+== A. FOR UPDATE NOWAIT trên dòng đang bị giữ ==
+A› BEGIN;
+A› SELECT id, total FROM l06_contracts WHERE id = 1 FOR UPDATE;
+B› SELECT id, total FROM l06_contracts WHERE id = 1 FOR UPDATE NOWAIT;
+B nhận: 55P03 "could not obtain lock on row in relation "l06_contracts"" sau 1 ms (mẫu trên máy này)
+✔ NOWAIT trả 55P03 ngay (không chờ): "could not obtain lock on row in relation "l06_contracts""
+
+== B. lock_timeout = 1s rồi UPDATE dòng đang bị giữ ==
+B› SET lock_timeout = '1s';
+B› UPDATE l06_contracts SET total = total + 1 WHERE id = 1;
+✔ B thật sự xếp hàng chờ: Lock/transactionid, chặn bởi A
+B nhận: 55P03 "canceling statement due to lock timeout" sau 1007 ms (mẫu trên máy này)
+✔ lock_timeout trả 55P03 sau khoảng 1 s: "canceling statement due to lock timeout"
+✔ cùng mã 55P03 nhưng hai thông điệp khác nhau → log phải đọc cả message
+B› SET lock_timeout = '5s';
+…
+== C. SKIP LOCKED: 3 worker nhận 3 ghế khác nhau ==
+A› BEGIN;
+A› SELECT id FROM l06_seats WHERE NOT booked ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+B› BEGIN;
+B› SELECT id FROM l06_seats WHERE NOT booked ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+C› BEGIN;
+C› SELECT id FROM l06_seats WHERE NOT booked ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+worker │ seat │ code
+───────┼──────┼─────
+A      │ 1    │ ok
+B      │ 2    │ ok
+C      │ 3    │ ok
+✔ 3 worker nhận 3 ghế khác nhau, không ai chờ: 1, 2, 3
+✔ ghế nhận được theo thứ tự id: 1, 2, 3 (kỳ vọng 1, 2, 3)
+…
+== D. SELECT count(*) … FOR UPDATE ==
+A› SELECT count(*) FROM l06_seats FOR UPDATE;
+A nhận: 0A000 "FOR UPDATE is not allowed with aggregate functions"
+✔ count(*) … FOR UPDATE bị từ chối: 0A000 (khóa từng dòng, không khóa được "một con số")</pre></div>
+
+  <h3>Dòng nóng (slide 12)</h3>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/14_Locking/page_12_img_01.png" alt="Slide 12: bên trái tải chia đều trên 3 tài nguyên, bên phải 5 request dồn vào tài nguyên B" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 12 · tải trải đều (trái) và dồn vào một tài nguyên (phải)</figcaption></figure>
+  <p>Lab 08 cho 7 phiên cùng UPDATE một dòng đang bị H giữ. Kết quả: <b class="m" data-run="lab08">7/7 người chờ</b>, gồm 1 phiên chờ <code>Lock/transactionid</code> và 6 phiên chờ <code>Lock/tuple</code>. Khi 8 phiên sửa 8 dòng khác nhau: <b class="m" data-run="lab08">0 người chờ</b>.</p>
+  <div class="callout warn">
+    <span class="tag">Đừng hiểu nhầm</span>
+    <p>Dòng nóng bắt người ghi xếp hàng, nhưng không bảo đảm ai đến trước được làm trước. Sau khi H COMMIT, server tự chọn người kế tiếp; lab chỉ in số đếm, không in thứ tự xong. Kết quả vẫn đủ: <b class="m" data-run="lab08">n cuối = 8</b>.</p>
+  </div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab8</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab08.txt">Lab 14.08 — Dòng nóng bắt mọi người xếp hàng, dòng trải đều thì không; advisory lock xact vs session (slide 12–22)
+…
+== A. Dòng nóng — H giữ id = 1, A…G lần lượt xếp hàng ==
+…
+vai │ đang chờ           │ bị chặn bởi
+────┼────────────────────┼─────────────────
+A   │ Lock/transactionid │ H
+B   │ Lock/tuple         │ A
+C   │ Lock/tuple         │ A, B
+D   │ Lock/tuple         │ A, B, C
+E   │ Lock/tuple         │ A, B, C, D
+F   │ Lock/tuple         │ A, B, C, D, E
+G   │ Lock/tuple         │ A, B, C, D, E, F
+✔ 7/7 người chờ: 1 trên Lock/transactionid (chờ H COMMIT) + 6 trên Lock/tuple (xếp hàng sau người đầu)
+H› COMMIT;
+→ sau H COMMIT, 7/7 người xong lần lượt: người đầu sau 4 ms, người cuối sau 23 ms (mẫu trên máy này)
+✔ Cả 7 UPDATE xong, không ai mất cập nhật: n cuối = 8 (1 của H + 7 người chờ)
+…
+8 UPDATE trên 8 dòng khác nhau xong sau tối đa 1 ms (mẫu trên máy này)
+✔ 0 người chờ; cả 8 UPDATE xong ngay, mỗi dòng n = 1, tổng = 8</pre></div>
+
+  <div class="quiz" data-quiz="6"></div>
+</section>
+
+
+<!-- CHẶNG 7 -->
+<section id="chang-7" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">07</span>
+    <div>
+      <div class="stage-meta"><span>Slide 15–18</span><span>25 phút</span><span>Day 04</span></div>
+      <h2>Lạc quan: version CAS, và nó vẫn chờ khóa dòng</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> viết optimistic locking đúng (version + kiểm tra số dòng), và biết khi nào nó vẫn chờ, vẫn lỗi.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Đọc <code>version</code>, rồi ghi <code>… WHERE id = $1 AND version = $2</code> và tăng version. Sửa được 0 dòng nghĩa là người khác đã ghi trước.</dd>
+    <dt>TẠI SAO?</dt><dd>Không giữ khóa trong lúc người dùng suy nghĩ. Xung đột được phát hiện lúc ghi.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Tranh chấp cao trên một dòng: đa số request thua và phải thử lại, tốn hơn khóa bi quan.</dd>
+  </dl>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/14_Locking/page_18_img_01.png" alt="Slide 18: Bob cập nhật version 1 thành 2 rồi COMMIT; UPDATE của Alice với version = 1 không khớp dòng nào" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 18 · UPDATE có version: người đến sau không khớp dòng nào</figcaption></figure>
+
+  <div class="callout pg" id="sl-15">
+    <span class="tag">Slide 15 · Lab 14.07</span> <span class="vchip fix">Cần sửa</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>"No locks": cho xung đột xảy ra, phát hiện lúc ghi.</p></div>
+      <div><h5>PG 16 đo được</h5><p>UPDATE có version vẫn lấy khóa dòng. B <b class="m" data-run="lab07">cùng câu UPDATE phải chờ: Lock/transactionid, chặn bởi A</b>. Ở READ COMMITTED, sau khi A COMMIT, <b class="m" data-run="lab07">B sau khi A COMMIT: rowCount 0</b>. Ở REPEATABLE READ, B nhận <b class="m" data-run="lab07">40001</b>. Chính slide 18 cũng ghi chú: "this acquires a lock for a row while updating".</p></div>
+    </div>
+  </div>
+
+  <div class="callout pg" id="sl-16">
+    <span class="tag">Slide 16 · Lab 14.07</span> <span class="vchip fix">Cần sửa</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Optimistic locking "avoid deadlocks".</p></div>
+      <div><h5>PG 16 đo được</h5><p>Hai UPDATE có version, chéo dòng 1/2 theo thứ tự M1: <b class="m" data-run="lab07">40P01 × 1</b>. Version chỉ phát hiện ghi đè; nó không sửa thứ tự khóa sai.</p></div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">Slide 17–18 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <p>Công thức slide 18 chạy đúng. Bước còn thiếu là thử lại: đọc lại version mới rồi ghi lại. Lab 14.07 C: B đọc lại version 2, ghi thành công, <b class="m" data-run="lab07">version cuối = 3</b>.</p>
+  </div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab7</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab07.txt">Lab 14.07 — version check vẫn chờ khóa dòng: RC 0 dòng, RR 40001, thử lại → v3, chéo dòng → 40P01 (slide 15, 16, 18)
+…
+== A. READ COMMITTED: cùng UPDATE … AND version = 1 ==
+…
+A› UPDATE l07_items SET amount = 90, version = version + 1 WHERE id = 1 AND version = 1;
+B› UPDATE l07_items SET amount = 80, version = version + 1 WHERE id = 1 AND version = 1;
+…
+✔ cả hai đọc version 1/1 (kỳ vọng 1/1)
+✔ A: UPDATE … AND version = 1 → 1 dòng, giữ khóa dòng tới COMMIT
+✔ B cùng câu UPDATE phải chờ: Lock/transactionid, chặn bởi A
+B sau khi A COMMIT: rowCount 0
+✔ B: 0 dòng → ứng dụng biết mình thua, phải đọc lại
+✔ version cuối = 2 (chỉ A ghi)
+…
+== B. REPEATABLE READ: cùng UPDATE … AND version = 1 ==
+…
+B sau khi A COMMIT: 40001 "could not serialize access due to concurrent update"
+✔ B nhận 40001 → phải ROLLBACK và thử lại cả transaction
+…
+== C. B thử lại: đọc lại version rồi UPDATE ==
+…
+B› SELECT amount, version FROM l07_items WHERE id = 1;
+B› UPDATE l07_items SET amount = 80, version = version + 1 WHERE id = 1 AND version = 2;
+B› COMMIT;
+✔ B đọc lại version 2, UPDATE → 1 dòng, version cuối = 3 (kỳ vọng 3)
+…
+== D. UPDATE có version chéo dòng 1/2 (thứ tự M1) ==
+…
+A› UPDATE l07_items SET amount = amount - 10, version = version + 1 WHERE id = 1 AND version = 1;
+B› UPDATE l07_items SET amount = amount - 10, version = version + 1 WHERE id = 2 AND version = 1;
+A› UPDATE l07_items SET amount = amount - 10, version = version + 1 WHERE id = 2 AND version = 1;
+✔ A giữ dòng 1, B giữ dòng 2; A xin dòng 2 → chờ Lock/transactionid
+(A đã chờ 36 ms theo đồng hồ server trước khi B khép vòng)
+B› UPDATE l07_items SET amount = amount - 10, version = version + 1 WHERE id = 1 AND version = 1;
+40P01 × 1
+nạn nhân: A
+  Process A waits for ShareLock on transaction &lt;xid&gt;; blocked by process B.
+  Process B waits for ShareLock on transaction &lt;xid&gt;; blocked by process A.
+người sống sót B: rowCount 1 sau 972 ms (mẫu trên máy này)
+✔ đúng 1 phiên nhận 40P01 (đo được 1) → version không cứu được thứ tự khóa sai</pre></div>
+
+  <div class="widget" id="w5">
+    <div class="widget-head"><h4>W5 · Chọn chiến lược khóa</h4><span class="eyebrow">Lab 14.06–14.08 · slide 13–16, 21</span></div>
+    <div class="widget-body">
+      <p>Chọn mức tranh chấp và tình huống. Gợi ý kèm số đo từ lab.</p>
+      <div class="fields">
+        <label>Mức tranh chấp
+          <select class="field" id="w5-contention">
+            <option value="low">Thấp: hiếm khi 2 người sửa cùng một dòng</option>
+            <option value="high">Cao: nhiều người dồn vào cùng một dòng</option>
+          </select>
+        </label>
+        <label>Tình huống
+          <select class="field" id="w5-scenario">
+            <option value="seat">Trừ ghế / tồn kho</option>
+            <option value="profile">Sửa hồ sơ trên form, người dùng nghĩ lâu</option>
+            <option value="queue">Nhiều worker lấy job từ một bảng</option>
+            <option value="transfer">Chuyển tiền giữa 2 ví</option>
+          </select>
+        </label>
+      </div>
+      <div class="btns"><button type="button" class="btn" id="w5-mutex">Còn mutex trong Node thì sao?</button></div>
+      <div class="out" id="w5-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="quiz" data-quiz="7"></div>
+</section>
+
+<!-- CHẶNG 8 -->
+<section id="chang-8" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">08</span>
+    <div>
+      <div class="stage-meta"><span>Slide 19–24</span><span>60 phút</span><span>Day 04</span></div>
+      <h2>Notes, best practices, recap và bài tập</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> gom cả bài thành một quy tắc chọn khóa, tự viết đặt vé đúng, rà code Prisma 7, và trả lời 10 câu phỏng vấn.</p>
+  <dl class="wwh">
+    <dt>TỔNG KẾT</dt><dd>Transaction và locking giải hai bài khác nhau. Khóa của DB khác khóa của ngôn ngữ lập trình.</dd>
+    <dt>THỰC CHIẾN</dt><dd>Bài tập A–D trên bảng <code>flights</code>/<code>bookings</code>, rồi rà một <code>BookingService</code> Prisma 7.</dd>
+    <dt>TIẾP THEO</dt><dd>Bài 07 (Day 05): sổ cái kép, nơi CHECK của Lab 01 thành lớp bảo vệ cuối.</dd>
+  </dl>
+
+  <div class="callout key">
+    <span class="tag">Slide 19 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <p>Transaction lo "tất cả hoặc không"; locking lo "ai đi trước". Mutex trong Node chỉ khóa trong một process: hai pod là hai mutex khác nhau, còn khóa trong DB thì chỉ có một.</p>
+  </div>
+
+  <div class="callout pg" id="sl-20">
+    <span class="tag">Slide 20 · Lab 14.04, 14.05, 14.08</span> <span class="vchip diff">MySQL đúng, PG khác</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Trừ trước cộng sau; khóa theo khóa chính; tránh secondary index trong UPDATE; soi khóa dòng; dùng optimistic; kết hợp distributed lock + optimistic.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Năm mục đúng trên PG. Mục "tránh secondary index" là mẹo của InnoDB: trên PG, UPDATE theo cột không index vẫn chỉ khóa dòng khớp (<b class="m" data-run="lab04">pgrowlocks thấy 4 dòng bị khóa</b>). Khóa đúng thứ tự bằng <code>ORDER BY id</code> (Lab 14.05). "Distributed lock" ở bài này là advisory lock của PG (Lab 14.08); Redis để Day 07.</p></div>
+    </div>
+  </div>
+  <div class="callout cite-mysql">
+    <span class="tag">MySQL 8.4 · không đo trên máy này</span>
+    <p>Trên InnoDB, UPDATE qua secondary index khóa cả index record lẫn record ở clustered index, kèm khe ở RR; vì vậy slide khuyên khóa qua khóa chính. Nguồn: <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html" target="_blank" rel="noreferrer">MySQL 8.4 · Locks Set by Different SQL Statements</a>.</p>
+  </div>
+
+  <p>Advisory lock là khóa trên một con số do bạn đặt, ví dụ <code>hashtext('flight:1')</code>. Bản <code>_xact_</code> tự nhả khi COMMIT. Bản mức session sống qua COMMIT, rất nguy hiểm khi dùng pool kết nối.</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab8</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="lab08.txt">== C. pg_try_advisory_xact_lock — khóa theo transaction ==
+A› BEGIN;
+A› SELECT pg_try_advisory_xact_lock(hashtext('flight:1'));
+B› SELECT pg_try_advisory_xact_lock(hashtext('flight:1'));
+vai │ locktype │ mode          │ granted
+────┼──────────┼───────────────┼────────
+A   │ advisory │ ExclusiveLock │ true
+A› COMMIT;
+B› SELECT pg_try_advisory_xact_lock(hashtext('flight:1'));
+A lấy khóa: true · B khi A còn mở transaction: false · B sau khi A COMMIT: true
+✔ A true, B false (không chờ), pg_locks thấy locktype = 'advisory' của A; COMMIT nhả khóa → B true
+
+== D. pg_advisory_lock mức session — sống qua COMMIT ==
+A› BEGIN;
+A› SELECT pg_advisory_lock(hashtext('flight:1'));
+A› COMMIT;
+vai │ locktype │ mode          │ granted
+────┼──────────┼───────────────┼────────
+A   │ advisory │ ExclusiveLock │ true
+B› SELECT pg_try_advisory_xact_lock(hashtext('flight:1'));
+A› SELECT pg_advisory_unlock(hashtext('flight:1'));
+B› SELECT pg_try_advisory_xact_lock(hashtext('flight:1'));
+Sau COMMIT A vẫn giữ 1 khóa advisory · B thử: false · pg_advisory_unlock: true · còn 0 khóa · B thử lại: true
+⚠ Với pool kết nối: COMMIT xong connection quay về pool nhưng VẪN giữ khóa → request sau bị chặn. Dùng bản _xact_, hoặc unlock trong finally.
+✔ pg_advisory_lock sống qua COMMIT (B vẫn false), chỉ nhả khi pg_advisory_unlock → B true</pre></div>
+
+  <div class="callout key">
+    <span class="tag">Slide 21 · Recap · <span class="vchip ok">Đúng trên PG16</span></span>
+    <ol>
+      <li>Ràng buộc được bằng một câu SQL? Dùng <code>UPDATE … WHERE điều_kiện</code> + kiểm số dòng, thêm <code>CHECK</code> làm lưới.</li>
+      <li>Phải đọc rồi quyết định, tranh chấp cao? <code>SELECT … FOR UPDATE</code>, khóa nhiều dòng thì <code>ORDER BY id</code>.</li>
+      <li>Tranh chấp thấp, người dùng nghĩ lâu? Version CAS + thử lại.</li>
+      <li>Nhiều worker chia việc? <code>SKIP LOCKED</code>. Không muốn chờ? <code>NOWAIT</code> hoặc <code>lock_timeout</code>.</li>
+      <li>Luôn bắt 40P01 / 40001 và thử lại cả transaction.</li>
+    </ol>
+  </div>
+
+  <p>Lịch 60 phút của chặng này: recap 8, bài tập A + B 12, bài D Basic 20, Prisma drill 10, phỏng vấn 10. D Advanced, C và M3 dời sang tối Day 04.</p>
+  <p>Đi tiếp theo thứ tự: <a href="#bai-tap">Bài tập A–C</a> → <a href="#bai-tap-d">Bài tập D</a> → <a href="#prisma-drill">Prisma drill</a> → <a href="#phong-van">Phỏng vấn</a>.</p>
+
+  <div class="quiz" data-quiz="8"></div>
+</section>
+
+<!-- BÀI TẬP A–C -->
+<section id="bai-tap" class="stage col">
+  <h2>Bài tập A–C: đặt vé máy bay (slide 22)</h2>
+  <div class="panel">
+    <h4>A. Thẻ dữ liệu</h4>
+    <p>Chuyến VN123 còn 2 ghế, 3 hành khách P1, P2, P3 cùng đặt. Bộ chấm cho mọi người đọc xong rồi mới cho từng người ghi lần lượt, nên lỗi đọc-rồi-ghi lộ ra ngay; lỗi do hai người ghi chồng nhau thì không lộ ra ở đây.</p>
+  </div>
+  <div class="panel">
+    <h4>B. Đoán rồi đo</h4>
+    <p>Mở <code>labs/lesson-14-locking/homework-predictions.mine.mjs</code>. Mỗi kịch bản điền 3 ô: <code>booked</code> (0–3), <code>seatsLeft</code>, <code>code</code> (<code>none 40P01 40001 55P03 23514</code>), và một dòng "vì sao". Viết lý do vào các ô dưới trước, rồi mới chép sang file.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Kịch bản</th><th>Vì sao (viết trước khi đo)</th></tr></thead>
+      <tbody>
+        <tr><td>s1</td><td>Ngây thơ: đọc không khóa, trừ tương đối</td><td><textarea class="field" data-store="l14-hw-b-s1" placeholder="Giống cách nào của Lab 01?"></textarea></td></tr>
+        <tr><td>s2</td><td>Khóa bi quan <code>FOR UPDATE</code></td><td><textarea class="field" data-store="l14-hw-b-s2" aria-label="Bài tập B s2 — vì sao"></textarea></td></tr>
+        <tr><td>s3</td><td><code>UPDATE … WHERE seats &gt; 0</code></td><td><textarea class="field" data-store="l14-hw-b-s3" aria-label="Bài tập B s3 — vì sao"></textarea></td></tr>
+        <tr><td>s4</td><td>Khóa lạc quan, không thử lại</td><td><textarea class="field" data-store="l14-hw-b-s4" placeholder="Ai thua, và thua thì làm gì?"></textarea></td></tr>
+        <tr><td>s5</td><td>Advisory lock + khóa lạc quan</td><td><textarea class="field" data-store="l14-hw-b-s5" aria-label="Bài tập B s5 — vì sao"></textarea></td></tr>
+        <tr><td>s6</td><td>Vé khứ hồi khóa VN123/VN456 ngược thứ tự</td><td><textarea class="field" data-store="l14-hw-b-s6" placeholder="Điều kiện Coffman nào đủ cả 4?"></textarea></td></tr>
+      </tbody>
+    </table></div>
+    <p>Rồi chạy <code>npm run homework</code>. File chưa điền sẽ bị từ chối mà không kết nối DB:</p>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run homework</code></div>
+    <div class="code terminal"><pre class="code terminal" data-run="hw-mine.txt">Bài tập 14 — Phần B: dự đoán rồi đo (slide 22) · VN123 còn 2 ghế, 3 hành khách P1, P2, P3
+Các ô cần sửa trước khi đo (dòng còn ô lỗi sẽ không đo):
+  ✘ s1.booked: còn '???' (số nguyên 0–3)
+  ✘ s1.seatsLeft: còn '???' (số nguyên -1–2)
+  ✘ s1.code: còn '???' (chỉ nhận: none 40P01 40001 55P03 23514)
+  ✘ s1.why: chưa viết 1 dòng giải thích
+…
+  (giá trị code hợp lệ: none 40P01 40001 55P03 23514)
+
+Không có dòng nào đủ ô hợp lệ — từ chối chạy, chưa mở kết nối DB.
+[exit 1]</pre></div>
+    <label class="fields"><span class="muted">Câu deadlock (slide 22): kịch bản s6 đủ 4 điều kiện nào, và cách đơn giản nhất để bỏ một điều kiện?</span>
+      <textarea class="field" data-store="l14-hw-b-deadlock"></textarea>
+    </label>
+  </div>
+  <div class="panel">
+    <h4>C. Rà bản nháp AI (tùy chọn, tối Day 04)</h4>
+    <p>File <code>homework-ai-draft.mjs</code> có 5 lỗi cài sẵn. Chạy thử với 1 người dùng: mọi hàm có vẻ chạy, nhưng triệu chứng đã lộ. Đọc code, tìm đủ 5 lỗi trước khi mở đáp án.</p>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run homework:draft</code></div>
+    <div class="code terminal"><pre class="code terminal" data-run="hw-draft.txt">Bài tập 14 — Phần C: chạy thử bản nháp module đặt vé do AI viết (slide 22), 1 người dùng
+…
+== 1. bookSeat — kiểm tra ghế ==
+…
+triệu chứng: lúc kiểm tra thấy seats=5, phiên đang giữ 0 khóa dòng → người khác vẫn đặt chen được
+…
+bookSeat(1) vẫn trả ok khi chỉ có 1 người — lỗi chỉ lộ khi chạy đồng thời (kịch bản s1)
+…
+== 2. bookRoundTrip — khóa 2 chuyến ==
+…
+D› SELECT id, code FROM hw_draft_flights WHERE id = ANY($1) FOR UPDATE
+…
+triệu chứng: cùng input [1, 2] — Seq Scan khóa VN456 → VN123, Index Scan khóa VN123 → VN456 → thứ tự khóa do plan quyết định, 2 phiên khác plan sẽ khóa ngược nhau → 40P01 (kịch bản s6)
+…
+== 3. confirmWithVersion — khóa lạc quan ==
+…
+D› UPDATE hw_draft_flights SET seats = seats - 1, version = version + 1 WHERE id = $1 AND version = $2
+…
+triệu chứng: lần 1 seats 2 → 1; lần 2 dùng version cũ 0: ok=true, seats 1 → 1 nhưng số vé 4 → 5 → vé ma
+…
+== 4. withFlightLock — advisory lock ==
+D› SELECT pg_advisory_lock(hashtext('flight:' || $1))
+…
+triệu chứng: bookSeat đã COMMIT nhưng phiên vẫn giữ 1 advisory lock → trả kết nối về pool là giữ khóa mãi, request sau trên kết nối khác chờ tới lock_timeout
+…
+== 5. countBookedLocked — đếm có khóa ==
+…
+D› SELECT count(*)::int AS n FROM hw_draft_bookings WHERE flight_id = $1 FOR UPDATE
+…
+triệu chứng: lỗi 0A000: FOR UPDATE is not allowed with aggregate functions → hàm không bao giờ chạy được
+…
+sau khi đóng kết nối của service: còn 0 advisory lock của phiên đó (Postgres tự nhả khi phiên kết thúc)
+D› ROLLBACK
+[exit 0]</pre></div>
+    <textarea class="field" data-store="l14-hw-c" placeholder="5 lỗi tôi tìm được: 1) … 2) …"></textarea>
+  </div>
+  <details class="fold"><summary>Đáp án B, C và lời giải D (mở sau khi tự làm · <code>npm run homework:solution</code>)</summary><div class="fold-body">
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run homework:solution</code></div>
+    <div class="code terminal"><pre class="code terminal" data-run="hw-solution.txt">Bài tập 14 — Phần B: dự đoán rồi đo (slide 22) · VN123 còn 2 ghế, 3 hành khách P1, P2, P3
+
+== Kết quả đo (đoán → đo) ==
+✔ s1 ngây thơ: đọc không khóa, trừ tương đối — booked: 3 → 3 ✔ · seatsLeft: -1 → -1 ✔ · code: none → none ✔
+✔ s2 khóa bi quan FOR UPDATE — booked: 2 → 2 ✔ · seatsLeft: 0 → 0 ✔ · code: none → none ✔
+✔ s3 UPDATE có điều kiện seats &gt; 0 — booked: 2 → 2 ✔ · seatsLeft: 0 → 0 ✔ · code: none → none ✔
+✔ s4 khóa lạc quan không thử lại — booked: 1 → 1 ✔ · seatsLeft: 1 → 1 ✔ · code: none → none ✔
+✔ s5 advisory lock + khóa lạc quan — booked: 2 → 2 ✔ · seatsLeft: 0 → 0 ✔ · code: none → none ✔
+✔ s6 vé khứ hồi khóa VN123/VN456 ngược thứ tự — booked: 1 → 1 ✔ · seatsLeft: 1 → 1 ✔ · code: 40P01 → 40P01 ✔
+
+== Phần C — đáp án rà soát bản nháp AI (homework-ai-draft.mjs) ==
+1. bookSeat gọi getAvailableSeats (SELECT thường) để kiểm tra ghế TRƯỚC khi khóa: lúc kiểm tra phiên chưa giữ khóa dòng nào, người khác vẫn đặt chen được (kịch bản s1).
+   Sửa: Khóa trước rồi mới kiểm tra: SELECT seats … FOR UPDATE trong cùng transaction, hoặc gộp vào UPDATE … WHERE seats &gt; 0 và xem rowCount.
+2. bookRoundTrip khóa nhiều chuyến bằng WHERE id = ANY($1) FOR UPDATE không ORDER BY: thứ tự khóa do plan quyết định (Seq Scan theo vị trí dòng, Index Scan theo id), hai phiên khác plan khóa ngược nhau → 40P01 (kịch bản s6).
+   Sửa: Luôn khóa theo một thứ tự toàn cục: SELECT … WHERE id = ANY($1) ORDER BY id FOR UPDATE (Lab 05 phần C), và vẫn thử lại khi gặp 40P01.
+3. confirmWithVersion bỏ qua rowCount của UPDATE … AND version = $2: version cũ làm UPDATE sửa 0 dòng nhưng hàm vẫn INSERT vé và báo thành công → vé ma.
+   Sửa: Nếu rowCount = 0 thì ROLLBACK và báo xung đột (hoặc đọc lại rồi thử lại có giới hạn); chỉ INSERT vé khi đúng 1 dòng được sửa.
+4. withFlightLock dùng pg_advisory_lock mức session và không bao giờ pg_advisory_unlock: khóa sống qua COMMIT, kết nối trả về pool vẫn giữ khóa, request sau chờ mãi.
+   Sửa: Dùng pg_advisory_xact_lock (tự nhả khi COMMIT/ROLLBACK); nếu buộc dùng mức session thì pg_advisory_unlock trong finally.
+5. countBookedLocked chạy SELECT count(*) … FOR UPDATE: Postgres không cho FOR UPDATE với hàm gộp → lỗi 0A000, hàm không bao giờ chạy được.
+   Sửa: Khóa dòng cha thay vì đếm có khóa: SELECT … FROM flights WHERE id = $1 FOR UPDATE rồi mới count(*) thường (hoặc giữ bộ đếm seats trên dòng chuyến bay).
+Bài tập 14 — Phần D: chấm SQL đặt vé (slide 22)
+Basic PASS = 2 vé, 1 người bị từ chối, còn 0 ghế, không lỗi · Advanced PASS = như Basic, 0 xung đột version, WRITE_SQL có $2 (version) và có người đọc chờ Lock/advisory
+ghi chú: khi chấm, `flights` → `hw_flights`, `bookings` → `hw_bookings` (bảng nháp, tự xóa khi xong)
+
+== Basic — chỉ khóa bi quan trong DB ==
+P1› BEGIN
+P1› SELECT seats FROM hw_flights WHERE id = $1 FOR UPDATE
+P2› BEGIN
+P2› SELECT seats FROM hw_flights WHERE id = $1 FOR UPDATE
+P3› BEGIN
+P3› SELECT seats FROM hw_flights WHERE id = $1 FOR UPDATE
+P1› UPDATE hw_flights SET seats = seats - 1 WHERE id = $1
+P1› INSERT INTO hw_bookings (flight_id, passenger) VALUES ($1, $2)
+P1› COMMIT
+P2› UPDATE hw_flights SET seats = seats - 1 WHERE id = $1
+P2› INSERT INTO hw_bookings (flight_id, passenger) VALUES ($1, $2)
+P2› COMMIT
+P3› ROLLBACK
+Diễn biến:
+  P1 đọc → seats=2
+  P2 đọc → bị chặn (Lock/transactionid, chờ P1)
+  P3 đọc → bị chặn (Lock/tuple, chờ P2)
+  P1 ghi 1 dòng + INSERT hw_bookings → COMMIT
+  P2 hết chờ, đọc → seats=1
+  P2 ghi 1 dòng + INSERT hw_bookings → COMMIT
+  P3 hết chờ, đọc → seats=0
+  P3 thấy seats=0 → từ chối, ROLLBACK
+khóa lúc đọc: có (P2, P3 bị chặn khi đọc)
+✔ Basic PASS — booked=2 refused=1 seatsLeft=0 conflicts=0 lỗi=không
+…
+== Advanced — advisory lock + khóa lạc quan theo version ==
+P1› BEGIN
+P1› SELECT pg_advisory_xact_lock(hashtext('flight:' || $1))
+…
+P2› SELECT pg_advisory_xact_lock(hashtext('flight:' || $1))
+…
+P3› SELECT pg_advisory_xact_lock(hashtext('flight:' || $1))
+P1› UPDATE hw_flights SET seats = seats - 1, version = version + 1 WHERE id = $1 AND version = $2
+P1› INSERT INTO hw_bookings (flight_id, passenger) VALUES ($1, $2)
+…
+Diễn biến:
+  P1 đọc → seats=2, version=0
+  P2 đọc → bị chặn (Lock/advisory, chờ P1)
+  P3 đọc → bị chặn (Lock/advisory, chờ P1, P2)
+  P1 ghi 1 dòng + INSERT hw_bookings → COMMIT
+  P2 hết chờ, đọc → seats=1, version=1
+  P2 ghi 1 dòng + INSERT hw_bookings → COMMIT
+  P3 hết chờ, đọc → seats=0, version=2
+  P3 thấy seats=0 → từ chối, ROLLBACK
+khóa lúc đọc: có (P2, P3 bị chặn khi đọc)
+✔ Advanced PASS — booked=2 refused=1 seatsLeft=0 conflicts=0 lỗi=không
+…
+[exit 0]</pre></div>
+    <p class="muted">Kịch bản s6: nạn nhân 40P01 đổi tùy đồng hồ của từng phiên (như chặng 5), nên các ô chỉ đo số vé, số ghế và mã lỗi, không đo ai bị hủy.</p>
+  </div></details>
+</section>
+
+<!-- BÀI TẬP D -->
+<section id="bai-tap-d" class="stage col">
+  <h2>Bài tập D: tự viết SQL đặt vé (tự làm)</h2>
+  <p>Bạn viết 2 câu SQL: <code>READ_SQL</code> (đọc số ghế của chuyến <code>$1</code>) và <code>WRITE_SQL</code> (trừ 1 ghế). Bộ chấm tự INSERT vé. Basic chỉ dùng khóa bi quan trong DB. Bộ chấm chỉ nhận <code>UPDATE flights …</code> cho WRITE_SQL, READ_SQL phải đọc <code>flights</code>, và không nhận tên kèm schema.</p>
+  <div class="callout key">
+    <span class="tag">Tiêu chí PASS</span>
+    <p><b>Basic:</b> 2 vé, 1 người bị từ chối, còn 0 ghế, không lỗi. <b>Advanced</b> (tối Day 04): như Basic, 0 xung đột version, và đủ cả hai khóa: có người đọc chờ <code>Lock/advisory</code> (<code>ADV_LOCK_SQL</code> khóa thật) và <code>WRITE_SQL</code> có <code>$2</code> (guard version). Thiếu phần nào, bộ chấm in dòng <code>thiếu: …</code>.</p>
+  </div>
+  <h3>Bước 1: chạy tay trong 2 cửa sổ psql</h3>
+  <p>Bước 0: chạy <code>npm run setup -- --force</code> để <code>flights</code>/<code>bookings</code> về đúng 2 ghế, 0 vé, rồi xem id bằng <code>SELECT id, code, seats, version FROM lab14_locking.flights;</code>. Bộ chấm đổi <code>flights</code> → <code>hw_flights</code>, nên SQL bạn gõ tay chính là SQL được chấm.</p>
+  <div class="table-wrap"><table class="walk" data-walk="hw-d">
+    <thead><tr><th>#</th><th>psql-A (P1, rồi P3)</th><th>psql-B (P2)</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>BEGIN;</code> rồi READ_SQL của bạn (thay <code>$1</code> bằng id VN123)</td><td></td><td><input class="field" data-store="l14-hwd-step1" placeholder="seats = ?"></td></tr>
+      <tr><td>2</td><td></td><td><code>BEGIN;</code> rồi cùng READ_SQL</td><td><input class="field" data-store="l14-hwd-step2" placeholder="B có treo không? O thấy wait_event gì?"></td></tr>
+      <tr><td>3</td><td>WRITE_SQL của bạn, rồi <code>INSERT INTO bookings (flight_id, passenger) VALUES (…, 'P1');</code> <code>COMMIT;</code></td><td></td><td><input class="field" data-store="l14-hwd-step3" placeholder="UPDATE mấy dòng?"></td></tr>
+      <tr><td>4</td><td></td><td>READ trả về gì? WRITE_SQL, INSERT 'P2', <code>COMMIT;</code></td><td><input class="field" data-store="l14-hwd-step4" placeholder="B đọc được seats = ?"></td></tr>
+      <tr><td>5</td><td>P3: <code>BEGIN;</code> READ_SQL → thấy 0 ghế → <code>ROLLBACK;</code></td><td></td><td><input class="field" data-store="l14-hwd-step5" placeholder="P3 bị từ chối đúng chưa?"></td></tr>
+      <tr><td>6</td><td colspan="2">O: <code>SELECT seats FROM lab14_locking.flights WHERE code = 'VN123';</code> <code>SELECT count(*) FROM lab14_locking.bookings;</code></td><td><input class="field" data-store="l14-hwd-step6" placeholder="Kỳ vọng 0 ghế, 2 vé"></td></tr>
+    </tbody>
+  </table></div>
+  <label class="fields"><span class="muted">READ_SQL và WRITE_SQL của bạn (nháp)</span>
+    <textarea class="field" data-store="l14-hwd-sql" placeholder="READ_SQL = 'SELECT … WHERE id = $1 …'&#10;WRITE_SQL = 'UPDATE … WHERE id = $1 …'"></textarea>
+  </label>
+  <h3>Bước 2: để bộ chấm đo</h3>
+  <p>Chép 2 câu vào <code>BASIC</code> trong <code>homework-booking.mine.mjs</code>, rồi chạy. File chưa sửa bị từ chối như sau:</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run homework:booking</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="hw-booking-mine.txt">Bài tập 14 — Phần D: chấm SQL đặt vé (slide 22)
+Basic PASS = 2 vé, 1 người bị từ chối, còn 0 ghế, không lỗi · Advanced PASS = như Basic, 0 xung đột version, WRITE_SQL có $2 (version) và có người đọc chờ Lock/advisory
+Các ô cần sửa (bộ nào còn ô lỗi thì không chấm bộ đó):
+  ✘ BASIC.READ_SQL: còn '???' hoặc để trống
+  ✘ BASIC.WRITE_SQL: còn '???' hoặc để trống
+  ✘ ADVANCED.ADV_LOCK_SQL: còn '???' hoặc để trống
+  ✘ ADVANCED.READ_SQL: còn '???' hoặc để trống
+  ✘ ADVANCED.WRITE_SQL: còn '???' hoặc để trống
+
+Chưa có bộ SQL nào điền đủ — từ chối chấm, chưa mở kết nối DB.
+[exit 1]</pre></div>
+  <p>Bạn cần thấy một dòng <code>Basic PASS — booked=2 refused=1 seatsLeft=0 conflicts=0</code>. Dòng <code>khóa lúc đọc: có/không</code> cho biết READ_SQL có thật sự khóa hay không. Xong thì chạy lại <code>npm run setup -- --force</code>.</p>
+</section>
+
+
+<!-- PRISMA 7 DRILL -->
+<section id="prisma-drill" class="stage col">
+  <h2>Prisma 7 drill: rà một BookingService do AI viết</h2>
+  <p>Đây là code NestJS + Prisma 7 giống dự án <code>quan-ly-hop-dong</code> của bạn. Nó chạy được khi chỉ có 1 người dùng. Tìm 6 lỗi khóa trước khi mở đáp án; mỗi lỗi đã có một lab đo trong bài.</p>
+  <div class="code"><pre><code>// booking.service.ts — bản nháp AI (NestJS + Prisma 7, adapter-pg)
+@Injectable()
+export class BookingService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly payment: PaymentGateway,
+  ) {}
+
+  async bookRoundTrip(legs: { flightId: number; version: number }[], passenger: string) {
+    const first = await this.prisma.flight.findUnique({ where: { id: legs[0].flightId } });
+    if (!first || first.seats &lt;= 0) throw new ConflictException('Hết ghế');
+
+    return this.prisma.$transaction(async (tx) =&gt; {
+      const ids = legs.map((l) =&gt; l.flightId);
+      await tx.$queryRaw`SELECT id FROM flights WHERE id = ANY(${ids}) FOR UPDATE`;
+
+      for (const leg of legs) {
+        await tx.flight.updateMany({
+          where: { id: leg.flightId, version: leg.version },
+          data: { seats: { decrement: 1 }, version: { increment: 1 } },
+        });
+      }
+
+      const booking = await this.prisma.booking.create({
+        data: { flightId: legs[0].flightId, passenger },
+      });
+      await this.payment.charge(booking.id);          // HTTP sang cổng thanh toán
+      return booking;
+    });
+  }
+
+  async bookWithRetry(legs: { flightId: number; version: number }[], passenger: string) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.bookRoundTrip(legs, passenger);
+      } catch (e) {
+        if (e?.code !== 'P2034' || attempt === 3) throw e;
+      }
+    }
+  }
+}</code></pre></div>
+  <textarea class="field" data-store="l14-drill-notes" placeholder="6 lỗi tôi tìm được (ghi số dòng): …"></textarea>
+
+  <details class="fold"><summary>Đáp án 1 · vùng: kiểm tra ghế ở đầu hàm</summary><div class="fold-body">
+    <p><b>Lỗi:</b> <code>findUnique</code> và <code>if (seats &lt;= 0)</code> chạy trước khi mở transaction và không khóa gì. Hai request cùng thấy còn ghế, rồi cùng trừ. Đây là TOCTOU, giống Lab 14.01 A (ví −20) và kịch bản s1 (3 vé cho 2 ghế).</p>
+    <p><b>Sửa:</b> kiểm tra bên trong transaction, sau khi khóa; hoặc gộp kiểm tra vào chính câu ghi:</p>
+    <div class="code"><pre><code>const { count } = await tx.flight.updateMany({
+  where: { id: flightId, seats: { gt: 0 } },
+  data: { seats: { decrement: 1 } },
+});
+if (count === 0) throw new ConflictException('Hết ghế');</code></pre></div>
+  </div></details>
+
+  <details class="fold"><summary>Đáp án 2 · vùng: tạo vé (booking.create)</summary><div class="fold-body">
+    <p><b>Lỗi:</b> <code>this.prisma.booking.create</code> lấy một kết nối khác trong pool, nằm ngoài transaction. Nếu transaction rollback, vé vẫn còn.</p>
+    <p><b>Tệ hơn:</b> INSERT vé kiểm tra FK, cần <code>FOR KEY SHARE</code> trên dòng chuyến bay. Transaction đang giữ <code>FOR UPDATE</code> trên đúng dòng đó (từ <code>$queryRaw</code>). Ma trận Lab 14.02 đo ô UPDATE × KEY SHARE = 55P03, và Lab 14.02 C đo INSERT con phải chờ. Kết nối ngoài chờ transaction, transaction chờ lệnh <code>await</code> của chính nó: PG không thấy vòng này, nên request treo tới khi hết timeout. (Suy ra từ Lab 14.02, chưa chạy bằng Prisma.)</p>
+    <p><b>Sửa:</b> trong callback chỉ dùng <code>tx</code>: <code>tx.booking.create(…)</code>.</p>
+  </div></details>
+
+  <details class="fold"><summary>Đáp án 3 · vùng: câu $queryRaw khóa các chuyến</summary><div class="fold-body">
+    <p><b>Lỗi:</b> thứ tự khóa do plan quyết định. Bản nháp Phần C đo được: cùng input <code>[1, 2]</code>, Seq Scan khóa VN456 → VN123, Index Scan khóa VN123 → VN456. Hai request khác plan khóa ngược nhau → 40P01 (kịch bản s6). Sắp xếp mảng <code>ids</code> trong JS cũng không đủ.</p>
+    <p><b>Sửa:</b> để SQL quyết định thứ tự, như M2: <code>LockRows</code> nằm trên nút tạo thứ tự của <code>ORDER BY</code> (<code>Sort</code> như Lab 14.05 D trên bảng 10 dòng, hoặc Index Scan theo id trên bảng lớn).</p>
+    <div class="code"><pre><code>await tx.$queryRaw`SELECT id FROM flights WHERE id = ANY(${ids}) ORDER BY id FOR UPDATE`;</code></pre></div>
+  </div></details>
+
+  <details class="fold"><summary>Đáp án 4 · vùng: vòng for trừ ghế</summary><div class="fold-body">
+    <p><b>Lỗi:</b> <code>updateMany</code> trả <code>{ count }</code> và không bao giờ ném lỗi khi 0 dòng khớp. Version cũ → sửa 0 dòng, nhưng code vẫn tạo vé. Bản nháp Phần C đo đúng triệu chứng này: "vé ma" (ghế không đổi, số vé tăng). (Nếu dùng <code>update</code> với <code>where</code> không khớp thì Prisma ném P2025.)</p>
+    <p><b>Sửa:</b></p>
+    <div class="code"><pre><code>const { count } = await tx.flight.updateMany({
+  where: { id: leg.flightId, version: leg.version },
+  data: { seats: { decrement: 1 }, version: { increment: 1 } },
+});
+if (count === 0) throw new ConflictException('Dữ liệu đã đổi, hãy tải lại'); // ném lỗi → rollback</code></pre></div>
+  </div></details>
+
+  <details class="fold"><summary>Đáp án 5 · vùng: bookWithRetry</summary><div class="fold-body">
+    <p><b>Lỗi:</b> vòng retry chỉ bắt P2034. Mã này áp dụng cho truy vấn model (<code>tx.flight.updateMany</code>…): trên <code>@prisma/adapter-pg</code> 7.9.0 (đúng bản trong <code>pnpm-lock.yaml</code> của bạn) nó phủ 40001 nhưng không phủ 40P01; từ 7.10.0 mới phủ cả 40P01. Còn lỗi từ <code>$queryRaw</code>/<code>$executeRaw</code>, tức chính câu <code>FOR UPDATE</code> đang chờ khóa, tới dạng P2010 kèm SQLSTATE trong message, ở cả 7.9 lẫn 7.10. Vậy vòng retry bỏ sót đúng lỗi chặng 5 dạy, và chỉ nâng cấp thì chưa đủ.</p>
+    <p><b>Sửa:</b> điều kiện chính là SQLSTATE 40P01/40001 trong lỗi; P2034 chỉ là điều kiện phụ. Đường raw → P2010 mới đọc từ mã nguồn runtime 7.9.0, <span class="vchip fix">chưa kiểm chứng trên 7.9 của bạn</span>, nên hàm dưới bắt rộng:</p>
+    <div class="code"><pre><code>function isRetryable(e: unknown): boolean {
+  const err = e as { code?: string; meta?: unknown; message?: string };
+  const raw = JSON.stringify(err?.meta ?? {}) + String(err?.message ?? '');
+  if (raw.includes('40P01') || raw.includes('40001')) return true; // chính: SQLSTATE (P2010 từ $queryRaw)
+  return err?.code === 'P2034';                                   // phụ: truy vấn model (40001; 40P01 từ 7.10.0)
+}
+// Thử lại CẢ $transaction (tối đa 3 lần, nghỉ ngẫu nhiên 20–100 ms giữa các lần).</code></pre></div>
+  </div></details>
+
+  <details class="fold"><summary>Đáp án 6 · vùng: payment.charge</summary><div class="fold-body">
+    <p><b>Lỗi:</b> trong lúc chờ HTTP, transaction vẫn giữ khóa dòng chuyến bay; mọi người đặt cùng chuyến xếp hàng như dòng nóng Lab 14.08. Mặc định <code>$transaction</code> có <code>maxWait</code> 2000 ms và <code>timeout</code> 5000 ms. Cổng chậm hơn 5 s thì transaction bị hủy, nhưng tiền đã bị trừ.</p>
+    <p><b>Sửa:</b> transaction ngắn giữ ghế (trạng thái PENDING) → COMMIT → gọi thanh toán ngoài transaction → transaction ngắn thứ hai xác nhận hoặc trả ghế. Hoặc ghi outbox trong transaction và để worker gọi HTTP.</p>
+  </div></details>
+
+  <div class="callout teacher">
+    <span class="tag">Nhìn code thật · quan-ly-hop-dong (chỉ đọc)</span>
+    <ul>
+      <li><code>lease-contracts-termination.service.ts:36</code> gọi <code>findUnique</code> ngoài <code>$transaction</code>; <code>:42</code> kiểm <code>status !== ACTIVE</code> cũng ở ngoài; <code>:80</code> mở <code>$transaction</code> chỉ cho câu update, không khóa dòng. Đây là lỗi 1: hai request thanh lý cùng lúc đều thấy ACTIVE.</li>
+      <li><code>sap-export-workflow.service.ts:59</code> và <code>:62</code> dùng <code>tx.$queryRaw … ORDER BY id FOR UPDATE</code>: đúng bài M2, thứ tự khóa do SQL quyết định. Nhưng danh sách kỳ thanh toán được chuẩn bị trước transaction (<code>:38</code>) và không kiểm lại trạng thái PENDING sau khi khóa. Tùy chọn <code>{ timeout: 15000, maxWait: 5000 }</code> ở <code>:90</code>.</li>
+      <li><code>lease-contracts-addendum-state.service.ts:73</code> khóa một hợp đồng bằng <code>tx.$queryRaw … WHERE id = … FOR UPDATE</code>, rồi đọc lại và kiểm ACTIVE bên trong transaction. Mẫu đúng để học theo.</li>
+      <li>Tìm <code>P2034|40P01</code> trong <code>apps/api/src</code>: 0 kết quả, tức app chưa có retry nào. Kiểm phiên bản bằng <code>pnpm ls @prisma/client @prisma/adapter-pg</code>.</li>
+    </ul>
+    <p><b>Không sửa ở bài này → Boss Challenge 1</b></p>
+  </div>
+</section>
+
+<!-- 10 CÂU PHỎNG VẤN -->
+<section id="phong-van" class="stage col">
+  <h2>Kiểm tra cuối bài: 10 câu phỏng vấn</h2>
+  <p>Tự trả lời thành tiếng trước, rồi mới mở đáp án.</p>
+  <div id="examList"></div>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat-sheet" class="stage col">
+  <h2>Cheat sheet một trang</h2>
+  <h3>4 chế độ khóa dòng (Lab 14.02)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mode</th><th>Ai lấy</th><th>Xung đột với</th></tr></thead>
+    <tbody>
+      <tr><td><code>FOR KEY SHARE</code></td><td>INSERT/UPDATE dòng con kiểm FK</td><td>UPDATE</td></tr>
+      <tr><td><code>FOR SHARE</code></td><td><code>SELECT … FOR SHARE</code></td><td>NO KEY UPDATE, UPDATE</td></tr>
+      <tr><td><code>FOR NO KEY UPDATE</code></td><td>UPDATE cột thường</td><td>SHARE, NO KEY UPDATE, UPDATE</td></tr>
+      <tr><td><code>FOR UPDATE</code></td><td><code>SELECT … FOR UPDATE</code>, DELETE, UPDATE cột khóa</td><td>cả 4</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Mã lỗi cần thuộc</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mã</th><th>Thông điệp</th><th>Làm gì</th></tr></thead>
+    <tbody>
+      <tr><td>40P01</td><td>deadlock detected</td><td>ROLLBACK, thử lại cả transaction; sửa thứ tự khóa</td></tr>
+      <tr><td>55P03</td><td>could not obtain lock on row in relation …</td><td>NOWAIT: báo "đang bận" ngay</td></tr>
+      <tr><td>55P03</td><td>canceling statement due to lock timeout</td><td>Đã chờ hết <code>lock_timeout</code>: thử lại sau</td></tr>
+      <tr><td>40001</td><td>could not serialize access due to concurrent update</td><td>RR/SER: thử lại cả transaction</td></tr>
+      <tr><td>0A000</td><td>FOR UPDATE is not allowed with aggregate functions</td><td>Khóa dòng cha thay vì <code>count(*)</code></td></tr>
+      <tr><td>23514</td><td>violates check constraint</td><td>Lưới an toàn cuối: báo lỗi nghiệp vụ</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Câu chẩn đoán</h3>
+  <div class="code"><pre><code>SELECT pid, application_name, state, wait_event_type, wait_event,
+       pg_blocking_pids(pid) AS blocked_by, now() - xact_start AS tx_age, left(query, 60)
+FROM pg_stat_activity
+WHERE datname = current_database() AND (wait_event_type = 'Lock' OR state = 'idle in transaction');
+SELECT * FROM lab14_locking.pgrowlocks('lab14_locking.contracts');</code></pre></div>
+  <h3>Quy tắc chọn</h3>
+  <ol>
+    <li>Một câu <code>UPDATE … WHERE điều_kiện</code> + kiểm số dòng, thêm <code>CHECK</code>.</li>
+    <li>Đọc rồi quyết định: <code>FOR UPDATE</code>; nhiều dòng thì <code>ORDER BY id</code>.</li>
+    <li>Tranh chấp thấp, transaction dài: version CAS + thử lại.</li>
+    <li>Chia việc: <code>SKIP LOCKED</code>. Không chờ: <code>NOWAIT</code> / <code>lock_timeout</code>.</li>
+    <li>Advisory lock: dùng bản <code>_xact_</code>.</li>
+  </ol>
+  <h3>Mẫu Prisma 7</h3>
+  <div class="code"><pre><code>await this.prisma.$transaction(async (tx) =&gt; {
+  await tx.$queryRaw`SELECT id FROM flights WHERE id = ANY(${ids}) ORDER BY id FOR UPDATE`;
+  for (const id of ids) {
+    const { count } = await tx.flight.updateMany({ where: { id, seats: { gt: 0 } }, data: { seats: { decrement: 1 } } });
+    if (count === 0) throw new ConflictException('Hết ghế');
+    await tx.booking.create({ data: { flightId: id, passenger } }); // chỉ dùng tx, không gọi HTTP ở đây
+  }
+});
+// Bọc ngoài bằng retry: SQLSTATE 40P01/40001 trong lỗi (lỗi $queryRaw tới dạng P2010), hoặc P2034 (truy vấn model).</code></pre></div>
+</section>
+
+<!-- BẢN ĐỒ SLIDE -->
+<section id="ban-do-slide" class="stage col">
+  <h2>Bản đồ 24 slide</h2>
+  <p>Mỗi chip dẫn tới chỗ slide được giải thích. Gạch chân xanh là slide có khung "Slide nói / PG 16 đo được".</p>
+  <div class="chips" id="slideMap"></div>
+</section>
+
+<!-- THAM KHẢO -->
+<section id="tham-khao" class="stage col">
+  <h2>Tài liệu tham khảo</h2>
+  <h4>Slide 23</h4>
+  <ul>
+    <li><a href="https://blog.lawrencejones.dev/state-machines/index.html" target="_blank" rel="noreferrer">Lawrence Jones — State machines</a></li>
+    <li><a href="https://vladmihalcea.com/optimistic-vs-pessimistic-locking/" target="_blank" rel="noreferrer">Vlad Mihalcea — Optimistic vs. Pessimistic Locking</a></li>
+    <li><a href="https://faculty.kutztown.edu/schwesin/spring2022/csc343/lectures/Locking.pdf" target="_blank" rel="noreferrer">Kutztown CSC 343 — Locking (PDF)</a></li>
+  </ul>
+  <h4>PostgreSQL 16</h4>
+  <ul>
+    <li><a href="https://www.postgresql.org/docs/16/explicit-locking.html" target="_blank" rel="noreferrer">§13.3 Explicit Locking</a> · <a href="https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-ROWS" target="_blank" rel="noreferrer">§13.3.2 Row-Level Locks</a> · <a href="https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-DEADLOCKS" target="_blank" rel="noreferrer">§13.3.4 Deadlocks</a> · <a href="https://www.postgresql.org/docs/16/explicit-locking.html#ADVISORY-LOCKS" target="_blank" rel="noreferrer">§13.3.5 Advisory Locks</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/pgrowlocks.html" target="_blank" rel="noreferrer">pgrowlocks</a> · <a href="https://www.postgresql.org/docs/16/view-pg-locks.html" target="_blank" rel="noreferrer">pg_locks</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/runtime-config-locks.html" target="_blank" rel="noreferrer">deadlock_timeout</a> · <a href="https://www.postgresql.org/docs/16/runtime-config-client.html" target="_blank" rel="noreferrer">lock_timeout, idle_in_transaction_session_timeout</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/sql-select.html#SQL-FOR-UPDATE-SHARE" target="_blank" rel="noreferrer">SELECT … FOR UPDATE / NOWAIT / SKIP LOCKED</a></li>
+  </ul>
+  <h4>MySQL 8.4 (chỉ trích dẫn, không đo trên máy này)</h4>
+  <ul>
+    <li><a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html" target="_blank" rel="noreferrer">InnoDB Locking</a> · <a href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locks-set.html" target="_blank" rel="noreferrer">Locks Set by Different SQL Statements</a> · <a href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-locks-table.html" target="_blank" rel="noreferrer">data_locks</a></li>
+  </ul>
+  <h4>Prisma</h4>
+  <ul>
+    <li><a href="https://www.prisma.io/docs/orm/fundamentals/transactions" target="_blank" rel="noreferrer">Transactions and batch queries</a> · <a href="https://www.prisma.io/docs/orm/reference/error-reference" target="_blank" rel="noreferrer">Error reference (P2034, P2025, P2010)</a></li>
+    <li><a href="https://github.com/prisma/orm/pull/29717" target="_blank" rel="noreferrer">prisma#29717: 40P01 báo là P2034 (từ 7.10.0)</a> · <a href="https://unpkg.com/@prisma/adapter-pg@7.9.0/dist/index.mjs" target="_blank" rel="noreferrer">adapter-pg 7.9.0 mapDriverError (mã nguồn đã phát hành)</a></li>
+  </ul>
+</section>
+
+<!-- TIẾP THEO -->
+<section id="tiep-theo" class="stage col">
+  <div class="callout key">
+    <span class="tag">Tiếp theo · Bài 07 · Day 05</span>
+    <h3 style="margin-top:4px">Sổ cái kép: khi CHECK trở thành người gác cổng</h3>
+    <p>Ở Lab 01, <code>CHECK (balance &gt;= 0)</code> là lưới an toàn cuối, trả 23514 thay vì để ví âm. Ở Bài 07, chính ràng buộc đó thành lớp bảo vệ của bảng ledger. "Trừ trước, cộng sau" của slide 20 dẫn thẳng vào ghi sổ kép: mỗi giao dịch là hai dòng, tổng luôn bằng 0.</p>
+    <p>Mang theo từ Bài 14: khóa đúng thứ tự (<code>ORDER BY id</code>), bắt 40P01 và thử lại cả transaction.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- JSON nhúng nguyên văn từ lab-runs/*.json (npm run labN -- --json, 24/10/2026) -->
+<script type="application/json" id="run-lab01">{
+  "lab": "14.01",
+  "expectedTotal": 50,
+  "variants": {
+    "A": {
+      "mechanism": "kiểm tra cũ + trừ tương đối",
+      "final": {
+        "A": -20,
+        "B": 30,
+        "C": 40
+      },
+      "total": 50,
+      "waited": true,
+      "waitEvent": "Lock/transactionid",
+      "bOutcome": "trừ tiếp trên số dư mới, UPDATE 1",
+      "code": null
+    },
+    "B": {
+      "mechanism": "ghi tuyệt đối (lost update)",
+      "final": {
+        "A": 10,
+        "B": 30,
+        "C": 40
+      },
+      "total": 80,
+      "waited": true,
+      "waitEvent": "Lock/transactionid",
+      "bOutcome": "ghi đè số dư, UPDATE 1",
+      "code": null
+    },
+    "C": {
+      "mechanism": "SELECT … FOR UPDATE",
+      "final": {
+        "A": 20,
+        "B": 30,
+        "C": 0
+      },
+      "total": 50,
+      "waited": true,
+      "waitEvent": "Lock/transactionid",
+      "bOutcome": "đọc 20, từ chối",
+      "code": null
+    },
+    "D": {
+      "mechanism": "UPDATE … AND balance >= 40",
+      "final": {
+        "A": 20,
+        "B": 30,
+        "C": 0
+      },
+      "total": 50,
+      "waited": true,
+      "waitEvent": "Lock/transactionid",
+      "bOutcome": "rowCount 0",
+      "code": null
+    },
+    "E": {
+      "mechanism": "CHECK (balance >= 0)",
+      "final": {
+        "A": 20,
+        "B": 30,
+        "C": 0
+      },
+      "total": 50,
+      "waited": true,
+      "waitEvent": "Lock/transactionid",
+      "bOutcome": "23514, ROLLBACK",
+      "code": "23514"
+    }
+  }
+}</script>
+<script type="application/json" id="run-lab02">{
+  "lab": "14.02",
+  "plainSelectBlocked": false,
+  "modes": [
+    "KEY SHARE",
+    "SHARE",
+    "NO KEY UPDATE",
+    "UPDATE"
+  ],
+  "matrix": {
+    "KEY SHARE": {
+      "KEY SHARE": "ok",
+      "SHARE": "ok",
+      "NO KEY UPDATE": "ok",
+      "UPDATE": "55P03"
+    },
+    "SHARE": {
+      "KEY SHARE": "ok",
+      "SHARE": "ok",
+      "NO KEY UPDATE": "55P03",
+      "UPDATE": "55P03"
+    },
+    "NO KEY UPDATE": {
+      "KEY SHARE": "ok",
+      "SHARE": "55P03",
+      "NO KEY UPDATE": "55P03",
+      "UPDATE": "55P03"
+    },
+    "UPDATE": {
+      "KEY SHARE": "55P03",
+      "SHARE": "55P03",
+      "NO KEY UPDATE": "55P03",
+      "UPDATE": "55P03"
+    }
+  },
+  "docs": {
+    "KEY SHARE": {
+      "KEY SHARE": false,
+      "SHARE": false,
+      "NO KEY UPDATE": false,
+      "UPDATE": true
+    },
+    "SHARE": {
+      "KEY SHARE": false,
+      "SHARE": false,
+      "NO KEY UPDATE": true,
+      "UPDATE": true
+    },
+    "NO KEY UPDATE": {
+      "KEY SHARE": false,
+      "SHARE": true,
+      "NO KEY UPDATE": true,
+      "UPDATE": true
+    },
+    "UPDATE": {
+      "KEY SHARE": true,
+      "SHARE": true,
+      "NO KEY UPDATE": true,
+      "UPDATE": true
+    }
+  },
+  "fk": {
+    "plainUpdateBlocksChildInsert": false,
+    "keyUpdateBlocksChildInsert": true,
+    "keyUpdateWaitEvent": "Lock/transactionid"
+  },
+  "lockShapes": {
+    "holder": [
+      {
+        "locktype": "relation",
+        "relation": "l02_contracts",
+        "mode": "RowExclusiveLock",
+        "granted": "có",
+        "xid của": ""
+      },
+      {
+        "locktype": "relation",
+        "relation": "l02_contracts_pkey",
+        "mode": "RowExclusiveLock",
+        "granted": "có",
+        "xid của": ""
+      },
+      {
+        "locktype": "transactionid",
+        "relation": "",
+        "mode": "ExclusiveLock",
+        "granted": "có",
+        "xid của": "A"
+      }
+    ],
+    "waiter": [
+      {
+        "locktype": "relation",
+        "relation": "l02_contracts",
+        "mode": "RowExclusiveLock",
+        "granted": "có",
+        "xid của": ""
+      },
+      {
+        "locktype": "relation",
+        "relation": "l02_contracts_pkey",
+        "mode": "RowExclusiveLock",
+        "granted": "có",
+        "xid của": ""
+      },
+      {
+        "locktype": "transactionid",
+        "relation": "",
+        "mode": "ExclusiveLock",
+        "granted": "có",
+        "xid của": "B"
+      },
+      {
+        "locktype": "transactionid",
+        "relation": "",
+        "mode": "ShareLock",
+        "granted": "CHỜ",
+        "xid của": "A"
+      },
+      {
+        "locktype": "tuple",
+        "relation": "l02_contracts",
+        "mode": "ExclusiveLock",
+        "granted": "có",
+        "xid của": ""
+      }
+    ],
+    "xmaxIsXidA": true,
+    "pgrowlocks": [
+      {
+        "multi": false,
+        "modes": "No Key Update",
+        "của": "A"
+      }
+    ]
+  }
+}</script>
+<script type="application/json" id="run-lab03">{
+  "lab": "03",
+  "modes": [
+    {
+      "statement": "UPDATE",
+      "sql": "UPDATE l03_contracts SET total = total + 1 WHERE id = 1;",
+      "mode": "RowExclusiveLock"
+    },
+    {
+      "statement": "SELECT … FOR UPDATE",
+      "sql": "SELECT id FROM l03_contracts WHERE id = 1 FOR UPDATE;",
+      "mode": "RowShareLock"
+    },
+    {
+      "statement": "SELECT thường",
+      "sql": "SELECT count(*) FROM l03_contracts;",
+      "mode": "AccessShareLock"
+    }
+  ],
+  "queue": [
+    {
+      "role": "A",
+      "sql": "SELECT count(*) FROM l03_contracts;",
+      "locks": [
+        {
+          "mode": "AccessShareLock",
+          "granted": true
+        }
+      ],
+      "blockers": []
+    },
+    {
+      "role": "B",
+      "sql": "ALTER TABLE l03_contracts ADD COLUMN note text;",
+      "locks": [
+        {
+          "mode": "AccessExclusiveLock",
+          "granted": false
+        }
+      ],
+      "waitEvent": "Lock/relation",
+      "blockers": [
+        "A"
+      ]
+    },
+    {
+      "role": "C",
+      "sql": "SELECT count(*) FROM l03_contracts;",
+      "locks": [
+        {
+          "mode": "AccessShareLock",
+          "granted": false
+        }
+      ],
+      "waitEvent": "Lock/relation",
+      "blockers": [
+        "B"
+      ]
+    }
+  ],
+  "timeout": {
+    "setting": "1s",
+    "code": "55P03",
+    "message": "canceling statement due to lock timeout",
+    "ms": 984,
+    "cWaitedBehind": [
+      "B"
+    ],
+    "cReturned": true,
+    "aState": "idle in transaction"
+  }
+}</script>
+<script type="application/json" id="run-lab05">{
+  "lab": "05",
+  "deadlock": {
+    "deadlockTimeout": "1s",
+    "deadlocks": 1,
+    "victim": "A",
+    "survivor": {
+      "role": "B",
+      "ms": 970
+    },
+    "detail": [
+      "Process A waits for ShareLock on transaction <xid>; blocked by process B.",
+      "Process B waits for ShareLock on transaction <xid>; blocked by process A."
+    ],
+    "timeline": [
+      {
+        "role": "A",
+        "sql": "BEGIN;",
+        "event": "ok"
+      },
+      {
+        "role": "A",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+        "event": "ok",
+        "rows": 1
+      },
+      {
+        "role": "B",
+        "sql": "BEGIN;",
+        "event": "ok"
+      },
+      {
+        "role": "B",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+        "event": "ok",
+        "rows": 1
+      },
+      {
+        "role": "A",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+        "event": "wait",
+        "waitsFor": "B"
+      },
+      {
+        "role": "B",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+        "event": "wait",
+        "waitsFor": "A"
+      },
+      {
+        "role": "A",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+        "event": "40P01"
+      },
+      {
+        "role": "B",
+        "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+        "event": "ok",
+        "ms": 970
+      },
+      {
+        "role": "B",
+        "sql": "COMMIT;",
+        "event": "ok"
+      },
+      {
+        "role": "A",
+        "sql": "ROLLBACK;",
+        "event": "ok"
+      }
+    ]
+  },
+  "deadlockTimeout4s": {
+    "deadlockTimeout": {
+      "A": "4s",
+      "B": "1s"
+    },
+    "deadlocks": 1,
+    "victim": "B",
+    "survivor": {
+      "role": "A",
+      "ms": 1036
+    }
+  },
+  "okA": true,
+  "ordered": {
+    "rounds": [
+      {
+        "first": "A",
+        "deadlocks": 0,
+        "committed": true,
+        "timeline": [
+          {
+            "role": "A",
+            "sql": "BEGIN;",
+            "event": "ok"
+          },
+          {
+            "role": "A",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;",
+            "event": "ok",
+            "rows": 2
+          },
+          {
+            "role": "B",
+            "sql": "BEGIN;",
+            "event": "ok"
+          },
+          {
+            "role": "B",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;",
+            "event": "wait",
+            "waitsFor": "A"
+          },
+          {
+            "role": "A",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "A",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "A",
+            "sql": "COMMIT;",
+            "event": "ok"
+          },
+          {
+            "role": "B",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;",
+            "event": "resume",
+            "rows": 2
+          },
+          {
+            "role": "B",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "B",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "B",
+            "sql": "COMMIT;",
+            "event": "ok"
+          }
+        ]
+      },
+      {
+        "first": "B",
+        "deadlocks": 0,
+        "committed": true,
+        "timeline": [
+          {
+            "role": "B",
+            "sql": "BEGIN;",
+            "event": "ok"
+          },
+          {
+            "role": "B",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (2, 1) ORDER BY id FOR UPDATE;",
+            "event": "ok",
+            "rows": 2
+          },
+          {
+            "role": "A",
+            "sql": "BEGIN;",
+            "event": "ok"
+          },
+          {
+            "role": "A",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;",
+            "event": "wait",
+            "waitsFor": "B"
+          },
+          {
+            "role": "B",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "B",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "B",
+            "sql": "COMMIT;",
+            "event": "ok"
+          },
+          {
+            "role": "A",
+            "sql": "SELECT id FROM l05_contracts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;",
+            "event": "resume",
+            "rows": 2
+          },
+          {
+            "role": "A",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 2;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "A",
+            "sql": "UPDATE l05_contracts SET total = total + 1 WHERE id = 1;",
+            "event": "ok",
+            "rows": 1
+          },
+          {
+            "role": "A",
+            "sql": "COMMIT;",
+            "event": "ok"
+          }
+        ]
+      }
+    ],
+    "loop": {
+      "rounds": 10,
+      "deadlocks": 0,
+      "errors": 0
+    },
+    "totalDelta": [
+      24,
+      24
+    ]
+  },
+  "explain": {
+    "plan": [
+      "LockRows",
+      "  ->  Sort",
+      "        Sort Key: id",
+      "        ->  Seq Scan on l05_contracts",
+      "              Filter: (id = ANY ('{1,2}'::bigint[]))"
+    ],
+    "lockRowsAboveSort": true,
+    "scan": "Seq Scan on l05_contracts"
+  },
+  "okB": true
+}</script>
+<script type="application/json" id="run-lab07">{
+  "lab": "07",
+  "readCommitted": {
+    "readVersions": [
+      1,
+      1
+    ],
+    "aRows": 1,
+    "bWaited": true,
+    "waitEvent": "Lock/transactionid",
+    "bRows": 0,
+    "bCode": null,
+    "bMessage": null,
+    "finalVersion": 2
+  },
+  "repeatableRead": {
+    "readVersions": [
+      1,
+      1
+    ],
+    "aRows": 1,
+    "bWaited": true,
+    "waitEvent": "Lock/transactionid",
+    "bRows": null,
+    "bCode": "40001",
+    "bMessage": "could not serialize access due to concurrent update"
+  },
+  "retry": {
+    "readVersion": 2,
+    "rows": 1,
+    "finalVersion": 3
+  },
+  "crosswise": {
+    "deadlocks": 1,
+    "victim": "A",
+    "survivor": {
+      "role": "B",
+      "rows": 1,
+      "ms": 972
+    },
+    "final": [
+      {
+        "id": 1,
+        "amount": 90,
+        "version": 2
+      },
+      {
+        "id": 2,
+        "amount": 90,
+        "version": 2
+      }
+    ]
+  }
+}</script>
+<script type="application/json" id="run-lab08">{
+  "lab": "14.08",
+  "contention": {
+    "hotRow": {
+      "waiters": [
+        {
+          "role": "A",
+          "waitEvent": "Lock/transactionid",
+          "blockers": "H"
+        },
+        {
+          "role": "B",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A"
+        },
+        {
+          "role": "C",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A, B"
+        },
+        {
+          "role": "D",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A, B, C"
+        },
+        {
+          "role": "E",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A, B, C, D"
+        },
+        {
+          "role": "F",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A, B, C, D, E"
+        },
+        {
+          "role": "G",
+          "waitEvent": "Lock/tuple",
+          "blockers": "A, B, C, D, E, F"
+        }
+      ],
+      "afterCommit": {
+        "first": {
+          "ms": 4
+        },
+        "last": {
+          "ms": 24
+        }
+      },
+      "finished": 7,
+      "finalN": 8
+    },
+    "spread": {
+      "waiters": 0,
+      "total": 8
+    }
+  },
+  "advisory": {
+    "xact": {
+      "a": true,
+      "bWhileHeld": false,
+      "locks": [
+        {
+          "role": "A",
+          "locktype": "advisory",
+          "mode": "ExclusiveLock"
+        }
+      ],
+      "bAfterCommit": true
+    },
+    "session": {
+      "heldAfterCommit": true,
+      "bWhileHeld": false,
+      "unlocked": true,
+      "locksAfterUnlock": 0,
+      "bAfterUnlock": true
+    }
+  }
+}</script>
+
+<script>
+/* === GUIDE_DATA_START === */
+var SLIDES = [
+  { n: 1, title: 'Locking', href: '#cach-hoc', pg: false, chip: null },
+  { n: 2, title: '3.1. Problem Context', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 3, title: '3.2.1. Types of Locks in MySQL', href: '#sl-3', pg: true, chip: 'Cần sửa' },
+  { n: 4, title: 'Question: What is operation type of lock', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 5, title: 'Question: What is operation type of lock', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 6, title: '3.2.2. Types of Locks in MySQL', href: '#sl-6', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 7, title: '3.3. Row Lock', href: '#sl-7', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 8, title: 'Question: What is type of row lock', href: '#chang-4', pg: false, chip: 'Đúng trên PG16' },
+  { n: 9, title: 'Question: What is type of row lock', href: '#sl-9', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 10, title: '3.4. Query to show lock info', href: '#sl-10', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 11, title: '3.6. Go on; Save Yourself', href: '#sl-11', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 12, title: '3.7. Lock Contention', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 13, title: '3.8. Pessimistic Locking vs Optimistic Locking', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 14, title: '3.8.1. Pessimistic Locking', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 15, title: '3.8.2. Optimistic Locking', href: '#sl-15', pg: true, chip: 'Cần sửa' },
+  { n: 16, title: '3.8.2. Optimistic Locking', href: '#sl-16', pg: true, chip: 'Cần sửa' },
+  { n: 17, title: '4. Practices', href: '#chang-7', pg: false, chip: null },
+  { n: 18, title: '4.1. Implement Optimistic Locking', href: '#chang-7', pg: false, chip: 'Đúng trên PG16' },
+  { n: 19, title: '4.2. Notes', href: '#chang-8', pg: false, chip: 'Đúng trên PG16' },
+  { n: 20, title: '4.3. Best Practices', href: '#sl-20', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 21, title: 'Recap', href: '#chang-8', pg: false, chip: 'Đúng trên PG16' },
+  { n: 22, title: 'Homework', href: '#bai-tap', pg: false, chip: 'Đúng trên PG16' },
+  { n: 23, title: 'References', href: '#tham-khao', pg: false, chip: null },
+  { n: 24, title: 'Thank you', href: '#tiep-theo', pg: false, chip: null },
+];
+
+var QUIZ = {
+  1: [
+    { q: 'API rút tiền: SELECT balance → nếu đủ thì UPDATE wallets SET balance = balance - $amount. Ví có 50, hai request rút 30 và 40 cùng lúc (READ COMMITTED). Ví còn bao nhiêu?', opts: ['20, request 40 bị từ chối', '-20: request sau chờ khóa dòng rồi trừ tiếp trên số dư mới', 'Lỗi 40001', '10'], ans: 1, why: 'Lab 14.01 A: cả hai đọc 50 nên đều "đủ". UPDATE thứ hai chờ khóa dòng, rồi trừ 40 trên số dư mới 20 → -20. Khóa có, nhưng kiểm tra đã nằm trước khóa.' },
+    { q: 'Đổi code thành: app tự tính newBalance = balance - amount rồi UPDATE … SET balance = newBalance. Cùng tình huống, điều gì xảy ra?', opts: ['Ví 20, an toàn', 'Ví 10, tổng tiền trong hệ thống tăng thêm 30', 'Ví -20', 'Request sau bị 23514'], ans: 1, why: 'Lab 14.01 B: request sau ghi đè số nó tự tính (10) lên kết quả của request trước. Tổng đo được là 80 thay vì 50: mất cập nhật và in thêm tiền.' },
+    { q: 'Bạn muốn chặn ví âm chỉ bằng một câu SQL, không SELECT trước. Câu nào?', opts: ['UPDATE wallets SET balance = balance - 40 WHERE id = 1 AND balance >= 40, rồi kiểm số dòng', 'SELECT … FOR SHARE rồi UPDATE', 'UPDATE wallets SET balance = 10 WHERE id = 1', 'LOCK TABLE wallets'], ans: 0, why: 'Lab 14.01 D: điều kiện được kiểm lại trên số dư mới sau khi chờ khóa; request thua nhận 0 dòng (rowCount 0) và tự ROLLBACK.' },
+    { q: 'Bảng đã có CHECK (balance >= 0). Một request khác vẫn dùng cách "kiểm tra cũ + trừ tương đối". Nó nhận gì?', opts: ['Ví thành -20 như cũ', 'Lỗi 23514, transaction phải ROLLBACK, ví giữ 20', 'Lỗi 40P01', 'Bị treo mãi'], ans: 1, why: 'Lab 14.01 E: sau khi chờ khóa, UPDATE tạo ra dòng âm và bị CHECK từ chối với 23514. CHECK là lưới an toàn cuối, không thay cho logic đúng.' }
+  ],
+  2: [
+    { q: 'Phiên A đang SELECT … FOR UPDATE dòng orders id 7, chưa COMMIT. Một API báo cáo chạy SELECT * FROM orders WHERE id = 7. Chuyện gì xảy ra?', opts: ['API treo tới khi A COMMIT', 'API trả về ngay bản đã commit', 'API nhận 55P03', 'API nhận 40P01'], ans: 1, why: 'Lab 14.02 A: SELECT thường đọc snapshot, không xin khóa dòng nên không chờ FOR UPDATE.' },
+    { q: 'A đang UPDATE products SET price = price + 1 WHERE id = 5 (chưa COMMIT). B INSERT order_items có product_id = 5 (FK). B có chờ không?', opts: ['Có, vì dòng cha đang bị UPDATE', 'Không: UPDATE cột thường giữ FOR NO KEY UPDATE, còn FK chỉ cần FOR KEY SHARE', 'Có, nhận 55P03', 'Chỉ chờ ở REPEATABLE READ'], ans: 1, why: 'Lab 14.02 C đo đúng điều này với chuyến bay: UPDATE seats thì INSERT vé con chạy ngay. Nếu A UPDATE cột khóa chính thì B mới phải chờ.' },
+    { q: 'Bạn mở pg_locks của phiên đang giữ khóa dòng nhưng không thấy dòng locktype = tuple nào. Vì sao, và xem dòng bị khóa bằng gì?', opts: ['Khóa đã hết hạn; dùng pg_stat_statements', 'Khóa dòng được ghi vào xmax của tuple; dùng pgrowlocks', 'pg_locks chỉ hiện khóa của superuser', 'PG không có khóa dòng'], ans: 1, why: 'Lab 14.02 D: người giữ chỉ có khóa bảng + transactionid; xmax của dòng = xid của người giữ; pgrowlocks đọc thẳng trang dữ liệu.' },
+    { q: 'A giữ FOR SHARE trên một dòng. B xin FOR NO KEY UPDATE NOWAIT trên cùng dòng. B nhận gì?', opts: ['ok', '55P03', '40P01', '0A000'], ans: 1, why: 'Ma trận đo trong Lab 14.02 B: hàng SHARE, cột NO KEY UPDATE = 55P03. SHARE chỉ không xung đột với KEY SHARE và SHARE.' }
+  ],
+  3: [
+    { q: 'Một báo cáo mở transaction, SELECT bảng orders rồi để "idle in transaction". Bạn chạy ALTER TABLE orders ADD COLUMN note text. Ngay sau đó mọi API SELECT orders treo. Vì sao?', opts: ['ALTER làm hỏng index', 'ALTER chờ AccessExclusiveLock; các SELECT mới xếp hàng sau ALTER', 'Báo cáo khóa cả bảng bằng FOR UPDATE', 'Hết connection pool'], ans: 1, why: 'Lab 14.03 B: B (ALTER) chờ A; C (SELECT) chờ với pg_blocking_pids(C) = {B}. Hai SELECT không xung đột, nhưng C phải xếp sau người đang chờ.' },
+    { q: 'Cách an toàn nhất để chạy migration ALTER trên bảng đông người dùng?', opts: ['Chạy lúc nửa đêm, không cần gì thêm', 'SET lock_timeout = \'3s\' trước ALTER; lỗi 55P03 thì thử lại sau', 'SET statement_timeout = 0', 'Dùng NOWAIT trong SELECT của API'], ans: 1, why: 'Lab 14.03 C: B bỏ cuộc với 55P03 sau khoảng 1 s, và C chạy tiếp dù A vẫn mở. Không có lock_timeout, hàng đợi kéo dài tới khi A xong.' },
+    { q: 'SELECT id FROM t WHERE id = 1 FOR UPDATE lấy mode khóa bảng nào trên t?', opts: ['AccessShareLock', 'RowShareLock', 'RowExclusiveLock', 'AccessExclusiveLock'], ans: 1, why: 'Lab 14.03 A đo: SELECT … FOR UPDATE → RowShareLock, UPDATE → RowExclusiveLock, SELECT thường → AccessShareLock.' },
+    { q: 'Hàng đợi: A idle in transaction → B ALTER đang chờ → 50 SELECT đang chờ. Muốn các SELECT chạy lại ngay mà chưa đụng tới A, bạn làm gì?', opts: ['Hủy B (pg_cancel_backend hoặc để lock_timeout của B hết)', 'Kill từng SELECT', 'VACUUM bảng', 'Tăng max_connections'], ans: 0, why: 'Các SELECT chỉ bị chặn bởi B. Khi B rời hàng (Lab 14.03 C: 55P03), C đọc được ngay trong khi A vẫn "idle in transaction".' }
+  ],
+  4: [
+    { q: 'Bảng accounts có id 1, 2, 4, 5, 7. A (REPEATABLE READ) chạy UPDATE … WHERE id BETWEEN 2 AND 5, chưa COMMIT. B INSERT id 3. Trên PG 16?', opts: ['B chờ vì khe 2..5 bị khóa', 'B INSERT xong ngay', 'B nhận 40001', 'B nhận 55P03'], ans: 1, why: 'Lab 14.04 A: ở cả RC và RR, INSERT id 3 không bị chặn (INSERT 1). PG không có gap lock.' },
+    { q: 'Cùng tình huống, B UPDATE dòng id 4. Kết quả?', opts: ['Xong ngay', 'Chờ Lock/transactionid tới khi A xong', 'Nhận 23514', 'Nhận 0A000'], ans: 1, why: 'Lab 14.04 A: id 4 là dòng có thật mà A đã sửa, nên B chờ khóa dòng của A.' },
+    { q: 'UPDATE contracts … WHERE store_id = 44 (store_id không có index) quét tuần tự 1000 dòng. Bao nhiêu dòng bị khóa?', opts: ['Cả 1000 dòng', 'Chỉ các dòng khớp điều kiện', 'Cả bảng bằng khóa bảng độc quyền', 'Không dòng nào'], ans: 1, why: 'Lab 14.04 B: pgrowlocks thấy đúng 4 dòng khớp. Dòng được quét mà không khớp thì không bị khóa.' },
+    { q: 'Ở SERIALIZABLE, pg_locks của A hiện SIReadLock. B INSERT vào vùng A vừa đọc. B có chờ không?', opts: ['Có, SIReadLock giống gap lock', 'Không; SIReadLock chỉ để phát hiện xung đột (có thể thành 40001 lúc COMMIT)', 'Có, nhận 55P03', 'B nhận 40P01'], ans: 1, why: 'Lab 14.04 C: SIReadLock có trong pg_locks nhưng B INSERT và UPDATE đều không bị chặn.' }
+  ],
+  5: [
+    { q: 'Bạn làm M1 bằng tay, nghỉ khoảng 5 giây giữa các bước. Cửa sổ nào thường nhận 40P01?', opts: ['A, vì A chờ trước', 'B, phiên khép vòng: đồng hồ 1 s của A đã hết khi chưa có vòng', 'Cả hai', 'Không ai, PG tự giải'], ans: 1, why: 'Mỗi phiên chỉ kiểm tra một lần khi deadlock_timeout của nó hết. Lúc A kiểm tra chưa có vòng; B khép vòng và 1 s sau B thấy vòng, nên B tự hủy.' },
+    { q: 'Service chuyển tiền khóa ví nguồn rồi khóa ví đích. Hai request A→B và B→A chạy cùng lúc và đôi khi gặp 40P01. Cách sửa gốc là gì?', opts: ['Tăng deadlock_timeout', 'Khóa cả hai ví trong một câu … WHERE id IN (…) ORDER BY id FOR UPDATE', 'Retry vô hạn', 'Dùng READ UNCOMMITTED'], ans: 1, why: 'Lab 14.05 C: cùng thứ tự khóa thì phiên sau chỉ chờ, 40P01 × 0 ở cả hai thứ tự bắt đầu và 10 vòng song song.' },
+    { q: 'Bạn sort mảng id trong JS rồi gửi WHERE id = ANY($1) FOR UPDATE (không ORDER BY). Đã an toàn chưa?', opts: ['Rồi, mảng đã sort', 'Chưa: thứ tự khóa theo plan; chỉ ORDER BY trong SQL đặt LockRows trên nút tạo thứ tự (Sort hoặc Index Scan theo id)', 'Rồi, PG luôn khóa theo id', 'Chưa, phải dùng FOR SHARE'], ans: 1, why: 'Bản nháp Phần C đo: cùng input [1, 2], Seq Scan khóa VN456 trước, Index Scan khóa VN123 trước. Lab 14.05 D: có ORDER BY thì LockRows nằm trên nút tạo thứ tự (ở lab là Sort vì bảng chỉ 10 dòng).' },
+    { q: 'ORDER BY id FOR UPDATE phá điều kiện Coffman nào?', opts: ['Loại trừ lẫn nhau', 'Giữ và chờ', 'Không cướp được', 'Chờ vòng tròn'], ans: 3, why: 'Mọi phiên xin dòng theo id tăng dần, nên không thể có phiên giữ id lớn rồi xin id nhỏ: không có vòng A → B → A.' }
+  ],
+  6: [
+    { q: 'Màn hình chọn ghế: nếu ghế đang có người giữ thì báo ngay "ghế đang được giữ", không chờ. Dùng gì?', opts: ['FOR UPDATE NOWAIT, bắt 55P03', 'SET lock_timeout = \'30s\'', 'FOR SHARE', 'SERIALIZABLE'], ans: 0, why: 'Lab 14.06 A: NOWAIT trả 55P03 "could not obtain lock on row…" ngay lập tức.' },
+    { q: '10 worker cùng lấy job từ bảng jobs, mỗi worker một job, không ai đợi ai. Câu nào?', opts: ['SELECT … FOR UPDATE LIMIT 1', 'SELECT … ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED', 'SELECT count(*) … FOR UPDATE', 'LOCK TABLE jobs'], ans: 1, why: 'Lab 14.06 C: 3 worker nhận 3 ghế khác nhau (1, 2, 3), không ai chờ.' },
+    { q: 'Log có hai lỗi 55P03 với message "could not obtain lock on row…" và "canceling statement due to lock timeout". Khác nhau thế nào?', opts: ['Giống hệt nhau', 'Cái đầu là NOWAIT (không chờ); cái sau là đã chờ hết lock_timeout', 'Cái sau là deadlock', 'Cái đầu là lỗi mạng'], ans: 1, why: 'Lab 14.06 A và B: cùng mã, khác message. Muốn biết nguyên nhân phải đọc message.' },
+    { q: '8 request cùng UPDATE counters SET n = n + 1 WHERE id = 1. Câu nào đúng?', opts: ['Một số cập nhật bị mất', 'Chúng xếp hàng, không mất cập nhật, nhưng thứ tự xong không chắc theo thứ tự đến', 'PG xử lý song song nên không ai chờ', 'Request thứ 8 luôn nhận 40P01'], ans: 1, why: 'Lab 14.08 A: 7/7 người chờ, n cuối = 8. Sau mỗi COMMIT, server chọn người kế tiếp; không phải hàng đợi đến trước làm trước.' }
+  ],
+  7: [
+    { q: 'A và B cùng đọc version 1, rồi cùng chạy UPDATE … AND version = 1 ở READ COMMITTED. A chưa COMMIT. B thế nào?', opts: ['B xong ngay vì optimistic không khóa', 'B chờ khóa dòng của A; sau khi A COMMIT, B sửa 0 dòng', 'B nhận 40P01', 'B ghi đè A'], ans: 1, why: 'Lab 14.07 A: B chờ Lock/transactionid, rồi rowCount 0. "No locks" của slide 15 là sai trên PG.' },
+    { q: 'Cùng tình huống nhưng cả hai ở REPEATABLE READ. B nhận gì sau khi A COMMIT?', opts: ['0 dòng', '40001 could not serialize access due to concurrent update', '55P03', 'Sửa 1 dòng'], ans: 1, why: 'Lab 14.07 B: B nhận 40001 và phải thử lại cả transaction.' },
+    { q: 'Code chạy UPDATE … AND version = $2 rồi INSERT vé mà không xem số dòng đã sửa. Hậu quả khi version cũ?', opts: ['Không sao, UPDATE sẽ ném lỗi', 'Vé ma: ghế không trừ nhưng vé vẫn được tạo', 'Deadlock', 'Ghế bị trừ hai lần'], ans: 1, why: 'Bản nháp Phần C đo: lần 2 dùng version cũ, ok=true, ghế giữ nguyên nhưng số vé tăng.' },
+    { q: 'Hai UPDATE có version, mỗi phiên sửa dòng 1 và dòng 2 theo thứ tự ngược nhau. Có deadlock không?', opts: ['Không, optimistic tránh được deadlock', 'Có: một phiên nhận 40P01', 'Chỉ khi ở SERIALIZABLE', 'Có, cả hai phiên nhận 40P01'], ans: 1, why: 'Lab 14.07 D: 40P01 × 1. Version không sửa thứ tự khóa; slide 16 cần sửa.' }
+  ],
+  8: [
+    { q: 'Hai pod NestJS cùng chạy, mỗi pod có một mutex trong bộ nhớ quanh hàm bookSeat. Có chặn được overbooking?', opts: ['Có', 'Không: mutex chỉ có hiệu lực trong một process', 'Có nếu dùng async/await', 'Chỉ khi DB ở SERIALIZABLE'], ans: 1, why: 'Slide 19: khóa của ngôn ngữ khác khóa của DB. Hai pod là hai mutex; cần khóa trong DB (FOR UPDATE, UPDATE có điều kiện, advisory lock).' },
+    { q: 'Bạn dùng pg_advisory_lock (mức session) qua connection pool, COMMIT xong quên unlock. Chuyện gì xảy ra?', opts: ['COMMIT tự nhả khóa', 'Kết nối trả về pool vẫn giữ khóa; request sau trên kết nối khác bị chặn', 'PG báo 40P01 ngay', 'Khóa tự hết sau 1 s'], ans: 1, why: 'Lab 14.08 D: sau COMMIT, A vẫn giữ 1 khóa advisory, B thử được false. Dùng pg_advisory_xact_lock thì COMMIT tự nhả (Lab 14.08 C).' },
+    { q: 'Slide 20 khuyên "tránh secondary index trong UPDATE". Trên PG 16 thì sao?', opts: ['Đúng y như InnoDB', 'Đó là mẹo của InnoDB; PG chỉ khóa dòng khớp, kể cả khi không có index', 'PG cấm UPDATE qua index', 'PG khóa cả bảng'], ans: 1, why: 'Lab 14.04 B: UPDATE theo cột không index, quét 1000 dòng, pgrowlocks thấy 4 dòng bị khóa.' },
+    { q: 'App dùng Prisma 7.9.0 (adapter-pg 7.9.0), vòng retry chỉ bắt e.code === P2034. Một deadlock 40P01 xảy ra. Kết quả?', opts: ['Được retry như 40001', 'Không được retry: trên 7.9.0, 40P01 không được báo là P2034', 'Prisma tự retry', 'Lỗi biến mất'], ans: 1, why: 'Mã nguồn adapter-pg 7.9.0 chỉ map 40001 thành write conflict (P2034, cho truy vấn model); từ 7.10.0 mới map cả 40P01. Lỗi từ $queryRaw … FOR UPDATE còn tới dạng P2010 ở cả hai bản, nên nâng cấp chưa đủ: kiểm SQLSTATE 40P01/40001 trong lỗi.' }
+  ]
+};
+
+var EXAM = [
+  { q: '1. SELECT thường và SELECT … FOR UPDATE khác nhau thế nào khi có người đang giữ khóa dòng?', a: 'SELECT thường đọc snapshot (MVCC), không xin khóa dòng nên không bao giờ chờ người ghi; Lab 14.02 A đo nó trả về ngay khi A giữ FOR UPDATE. SELECT … FOR UPDATE xin khóa mạnh nhất trên từng dòng, nên phải chờ (hoặc nhận 55P03 nếu có NOWAIT). Dùng FOR UPDATE khi bạn sắp quyết định dựa trên giá trị vừa đọc.' },
+  { q: '2. FOR NO KEY UPDATE khác FOR UPDATE ở đâu, và vì sao quan trọng với khóa ngoại?', a: 'UPDATE cột thường chỉ lấy FOR NO KEY UPDATE; UPDATE cột khóa chính (hoặc cột có unique index dùng được cho FK) hoặc DELETE lấy FOR UPDATE. INSERT dòng con kiểm tra FK bằng FOR KEY SHARE trên dòng cha, chỉ xung đột với FOR UPDATE. Vì vậy sửa số ghế không chặn việc tạo vé, còn đổi id chuyến bay thì chặn (Lab 14.02 C).' },
+  { q: '3. Trong PostgreSQL, khóa dòng được lưu ở đâu và bạn liệt kê chúng thế nào?', a: 'PG ghi xid của người khóa vào xmax của tuple ngay trên trang dữ liệu, không giữ danh sách khóa dòng trong bộ nhớ chung. pg_locks của người giữ chỉ có khóa bảng và transactionid; người chờ đầu tiên giữ một khóa tuple. Để xem dòng nào bị khóa: pgrowlocks(\'bảng\'); để xem ai chờ ai: pg_stat_activity + pg_blocking_pids().' },
+  { q: '4. Kể một sự cố do ALTER TABLE gây ra và cách phòng.', a: 'Một transaction đọc bảng rồi để idle. ALTER cần AccessExclusiveLock nên xếp hàng chờ; mọi SELECT đến sau phải xếp sau ALTER, API treo hàng loạt (Lab 14.03 B: pg_blocking_pids(C) = {B}). Phòng: SET lock_timeout vài giây trước ALTER và thử lại khi gặp 55P03; theo dõi và giới hạn transaction idle bằng idle_in_transaction_session_timeout.' },
+  { q: '5. PostgreSQL có gap lock không? Vậy phantom ở REPEATABLE READ được xử lý thế nào?', a: 'Không. PG chỉ khóa tuple có thật; Lab 14.04 A đo INSERT vào khe id 3 chạy ngay ở cả RC và RR. RR của PG dùng một snapshot cho cả transaction nên không thấy phantom; ghi đụng dòng đã đổi thì nhận 40001. SERIALIZABLE thêm SIReadLock để phát hiện, không để chặn.' },
+  { q: '6. PG chọn nạn nhân deadlock thế nào? Code có nên dựa vào điều đó?', a: 'Khi một phiên bắt đầu chờ, nó hẹn giờ deadlock_timeout (mặc định 1 s) và kiểm tra một lần lúc hết giờ; phiên nào thấy vòng thì tự hủy với 40P01. Script (B khép vòng sau vài chục ms) cho nạn nhân A; bằng tay (chậm hơn 1 s) nạn nhân thường là B; đặt deadlock_timeout của A = 4s thì nạn nhân là B. Vì phụ thuộc đồng hồ từng phiên, code không được dựa vào ai bị hủy: mọi phiên phải bắt 40P01 và thử lại.' },
+  { q: '7. Nêu 4 điều kiện Coffman và cách đơn giản nhất để tránh deadlock.', a: 'Loại trừ lẫn nhau, giữ và chờ, không cướp được, chờ vòng tròn; deadlock cần đủ cả 4. Cách đơn giản nhất là phá chờ vòng tròn: mọi transaction khóa các dòng theo cùng một thứ tự, ví dụ SELECT … WHERE id IN (…) ORDER BY id FOR UPDATE. Lab 14.05 C: 40P01 × 0 ở cả hai thứ tự bắt đầu, LockRows nằm trên Sort.' },
+  { q: '8. Khi nào dùng NOWAIT, lock_timeout, SKIP LOCKED?', a: 'NOWAIT: muốn biết ngay dòng đang bận (55P03 "could not obtain lock on row…"). lock_timeout: chấp nhận chờ ngắn rồi bỏ (55P03 "canceling statement due to lock timeout"), bắt buộc cho migration. SKIP LOCKED: nhiều worker chia việc từ một bảng, mỗi worker lấy dòng chưa ai khóa (Lab 14.06 C: 3 worker nhận ghế 1, 2, 3).' },
+  { q: '9. Chọn optimistic hay pessimistic locking theo mức tranh chấp thế nào?', a: 'Tranh chấp thấp, transaction dài (người dùng sửa form): optimistic bằng version + kiểm số dòng + thử lại. Tranh chấp cao trên ít dòng (trừ ghế, tồn kho): pessimistic hoặc UPDATE có điều kiện, vì optimistic sẽ làm đa số request thua. Lưu ý trên PG, UPDATE có version vẫn chờ khóa dòng (Lab 14.07 A) và vẫn có thể deadlock nếu khóa chéo (Lab 14.07 D).' },
+  { q: '10. pg_advisory_xact_lock khác pg_advisory_lock thế nào khi dùng connection pool?', a: 'Bản _xact_ gắn với transaction, tự nhả khi COMMIT/ROLLBACK (Lab 14.08 C: B false khi A giữ, true sau COMMIT). Bản session sống qua COMMIT; kết nối trả về pool vẫn giữ khóa và request sau bị chặn (Lab 14.08 D). Với pool, dùng bản _xact_, hoặc pg_advisory_unlock trong finally. Advisory lock chỉ phối hợp trong một DB, không thay Redis lock giữa nhiều hệ thống.' }
+];
+/* === GUIDE_DATA_END === */
+
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* chế độ riêng tư: bỏ qua, trang vẫn chạy */ } }
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const run = (id) => { try { return JSON.parse($('#run-' + id).textContent); } catch { return null; } };
+  const press = (group, btn) => { $$('[aria-pressed]', group).forEach((b) => b.setAttribute('aria-pressed', String(b === btn))); };
+
+  // Giao diện sáng/tối (khóa l14-theme)
+  const theme = store.get('l14-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  $('#themeBtn')?.addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('l14-theme', next);
+  });
+
+  // Ô điền tay: chỉ dùng khóa l14-* (data-store)
+  $$('[data-store]').forEach((el) => {
+    const key = el.dataset.store;
+    if (!key.startsWith('l14-')) return;
+    const saved = store.get(key);
+    if (el.type === 'checkbox') {
+      el.checked = saved === 'true';
+      el.addEventListener('change', () => store.set(key, String(el.checked)));
+    } else {
+      el.value = saved ?? '';
+      el.addEventListener('input', () => store.set(key, el.value));
+    }
+  });
+
+  // Bảng walkthrough: nhãn cột cho dạng thẻ trên màn nhỏ
+  $$('table.walk').forEach((t) => {
+    const heads = $$('thead th', t).map((th) => th.textContent.trim());
+    $$('tbody tr', t).forEach((tr) => $$('td', tr).forEach((td, i) => { if (i > 0 && heads[i]) td.dataset.label = heads[i]; }));
+  });
+
+  // Quiz
+  $$('.quiz[data-quiz]').forEach((box) => {
+    const n = box.dataset.quiz;
+    const qs = QUIZ[n];
+    if (!qs) return;
+    let score = 0, answered = 0;
+    box.innerHTML = `<div class="quiz-head"><h4>Tự kiểm tra chặng ${n}</h4><span class="quiz-score num" aria-live="polite">0/${qs.length}</span></div>` +
+      qs.map((x, i) => {
+        const order = x.opts.map((_, j) => j).sort(() => Math.random() - 0.5);
+        return `<div class="q" data-i="${i}"><p class="q-text">${i + 1}. ${esc(x.q)}</p><div class="q-opts">${order.map((j) => `<button type="button" class="q-opt" data-j="${j}">${esc(x.opts[j])}</button>`).join('')}</div></div>`;
+      }).join('');
+    $$('.q', box).forEach((qel) => {
+      const x = qs[+qel.dataset.i];
+      $$('.q-opt', qel).forEach((btn) => btn.addEventListener('click', () => {
+        const j = +btn.dataset.j;
+        $$('.q-opt', qel).forEach((b) => { b.disabled = true; if (+b.dataset.j === x.ans) b.classList.add('right'); });
+        if (j === x.ans) score++; else btn.classList.add('wrong');
+        answered++;
+        const ex = document.createElement('div');
+        ex.className = 'q-explain';
+        ex.innerHTML = `<strong>${j === x.ans ? 'Đúng.' : 'Chưa đúng.'}</strong> ${esc(x.why)}`;
+        qel.appendChild(ex);
+        $('.quiz-score', box).textContent = `${score}/${qs.length}${answered === qs.length ? (score === qs.length ? ' · Đạt' : ' · Xem lại phần sai') : ''}`;
+      }));
+    });
+  });
+
+  // Phỏng vấn + bản đồ slide
+  const exam = $('#examList');
+  if (exam) exam.innerHTML = EXAM.map((e) => `<details class="fold"><summary>${esc(e.q)}</summary><div class="fold-body"><p>${esc(e.a)}</p></div></details>`).join('');
+  const chipClass = { 'Đúng trên PG16': 'ok', 'MySQL đúng, PG khác': 'diff', 'Cần sửa': 'fix' };
+  const map = $('#slideMap');
+  if (map) map.innerHTML = SLIDES.map((s) => `<a class="chip${s.pg ? ' pg' : ''}" href="${s.href}"><b>${s.n}</b> ${esc(s.title)}${s.chip ? ` <span class="vchip ${chipClass[s.chip]}">${esc(s.chip)}</span>` : ''}</a>`).join('');
+
+  // W2 · Ai chặn số âm? (lab01.json)
+  const L1 = run('lab01');
+  const w2Btns = $('#w2-btns');
+  if (L1 && w2Btns) {
+    const lo = -30, hi = 60, pct = (v) => ((v - lo) / (hi - lo)) * 100;
+    const show = (k) => {
+      const v = L1.variants[k];
+      $('#w2-bars').innerHTML = Object.entries(v.final).map(([w, val]) => {
+        const a = pct(Math.min(0, val)), b = pct(Math.max(0, val));
+        return `<div class="bar"><span>Ví ${w}</span><span class="bar-track" aria-hidden="true"><span class="bar-zero" style="left:${pct(0)}%"></span><span class="bar-fill${val < 0 ? ' neg' : ''}" style="left:${a}%;width:${b - a}%"></span></span><span class="bar-val">${val}</span></div>`;
+      }).join('');
+      const broken = v.final.A < 0 ? '<span class="badx">✘ ví A âm</span>' : v.total !== L1.expectedTotal ? `<span class="badx">✘ tổng ${v.total} ≠ ${L1.expectedTotal}: tiền bị in thêm</span>` : '<span class="good">✔ giữ được bất biến: ví ≥ 0, tổng 50</span>';
+      $('#w2-out').innerHTML = `<p><b>${esc(k)}. ${esc(v.mechanism)}</b> · tổng = ${v.total}${v.code ? ` · mã ${esc(v.code)}` : ''}</p><p>Phiên B: chờ <code>${esc(v.waitEvent)}</code>, rồi ${esc(v.bOutcome)}.</p><p>${broken}</p>`;
+    };
+    w2Btns.innerHTML = Object.entries(L1.variants).map(([k, v]) => `<button type="button" class="btn" aria-pressed="false" data-k="${k}">${k}. ${esc(v.mechanism)}</button>`).join('');
+    $$('button', w2Btns).forEach((b) => b.addEventListener('click', () => { press(w2Btns, b); show(b.dataset.k); }));
+    press(w2Btns, $('button', w2Btns));
+    show('A');
+  }
+
+  // W1 · Ma trận 4×4 (lab02.json)
+  const L2 = run('lab02');
+  const w1 = $('#w1-matrix');
+  if (L2 && w1) {
+    const head = `<tr><th>A giữ ↓ / B xin →</th>${L2.modes.map((m) => `<th>${esc(m)}</th>`).join('')}</tr>`;
+    const rows = L2.modes.map((h) => `<tr><td><b>${esc(h)}</b></td>${L2.modes.map((r) => {
+      const v = L2.matrix[h][r];
+      return `<td><button type="button" class="cellbtn ${v === 'ok' ? 'ok' : 'bad'}" aria-pressed="false" data-h="${esc(h)}" data-r="${esc(r)}" aria-label="A giữ ${esc(h)}, B xin ${esc(r)}: ${esc(v)}">${esc(v)}</button></td>`;
+    }).join('')}</tr>`).join('');
+    w1.innerHTML = `<table class="mx"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    const fk = L2.fk;
+    const out = $('#w1-out');
+    out.innerHTML = `Khóa ngoại đo được: UPDATE cột thường chặn INSERT con? <b>${fk.plainUpdateBlocksChildInsert ? 'có' : 'không'}</b> · UPDATE khóa chính chặn INSERT con? <b>${fk.keyUpdateBlocksChildInsert ? 'có' : 'không'}</b> (${esc(fk.keyUpdateWaitEvent)}).`;
+    $$('.cellbtn', w1).forEach((b) => b.addEventListener('click', () => {
+      press(w1, b);
+      const { h, r } = b.dataset;
+      const v = L2.matrix[h][r], doc = L2.docs[h][r], match = (v !== 'ok') === doc;
+      const fkNote = r === 'KEY SHARE' ? ' INSERT dòng con kiểm FK chính là người xin KEY SHARE.' : '';
+      out.innerHTML = `A giữ <code>FOR ${esc(h)}</code>, B xin <code>FOR ${esc(r)} NOWAIT</code> → đo được <b>${esc(v)}</b>. Tài liệu PG 16 §13.3.2: ${doc ? 'xung đột' : 'không xung đột'} → <span class="${match ? 'good' : 'badx'}">${match ? 'khớp' : 'lệch'}</span>.${fkNote}`;
+    }));
+    $('#w1-mysql')?.addEventListener('change', (e) => { $('#w1-sx').hidden = !e.target.checked; });
+  }
+
+  // W3 · Hàng đợi khóa bảng (lab03.json)
+  const L3 = run('lab03');
+  const w3Lanes = $('#w3-lanes');
+  if (L3 && w3Lanes) {
+    const t = L3.timeout;
+    const paint = (withTimeout) => {
+      const lane = (q, pill) => `<div class="lane"><span class="who">${q.role}</span><span class="what"><code>${esc(q.sql)}</code><br><span class="muted">${esc(q.locks[0].mode)}</span></span>${pill}</div>`;
+      const [a, b, c] = L3.queue;
+      w3Lanes.innerHTML = lane(a, '<span class="pill ok">đã cấp · idle in transaction</span>')
+        + lane(b, withTimeout ? `<span class="pill bad">${esc(t.code)} sau ${t.ms} ms</span>` : `<span class="pill wait">chờ ${esc(b.blockers.join(', '))} · ${esc(b.waitEvent)}</span>`)
+        + lane(c, withTimeout ? '<span class="pill ok">đọc xong</span>' : `<span class="pill wait">chờ ${esc(c.blockers.join(', '))} · ${esc(c.waitEvent)}</span>`);
+      $('#w3-out').innerHTML = withTimeout
+        ? `<p>B nhận <b>${esc(t.code)}</b> "${esc(t.message)}" sau ${t.ms} ms (mẫu trên máy này). C ${t.cReturned ? 'chạy tiếp' : 'vẫn chờ'} dù A vẫn "${esc(t.aState)}".</p>`
+        : `<p>A và C đều chỉ đọc, hai <code>AccessShareLock</code> không xung đột. Nhưng C phải xếp sau B: <code>pg_blocking_pids(C) = {${esc(c.blockers.join(', '))}}</code>. Một transaction quên đóng + một ALTER = API treo.</p>`;
+    };
+    const tg = $('#w3-timeout');
+    tg?.addEventListener('change', () => paint(tg.checked));
+    paint(false);
+  }
+
+  // W4 · Đồ thị chờ + Coffman (lab05.json)
+  const L5 = run('lab05');
+  const svg = $('#w4-svg');
+  if (L5 && svg) {
+    const NS = 'http://www.w3.org/2000/svg';
+    let ordered = false, step = 0;
+    const tl = () => (ordered ? L5.ordered.rounds[0].timeline : L5.deadlock.timeline);
+    const pos = { A: [90, 100], B: [310, 100] };
+    const short = (sql) => sql.replace(/\bl05_/g, '');
+    const state = (n) => {
+      const edges = {}, dead = new Set();
+      tl().slice(0, n).forEach((e) => {
+        if (e.event === 'wait') edges[e.role] = e.waitsFor;
+        else { delete edges[e.role]; if (e.event === '40P01') dead.add(e.role); }
+      });
+      return { edges, dead };
+    };
+    const label = (e) => ({ ok: 'xong', wait: `chờ ${e.waitsFor}`, resume: 'hết chờ, nhận dòng', '40P01': 'nhận 40P01' }[e.event] ?? e.event) + (e.rows ? ` (${e.rows} dòng)` : '') + (e.ms ? ` · ${e.ms} ms` : '');
+    const draw = () => {
+      const t = tl();
+      const { edges, dead } = state(step);
+      const cycle = edges.A === 'B' && edges.B === 'A';
+      let g = `<title id="w4-svg-title">Đồ thị chờ giữa phiên A và B</title><defs><marker id="w4-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${cycle ? 'var(--bad)' : 'var(--warn)'}"></path></marker></defs>`;
+      if (edges.A === 'B') g += `<path class="edge${cycle ? ' cycle' : ''}" d="M122,82 Q200,20 278,82" marker-end="url(#w4-arrow)"></path><text class="elabel" x="200" y="34" text-anchor="middle">A chờ B</text>`;
+      if (edges.B === 'A') g += `<path class="edge${cycle ? ' cycle' : ''}" d="M278,118 Q200,180 122,118" marker-end="url(#w4-arrow)"></path><text class="elabel" x="200" y="176" text-anchor="middle">B chờ A</text>`;
+      Object.entries(pos).forEach(([r, [x, y]]) => {
+        g += `<g class="node${dead.has(r) ? ' dead' : ''}"><circle cx="${x}" cy="${y}" r="30"></circle><text x="${x}" y="${y + 8}" text-anchor="middle">${r}</text></g>`;
+      });
+      svg.innerHTML = g;
+      $('#w4-steps').innerHTML = `<thead><tr><th>#</th><th>Phiên</th><th>SQL</th><th>Kết quả</th></tr></thead><tbody>${t.map((e, i) => `<tr class="${i === step - 1 ? 'now' : i >= step ? 'future' : ''}"><td>${i + 1}</td><td>${e.role}</td><td>${esc(short(e.sql))}</td><td>${esc(label(e))}</td></tr>`).join('')}</tbody>`;
+      const cur = t[step - 1];
+      let msg = step === 0 ? 'Bấm "Bước tiếp" để bắt đầu.' : `<b>Bước ${step}/${t.length}:</b> ${cur.role} chạy <code>${esc(short(cur.sql))}</code> → ${esc(label(cur))}.`;
+      if (cycle) msg += ` <span class="badx">Vòng tròn A → B → A.</span> Sau deadlock_timeout, phiên kiểm tra trước sẽ tự hủy.`;
+      if (!ordered && cur?.event === '40P01') msg += ` Nạn nhân: <b>${esc(L5.deadlock.victim)}</b>; ${esc(L5.deadlock.survivor.role)} sống sau ${L5.deadlock.survivor.ms} ms (mẫu). Đặt deadlock_timeout của A = 4s thì nạn nhân là <b>${esc(L5.deadlockTimeout4s.victim)}</b>.`;
+      if (ordered && step === t.length) msg += ` <span class="good">40P01 × ${L5.ordered.rounds[0].deadlocks}: B chỉ chờ A, không bao giờ có mũi tên ngược lại.</span> 10 vòng song song: 40P01 × ${L5.ordered.loop.deadlocks}.`;
+      $('#w4-out').innerHTML = msg;
+      $('#w4-prev').disabled = step === 0;
+      $('#w4-next').disabled = step === t.length;
+    };
+    $('#w4-next').addEventListener('click', () => { step = Math.min(tl().length, step + 1); draw(); });
+    $('#w4-prev').addEventListener('click', () => { step = Math.max(0, step - 1); draw(); });
+    $('#w4-reset').addEventListener('click', () => { step = 0; draw(); });
+    $('#w4-order').addEventListener('change', (e) => { ordered = e.target.checked; step = 0; draw(); });
+    draw();
+
+    const COFF = [
+      { k: 'mutex', t: 'Loại trừ lẫn nhau', why: 'Vẫn còn: khóa dòng UPDATE chỉ một phiên giữ. Bỏ điều kiện này nghĩa là bỏ khóa, dữ liệu sai.' },
+      { k: 'hold', t: 'Giữ và chờ', why: 'Vẫn còn: với ORDER BY, A vẫn giữ dòng 1 trong khi xin dòng 2 trong cùng câu lệnh.' },
+      { k: 'nopre', t: 'Không cướp được', why: 'Vẫn còn: PG không giật khóa từ phiên khác; nó chỉ hủy cả transaction (40P01).' },
+      { k: 'circ', t: 'Chờ vòng tròn', why: 'Đúng. Mọi phiên xin dòng theo id tăng dần, nên không ai giữ id lớn rồi xin id nhỏ: không thể có vòng A → B → A.' },
+    ];
+    const cBox = $('#w4-coffman');
+    cBox.innerHTML = COFF.map((c) => `<button type="button" class="btn" data-k="${c.k}">${c.t}</button>`).join('');
+    $$('button', cBox).forEach((b) => b.addEventListener('click', () => {
+      const c = COFF.find((x) => x.k === b.dataset.k);
+      $$('button', cBox).forEach((x) => x.classList.remove('right', 'wrong'));
+      b.classList.add(c.k === 'circ' ? 'right' : 'wrong');
+      $('#w4-coffman-out').innerHTML = `<b>${esc(c.t)}:</b> ${esc(c.why)}`;
+    }));
+  }
+
+  // W5 · Chọn chiến lược (lab05/07/08.json)
+  const L7 = run('lab07'), L8 = run('lab08');
+  const w5Out = $('#w5-out');
+  if (L7 && L8 && w5Out) {
+    const hot = L8.contention.hotRow, spread = L8.contention.spread;
+    const tuple = hot.waiters.filter((w) => w.waitEvent === 'Lock/tuple').length;
+    const ev = {
+      hot: `Lab 14.08 A: dòng nóng có ${hot.waiters.length} người chờ (${hot.waiters.length - tuple} trên transactionid, ${tuple} trên tuple), n cuối = ${hot.finalN}: chậm nhưng không mất cập nhật. Dòng trải đều: ${spread.waiters} người chờ.`,
+      rc: `Lab 14.07 A: người thua với version chờ khóa rồi nhận ${L7.readCommitted.bRows} dòng (READ COMMITTED); ở REPEATABLE READ nhận ${esc(L7.repeatableRead.bCode)}.`,
+      retry: `Lab 14.07 C: đọc lại version ${L7.retry.readVersion}, ghi lại được, version cuối ${L7.retry.finalVersion}.`,
+      cross: `Lab 14.07 D: version chéo dòng vẫn ra 40P01 × ${L7.crosswise.deadlocks}.` + (L5 ? ` Lab 14.05 C: ORDER BY id → 40P01 × ${L5.ordered.loop.deadlocks} sau ${L5.ordered.loop.rounds} vòng.` : ''),
+    };
+    const REC = {
+      seat: {
+        high: ['Khóa bi quan hoặc UPDATE có điều kiện', '<code>UPDATE flights SET seats = seats - 1 WHERE id = $1 AND seats &gt; 0</code> rồi kiểm số dòng; cần đọc trước thì <code>FOR UPDATE</code>. Optimistic ở đây làm đa số request thua.', ['hot', 'rc']],
+        low: ['UPDATE có điều kiện (một câu)', 'Tranh chấp thấp thì một câu UPDATE có điều kiện vừa đúng vừa rẻ; version CAS cũng được.', ['retry']],
+      },
+      profile: {
+        low: ['Optimistic: version CAS + báo tải lại', 'Không giữ khóa trong lúc người dùng sửa form. Ghi <code>… AND version = $2</code>, 0 dòng thì báo "dữ liệu đã đổi".', ['rc', 'retry']],
+        high: ['Optimistic vẫn được, nhưng chia nhỏ dữ liệu', 'Nhiều người sửa cùng hồ sơ: tách thành nhiều dòng (mỗi phần một dòng), hoặc khóa ngắn với <code>NOWAIT</code> để báo "đang có người sửa".', ['rc', 'hot']],
+      },
+      queue: {
+        low: ['SKIP LOCKED', '<code>SELECT id FROM jobs WHERE NOT done ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED</code>: mỗi worker lấy một job khác nhau, không ai chờ (Lab 14.06 C).', ['hot']],
+        high: ['SKIP LOCKED', 'Càng đông worker càng cần SKIP LOCKED: không có nó, mọi worker dồn vào cùng dòng đầu hàng như dòng nóng.', ['hot']],
+      },
+      transfer: {
+        low: ['Khóa 2 ví theo thứ tự id + CHECK', '<code>SELECT … WHERE id IN ($1, $2) ORDER BY id FOR UPDATE</code>, kiểm số dư, trừ trước cộng sau, <code>CHECK (balance &gt;= 0)</code> làm lưới. Bắt 40P01/40001 và thử lại.', ['cross']],
+        high: ['Khóa 2 ví theo thứ tự id + CHECK', 'Như tranh chấp thấp; thêm <code>lock_timeout</code> ngắn để request không treo lâu.', ['cross', 'hot']],
+      },
+    };
+    const sc = $('#w5-scenario'), co = $('#w5-contention');
+    const paint = () => {
+      const [title, how, keys] = REC[sc.value][co.value];
+      w5Out.innerHTML = `<p><b>Gợi ý: ${title}</b></p><p>${how}</p>${keys.map((k) => `<p class="muted">${ev[k]}</p>`).join('')}`;
+    };
+    sc.addEventListener('change', paint);
+    co.addEventListener('change', paint);
+    $('#w5-mutex').addEventListener('click', () => {
+      const x = L8.advisory.xact, s = L8.advisory.session;
+      w5Out.innerHTML = `<p><b>Ví dụ sai: mutex trong Node.</b> Mutex chỉ chặn request trong cùng một process. Hai pod (hoặc PM2 cluster) là hai mutex khác nhau, nên hai request vẫn cùng trừ ghế. Đây là suy luận, lab không chạy mutex.</p><p>Thay bằng khóa trong DB. Advisory lock theo transaction (Lab 14.08 C): A lấy ${x.a}, B khi A còn giữ ${x.bWhileHeld}, B sau COMMIT ${x.bAfterCommit}. Bản mức session sống qua COMMIT: ${s.heldAfterCommit ? 'có' : 'không'} (Lab 14.08 D), nên với pool phải dùng bản _xact_.</p>`;
+    });
+    paint();
+  }
+})();
+</script>
+</body>
+</html>

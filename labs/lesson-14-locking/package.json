@@ -1,0 +1,26 @@
+{
+  "name": "lesson-14-locking-labs",
+  "private": true,
+  "type": "module",
+  "description": "Runnable lock labs for lesson 14 (Locking) on the advance_be_lab Postgres (schema lab14_locking). Needs PG_URL.",
+  "scripts": {
+    "setup": "node 00-setup-dataset.mjs",
+    "check": "node check-lab-state.mjs",
+    "reset": "node check-lab-state.mjs --reset",
+    "lab1": "node 01-race-transfer.mjs",
+    "lab2": "node 02-row-lock-modes.mjs",
+    "lab3": "node 03-table-locks-queue.mjs",
+    "lab4": "node 04-no-gap-locks.mjs",
+    "lab5": "node 05-deadlock-ordering.mjs",
+    "lab6": "node 06-nowait-skip-locked.mjs",
+    "lab7": "node 07-optimistic-version.mjs",
+    "lab8": "node 08-contention-advisory.mjs",
+    "homework": "node homework-runner.mjs homework-predictions.mine.mjs",
+    "homework:booking": "node homework-booking-grader.mjs homework-booking.mine.mjs",
+    "homework:draft": "node homework-ai-draft.mjs",
+    "homework:solution": "node homework-runner.mjs homework-predictions.solution.mjs && node homework-booking-grader.mjs homework-booking.solution.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

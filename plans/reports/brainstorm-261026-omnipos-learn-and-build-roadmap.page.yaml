@@ -1,0 +1,481 @@
+version: 1
+meta:
+  title: "Lộ Trình Toàn Diện Vừa Học Vừa Build: OmniPOS & FinLedger Hub (39/39 Chuyên Đề)"
+  description: "Chiến lược phân tách 3 tầng tính năng (Core 39 bài vs Vỏ UI/CRUD do AI dựng sẵn vs Mở rộng sau 14/12) và kế hoạch chi tiết 6 Cụm từ 26/10 đến 14/12."
+  locale: vi
+theme:
+  preset: editorial
+blocks:
+  - type: hero
+    eyebrow: "BRAINSTORM CONTRACT & MASTER BUILD BLUEPRINT (26/10 -> 14/12 -> TẾT)"
+    title: "Vừa Học 39 Chuyên Đề Vừa Build Dự Án CV: Làm Sao Cho Kịp Mà Không Bị Ngợp?"
+    description: "Giải mã bài toán xử lý các tính năng ngoài giáo trình bằng mô hình 'Phân Vai 3 Tầng + 2 Worktree Song Song' trên nền repo `NgoDat2003/create-template-project`."
+
+  - type: section
+    title: "1. Chỉ Số Cam Kết & Hợp Đồng Đóng Khung (Brainstorm Contract)"
+    blocks:
+      - type: kpi
+        title: "Ngân Sách Thời Gian & Độ Phủ Kiến Trúc"
+        items:
+          - label: "Độ phủ kiến thức 3 khóa học"
+            value: "39 / 39 bài"
+            delta: "100% Scope"
+            trend: up
+            good: up
+            caption: "16 bài Backend + 10 bài System Design + 13 bài Kafka"
+          - label: "Thời gian hoàn thành 6 Cụm (Học + Core App)"
+            value: "49 ngày"
+            delta: "26/10 -> 14/12"
+            trend: flat
+            good: up
+            caption: "Mỗi Cụm: 70% thời gian học Pha A + 30% đắp dự án Pha B"
+          - label: "Thời gian Đạt phải tự gõ CRUD / UI râu ria"
+            value: "0 phút"
+            delta: "-100% việc phụ"
+            trend: down
+            good: down
+            caption: "AI dựng sẵn 100% vỏ UI/CRUD trên Worktree blueprint"
+          - label: "Quỹ thời gian đệm nâng cấp thêm trước Tết"
+            value: "~60 ngày"
+            delta: "15/12 -> Tết"
+            trend: up
+            good: up
+            caption: "Thong thả đắp thêm tính năng nâng cao & luyện phỏng vấn"
+
+      - type: key-value
+        title: "Brainstorm Contract (4 Trường Cốt Lõi & Điều Kiện Biên)"
+        items:
+          - key: "Outcome (Kết quả đầu ra)"
+            value: "Trước 14/12/2026: Nắm vững 39/39 chuyên đề và hoàn thiện 6 Milestone cốt lõi của dự án CV 'OmniPOS & FinLedger Hub' (Chuỗi 300+ cửa hàng F&B) trên nền create-template-project; từ 15/12 đến Tết mở rộng thêm các tính năng Product nâng cao."
+          - key: "Constraints (Ràng buộc kỹ thuật & Thời gian)"
+            value: "Học xong lý thuyết và thực nghiệm DBX của từng Cụm trước (Pha A) rồi mới mở repo code tính năng Cụm đó (Pha B). Bỏ qua 100% video record 2h và các file .mjs lab rời rạc. Giữ nguyên PostgreSQL 16 (:5433) làm DB chính."
+          - key: "Non-goals (Những việc cắt bỏ từ 26/10 - 14/12)"
+            value: "Từ 26/10 đến 14/12 tuyệt đối KHÔNG tự ngồi gõ các màn hình CRUD danh mục, CSS/HTML trang trí hoặc các tính năng nghiệp vụ ngoài 39 bài học (như QR Order tại bàn, tính định mức nguyên liệu BOM, báo cáo BI phức tạp)."
+          - key: "Acceptance Criteria (Tiêu chí nghiệm thu)"
+            value: "Cuối mỗi Cụm: (1) Tự tay chạy đúng các bài test cơ chế trên DBX; (2) Giải thích trôi chảy luồng code NestJS/Prisma/Next.js vừa thêm vào repo; (3) Bấm nút Stress Test trên UI React vượt qua bài kiểm tra tải đồng thời của Cụm đó."
+          - key: "Better Approaches (Phương pháp tối ưu được chọn)"
+            value: "Phân loại mọi tính năng của dự án thành 3 Tầng (Tầng 1: Lõi 39 bài học do Đạt code cùng AI; Tầng 2: Vỏ bọc UI/CRUD tối thiểu do AI dựng sẵn 100% trên Worktree mẫu; Tầng 3: Tính năng nghiệp vụ mở rộng để dành sau 14/12)."
+
+  - type: section
+    title: "2. Giải Đáp Trọng Tâm: Những Tính Năng Không Có Trong Bài Học Thì Xử Lý Thế Nào?"
+    blocks:
+      - type: callout
+        tone: success
+        title: "Nguyên Tắc Vàng: Chia Dự Án Thành 3 Nhóm Tính Năng — Không Ôm ĐồM Cùng Lúc!"
+        text: "Một dự án thực tế đưa vào CV luôn có phần 'Lõi Kỹ Thuật Khó' (nằm trong 39 bài học) và phần 'Vỏ Nghiệp Vụ' (CRUD cửa hàng, menu, giỏ hàng, giao diện). Nếu bạn tự làm cả hai cùng lúc thì 3 tháng cũng không xong. Giải pháp là tách bạch rạch ròi 3 nhóm dưới đây."
+
+      - type: feature-matrix
+        title: "Ma Trận Phân Vai 3 Nhóm Tính Năng Trong Dự Án 'OmniPOS & FinLedger Hub'"
+        plans:
+          - "Ai thực hiện?"
+          - "Làm vào lúc nào?"
+          - "Mục đích cho CV & Phỏng vấn"
+        rows:
+          - feature: "NHÓM 1: Lõi Kỹ Thuật 39 Bài Học (Transaction, Lock, Sổ cái kép, Redis, Rate Limit, Clean Arch, Security, Kafka, Outbox CDC, gRPC, Saga, Partitioning, Short-Link, Feed)"
+            values:
+              - "AI làm mẫu trên Worktree -> Đạt tự tay code & hiểu 100%"
+              - "Pha B cuối mỗi Cụm (26/10 -> 14/12)"
+              - "Trọng tâm 90% câu hỏi phỏng vấn Senior / Architect"
+          - feature: "NHÓM 2: Vỏ Bọc UI & CRUD Tối Thiểu (Trang Login có sẵn, bảng 300 Cửa hàng, danh sách Món nước, Nút bấm Stress Test trên React, cấu hình Orval/Docker, Seed data)"
+            values:
+              - "AI dựng sẵn 100% (Đạt tốn 0 phút gõ code râu ria)"
+              - "AI chuẩn bị sẵn trước khi vào Pha B mỗi Cụm"
+              - "Giúp App chạy liền mạch, trực quan để bấm nút test ngay"
+          - feature: "NHÓM 3: Tính Năng Nghiệp Vụ Mở Rộng Ngoài Khóa Học (Đặt món QR tại bàn, Tự động trừ định mức nguyên liệu BOM, Dashboard đối soát SAP nâng cao, Playwright E2E Video)"
+            values:
+              - "Đạt chủ động chọn tính năng yêu thích để độ thêm cùng AI"
+              - "SAU ngày 14/12 đến Tết (Khi đã học xong 100% 3 khóa)"
+              - "Làm dự án dày dặn, độc bản 100% khi đi phỏng vấn"
+
+      - type: comparison
+        title: "So Sánh 2 Cách Tiếp Cận Khi Vừa Học Vừa Build Dự Án"
+        left:
+          label: "Cách Sai Lầm (Dễ vỡ trận & Bỏ cuộc giữa chừng)"
+          items:
+            - "Vừa mới học lý thuyết chưa thấm đã mở repo ra gõ code ngay làm não bị quá tải kép (vừa lo nghĩ SQL MVCC vừa lo lỗi cú pháp NestJS)."
+            - "Tự ngồi gõ từng form CRUD thêm/sửa/xóa cửa hàng, chỉnh từng thẻ CSS Tailwind cho giao diện bán hàng mất cả tuần lễ."
+            - "Ôm đồm làm luôn các tính năng râu ria ngoài bài học (như tính công thức pha chế, quản lý ca làm việc nhân viên) ngay trong tháng 11."
+            - "Để AI sinh 100% code vào nhánh chính mà không đọc hiểu, dẫn tới có repo đẹp nhưng đi phỏng vấn bị hỏi luồng chạy là đứng hình."
+        right:
+          label: "Cách Của Chúng Ta (Phân Vai 3 Nhóm + 2 Worktree Song Song)"
+          items:
+            - "Học và vọc nát cơ chế trên DBX cho thông suốt hết các bài trong Cụm (Pha A - 70% thời gian) rồi mới mở repo làm dự án (Pha B - 30% thời gian)."
+            - "Mọi phần Vỏ UI, bảng hiển thị React, dữ liệu mồi 300 quán + Northwind và khung DTO đều được AI dựng sẵn ở Worktree phụ trước."
+            - "Trong suốt 26/10 -> 14/12 chỉ code đúng các tính năng thuộc 39 bài học; mọi tính năng nghiệp vụ mở rộng dời toàn bộ sang sau ngày 14/12."
+            - "Khi ghép vào nhánh chính, AI dẫn bạn đi từng file (Guard -> Controller -> Service -> Prisma), giải thích rõ tại sao đặt ở đó trước khi viết."
+
+      - type: diagram-panel
+        title: "Sơ Đồ Luồng Vận Hành Mỗi Cụm: Học Pha A -> Đắp Dự Án Pha B -> Mở Rộng Sau 14/12"
+        caption: "Mỗi Cụm 7-9 ngày luôn đi đúng 5 bước tuần tự từ trên xuống dưới để bảo đảm hiểu bản chất trước, hiểu luồng framework sau."
+        spec:
+          schema_version: 1
+          diagram_type: workflow
+          meta:
+            title: "Chu trình Vừa Học Vừa Build cho mỗi Cụm"
+            visual_preset: editorial
+            theme: light
+          lanes:
+            - id: lane-learn
+              label: "Pha A: Học Cơ Chế (70%)"
+              role: user
+            - id: lane-ai
+              label: "AI Chuẩn Bị Worktree"
+              role: orchestrator
+            - id: lane-build
+              label: "Pha B: Code Vào Dự Án (30%)"
+              role: worker
+          steps:
+            - id: st-guide
+              label: "1. Đọc Teacher Guide từng bài + đối đáp AI"
+              kind: start
+              lane: lane-learn
+            - id: st-dbx
+              label: "2. Tự gõ SQL / tình huống nhỏ trên DBX cho thông suốt"
+              kind: action
+              lane: lane-learn
+            - id: st-wt
+              label: "3. AI dựng sẵn Vỏ UI + Khung mẫu trên .worktrees/blueprint"
+              kind: subprocess
+              lane: lane-ai
+            - id: st-xray
+              label: "4. AI giải phẫu luồng NestJS/Next.js & dẫn Đạt code phần Lõi"
+              kind: action
+              lane: lane-build
+            - id: st-stress
+              label: "5. Bấm nút Stress Test trên UI React + Phản biện 3 câu CTO"
+              kind: terminal-success
+              lane: lane-build
+          transitions:
+            - from: st-guide
+              to: st-dbx
+              kind: normal
+              label: "Hiểu lý thuyết"
+            - from: st-dbx
+              to: st-wt
+              kind: normal
+              label: "Xong hết các bài trong Cụm"
+            - from: st-wt
+              to: st-xray
+              kind: normal
+              label: "Có khung chuẩn"
+            - from: st-xray
+              to: st-stress
+              kind: normal
+              label: "Code xong Core Logic"
+
+  - type: section
+    title: "3. Kiến Trúc Tổng Thể Dự Án 'OmniPOS & FinLedger Hub' Qua 6 Cụm"
+    blocks:
+      - type: diagram-panel
+        title: "Kiến Trúc Đích (Tiến Hóa Từ create-template-project Sang Turborepo Microservices)"
+        caption: "Cụm 1-3 xây các module trong apps/api; Cụm 4-6 tách thành các Microservices giao tiếp qua gRPC, Debezium CDC và Kafka KRaft."
+        spec:
+          schema_version: 1
+          diagram_type: architecture
+          meta:
+            title: "Kiến trúc OmniPOS & FinLedger Hub"
+            visual_preset: blueprint
+            theme: light
+          boundaries:
+            - id: b-mono
+              label: "Turborepo Monorepo (Nâng cấp từ create-template-project)"
+              role: cluster
+          components:
+            - id: c-web
+              label: "apps/web (Next.js 15 Dashboard & POS Simulator)"
+              role: frontend
+              layer: 0
+              boundary: b-mono
+            - id: c-gw
+              label: "apps/api (Edge Gateway: Auth, Idempotency, Rate Limit, SSE)"
+              role: gateway
+              layer: 1
+              boundary: b-mono
+            - id: c-order
+              label: "apps/order-service (Flash-Voucher Lock, Cache, Disruptor)"
+              role: backend
+              layer: 2
+              boundary: b-mono
+            - id: c-wallet
+              label: "apps/wallet-service (Double-Entry Ledger, Saga, Sharding)"
+              role: backend
+              layer: 2
+              boundary: b-mono
+            - id: c-pg
+              label: "PostgreSQL 16 (:5433 - MVCC, Locks, Partitioning, Outbox WAL)"
+              role: database
+              layer: 3
+              boundary: b-mono
+            - id: c-redis
+              label: "Redis 7 (Singleflight, ZSET Ranking/Feed, Lua Token Bucket)"
+              role: cache
+              layer: 3
+              boundary: b-mono
+            - id: c-kafka
+              label: "Kafka KRaft + Debezium CDC (Zero-Loss Event Streaming)"
+              role: queue
+              layer: 4
+              boundary: b-mono
+            - id: c-workers
+              label: "apps/fraud-worker & growth-service (Fraud Stream + ShortLink)"
+              role: worker
+              layer: 5
+              boundary: b-mono
+          connections:
+            - from: c-web
+              to: c-gw
+              kind: bi-directional
+              label: "REST + SSE"
+            - from: c-gw
+              to: c-order
+              kind: sync
+              label: "gRPC HTTP/2"
+            - from: c-gw
+              to: c-wallet
+              kind: sync
+              label: "gRPC HTTP/2"
+            - from: c-order
+              to: c-pg
+              kind: sync
+              label: "FOR UPDATE + Outbox"
+            - from: c-wallet
+              to: c-pg
+              kind: sync
+              label: "Double-Entry ACID"
+            - from: c-order
+              to: c-redis
+              kind: sync
+              label: "Cache + Singleflight"
+            - from: c-pg
+              to: c-kafka
+              kind: stream
+              label: "Debezium WAL CDC"
+            - from: c-kafka
+              to: c-workers
+              kind: async
+              label: "Cooperative Consumer"
+
+      - type: file-tree
+        title: "Cây Thư Mục Chuẩn 4 Tầng Clean Architecture + DDD (Theo Slide Bài 04 & Sách MSA Trang 268-294)"
+        items:
+          - path: "packages/building-blocks/src/"
+            status: added
+            note: "[Sách MSA Tr.270 & 293] BaseEntity, ValueObject, Result<T,E> (Bài 13), Outbox Contract"
+          - path: "apps/api/prisma/schema.prisma"
+            status: modified
+            note: "[Single Source of Truth] User, AuthSession, Store, Product, Wallet, LedgerEntry, OutboxEvent"
+          - path: "apps/api/src/common/{decorators,filters,guards,interceptors}/"
+            status: modified
+            note: "[Sách MSA Tr.270] @Idempotent(), HttpExceptionFilter (RFC 7807), Lua RateLimitGuard"
+          - path: "apps/api/src/modules/wallets/domain/{entities,value-objects,repositories}/"
+            status: added
+            note: "[Bài 04 Tr.26-29] Wallet Aggregate, Money VO, IWalletRepository Port (0% import Prisma)"
+          - path: "apps/api/src/modules/wallets/application/use-cases/"
+            status: added
+            note: "[Bài 04 Tr.29] TransferFundsUseCase, GetWalletStatementUseCase (Orchestrator)"
+          - path: "apps/api/src/modules/wallets/infrastructure/persistence/"
+            status: added
+            note: "[Bài 04 Tr.16] PrismaWalletRepository (prisma.$transaction, FOR UPDATE, Deadlock Ordering) + Mapper"
+          - path: "apps/api/src/modules/wallets/presentation/http/{controllers,dto}/"
+            status: added
+            note: "[Bài 04 Tr.15 & MSA Tr.294] WalletsController + Swagger DTOs sinh Orval hooks"
+          - path: "apps/api/src/modules/vouchers/{domain,application,infrastructure,presentation}/"
+            status: added
+            note: "[Bounded Context 2] Flash-Voucher Locking (SKIP LOCKED / Optimistic) & Redis Singleflight Cache"
+          - path: "apps/api/src/modules/orders/{domain,application,infrastructure,presentation}/"
+            status: added
+            note: "[Bounded Context 3] Đơn hàng POS, LMAX Disruptor Queue & Transactional Outbox"
+          - path: "apps/{order-service,wallet-service,fraud-worker}/"
+            status: added
+            note: "[Sách MSA Tr.291-292] Tách Microservices ở Cụm 4-5 (Giữ nguyên 4 tầng Clean Arch bên trong)"
+          - path: "apps/web/{app,features,lib/api/generated}/"
+            status: modified
+            note: "[Chuẩn frontend-architecture.md] page.tsx mỏng + features/{name}/hooks/use-{name}-actions.ts"
+
+      - type: table
+        title: "3 Cấp Độ Tiến Hóa Kiến Trúc & Refactor Thực Chiến (v1.0 -> v2.0 -> v3.0)"
+        columns:
+          - "Cấp độ & Giai đoạn"
+          - "Kiến trúc áp dụng"
+          - "Mục tiêu học tập & Nâng cấp Rule (.agent/projectRules/)"
+        rows:
+          - ["v1.0 — Cụm 1 & 2 (26/10 - 08/11)", "Chuẩn hiện tại của create-template-project (Controller -> Service -read/-workflow -> Prisma)", "Tập trung 100% não bộ làm chủ Database Internals (MVCC, Locking, Double-Entry) & Redis High-Load trên bộ khung quen thuộc."]
+          - ["v2.0 — Cụm 3 (09/11 - 17/11)", "Đại phẫu Refactor lên 4 tầng Clean Architecture + Hexagonal Ports/Adapters + DDD Tactical + Result<T,E>", "Sau khi học Bài 04 & 13: Tự tay refactor các module từ v1.0 sang 4 tầng (domain/application/infrastructure/presentation) và update .agent/projectRules/ lên chuẩn Senior v2.0."]
+          - ["v3.0 — Cụm 4, 5 & 6 (18/11 - 14/12)", "Distributed Microservices + Event-Driven (packages/building-blocks, gRPC, Debezium Outbox CDC, Kafka Saga)", "Trích xuất order-service, wallet-service, fraud-worker ra độc lập mà giữ nguyên 100% tầng domain/ không phải sửa lại."]
+
+  - type: section
+    title: "4. Chi Tiết Từng Cụm (Cụm 1 -> Cụm 6 & Sau 14/12): Học Gì, AI Đỡ Gì, Bạn Code Gì?"
+    blocks:
+      - type: tabs
+        title: "Bấm Vào Từng Cụm Để Xem Chi Tiết Lịch Học (Pha A) & Lịch Build Dự Án (Pha B)"
+        items:
+          - id: tab-c1
+            title: "Cụm 1 (26/10 - 01/11): DB, Lock & Ledger"
+            text: "Trọng tâm: Nốt Bài 12 (Transaction/MVCC) + Bài 14 (Locking/Deadlock) + Bài 07 (Double-Entry Ledger) -> Xây lõi Ví & Săn Flash-Voucher cho 300 quán."
+            blocks:
+              - type: table
+                title: "Lịch Chi Tiết 6 Ngày Của Cụm 1"
+                columns:
+                  - "Ngày"
+                  - "Pha"
+                  - "Việc bạn làm (1.5 - 2.5h/ngày)"
+                  - "Phần AI chuẩn bị sẵn để bạn không mất thời gian"
+                rows:
+                  - ["Ngày 1 (26/10)", "Pha A (Học)", "Học nốt Chặng 6-8 Bài 12: Gõ trên 2 tab DBX tạo lỗi 40001 & Write Skew trên bảng northwind", "AI tóm tắt từng chặng và đưa sẵn câu lệnh SQL mồi để bạn chạy trên DBX"]
+                  - ["Ngày 2 (27/10)", "Pha A (Học)", "Học nửa đầu Bài 14: Thực hành SELECT FOR UPDATE, NOWAIT, SKIP LOCKED và soi pg_locks trên DBX", "Đã có sẵn lesson_14_locking_teacher_guide.html"]
+                  - ["Ngày 3 (28/10)", "Pha A (Học)", "Học nửa sau Bài 14: Optimistic Lock (version), tự tạo Deadlock 40P01 trên DBX và sửa bằng Resource Ordering", "AI đưa tình huống 2 thu ngân khóa chéo 2 ví để bạn tự phá Deadlock"]
+                  - ["Ngày 4 (29/10)", "Pha A (Học)", "Học trọn vẹn Bài 07 (Data Modeling): 1NF-3NF, Polymorphic & tự gõ bảng Sổ cái kép (wallets + ledger_entries) trên DBX", "AI đối chiếu trực tiếp với schema thực tế của chuỗi F&B"]
+                  - ["Ngày 5 (30/10)", "Pha B (Dự Án)", "Giải phẫu luồng gốc của create-template-project (30p) + Cùng AI thêm bảng Store, Product, Wallet, LedgerEntry vào schema.prisma", "AI viết sẵn script seed.ts nạp 300 cửa hàng MayCha/Thức Coffee + 77 món từ northwind"]
+                  - ["Ngày 6 (31/10-01/11)", "Pha B (Dự Án)", "Nhìn bản mẫu trên .worktrees/blueprint -> Tự tay viết hàm claimFlashVoucher (FOR UPDATE) & transferWallet (Sổ cái kép + chống Deadlock)", "AI dựng sẵn trang UI React có nút 'Bắn 30 Request Mua Cùng Lúc' & bảng thống kê số dư"]
+
+          - id: tab-c2
+            title: "Cụm 2 (02/11 - 08/11): Redis, Cache & Rate Limit"
+            text: "Trọng tâm: Bài 06 (Redis Internals) + K2-04 (Multi-tier Cache & 5 thuật toán Rate Limit) + Áp dụng Bài 01, 02 đã học vào dự án."
+            blocks:
+              - type: table
+                title: "Phân Bổ 7 Ngày Của Cụm 2"
+                columns:
+                  - "Giai đoạn"
+                  - "Nội dung"
+                  - "Chi tiết thực hiện"
+                rows:
+                  - ["Ngày 1 - 4 (02/11 - 05/11)", "Pha A: Học Bài 06 & K2-04", "Học cấu trúc dữ liệu nội tại của Redis (SDS, Skiplist ZSET, Event Loop), RDB vs AOF, Redlock và 5 thuật toán Rate Limiting (Fixed/Sliding Window, Leaky/Token Bucket). Thực hành gõ lệnh Redis trực tiếp trên DBX."]
+                  - ["Ngày 5 (06/11)", "Pha B: AI dựng Vỏ + Giải phẫu", "AI thêm Redis 7 vào docker-compose.yaml và dựng sẵn trên Worktree mẫu giao diện тест Bắn 200 req/s & nút Bấm Đúp Thanh Toán."]
+                  - ["Ngày 6 - 7 (07/11 - 08/11)", "Pha B: Đạt code Lõi Cụm 2", "Bạn tự tay code 3 vũ khí vào apps/api: (1) Decorator @Idempotent() chống máy POS gửi trùng hóa đơn; (2) Cache-Aside + Singleflight + TTL Jitter cho Menu 300 quán & Bảng xếp hạng món bán chạy bằng Redis ZSET; (3) Guard Rate Limit bằng Lua Script Token Bucket."]
+
+          - id: tab-c3
+            title: "Cụm 3 (09/11 - 17/11): Clean Arch, Security & Resilience"
+            text: "Trọng tâm: Bài 04, 13 (Clean Arch & SOLID) + Bài 08 (Security) + Bài 11 (Regex ReDoS) + Bài 16 (Circuit Breaker/Retry) + Bài 05, 15 (Network/OS)."
+            blocks:
+              - type: table
+                title: "Phân Bổ 9 Ngày Của Cụm 3"
+                columns:
+                  - "Giai đoạn"
+                  - "Nội dung"
+                  - "Chi tiết thực hiện"
+                rows:
+                  - ["Ngày 1 - 6 (09/11 - 14/11)", "Pha A: Học 6 bài nền tảng Hệ thống & Bảo mật", "Mỗi ngày 1 bài qua Teacher Guide: (1) Clean Arch & DDD; (2) SOLID & Result<T,E>; (3) OWASP Top 10, IDOR, Argon2id, JWT Refresh Rotation; (4) Regex NFA & ReDoS; (5) OS Virtual Memory, epoll, Zero-Copy sendfile; (6) TCP/TLS/HTTP2/SSE, Retry Full Jitter & Circuit Breaker."]
+                  - ["Ngày 7 - 9 (15/11 - 17/11)", "Pha B: Đại Phẫu Refactor v1.0 -> v2.0 & Đắp Vành Đai Bảo Vệ", "Cùng AI thực hiện bài Refactor đắt giá nhất: nâng cấp các module từ kiến trúc cũ (v1.0) sang 4 tầng Clean Architecture + DDD + Result<T,E> (v2.0) và update bộ .agent/projectRules/; đồng thời gắn Guard chống IDOR, Regex an toàn, Circuit Breaker + Retry Jitter & Zero-Copy CSV Stream."]
+
+          - id: tab-c4
+            title: "Cụm 4 (18/11 - 26/11): Kafka Core Engine"
+            text: "Trọng tâm: Khóa 3 từ Bài 01 đến Bài 08 (Why Kafka, Partition/Offset, Producer ACKs & Idempotence, Avro Schema Registry, Consumer Rebalance & Liveness)."
+            blocks:
+              - type: table
+                title: "Phân Bổ 9 Ngày Của Cụm 4"
+                columns:
+                  - "Giai đoạn"
+                  - "Nội dung"
+                  - "Chi tiết thực hiện"
+                rows:
+                  - ["Ngày 1 - 6 (18/11 - 23/11)", "Pha A: Học 8 bài Kafka Core", "Nắm trọn 4 bí mật tốc độ Kafka (kết nối trực tiếp với bài OS Zero-Copy ở Cụm 3), quy tắc thứ tự trong Partition, 7 thông số Producer (acks=all, linger.ms, enable.idempotence), Schema Registry Avro/Protobuf, CooperativeStickyAssignor và 2 luồng Poll/Heartbeat chống Rebalance Loop."]
+                  - ["Ngày 7 - 9 (24/11 - 26/11)", "Pha B: Dựng Kafka KRaft & Tách Worker đầu tiên", "AI cấu hình sẵn container Kafka KRaft (không ZooKeeper) trong docker-compose.yaml. Bạn tự tay code Producer chuẩn tài chính bắn hóa đơn phân vùng theo storeId/walletId và tách app đầu tiên apps/fraud-worker lắng nghe sự kiện với Cooperative Rebalance."]
+
+          - id: tab-c5
+            title: "Cụm 5 (27/11 - 05/12): Microservices, Outbox CDC & Saga"
+            text: "Trọng tâm: K2-05 (gRPC), K2-06 (Microservices & Saga), K3-09 (Transactional Outbox + Debezium CDC + EOS), K3-10 (Fraud Stream) & K3-11..13 (150 câu CCDAK)."
+            blocks:
+              - type: table
+                title: "Phân Bổ 9 Ngày Của Cụm 5"
+                columns:
+                  - "Giai đoạn"
+                  - "Nội dung"
+                  - "Chi tiết thực hiện"
+                rows:
+                  - ["Ngày 1 - 6 (27/11 - 02/12)", "Pha A: Học Giao Dịch Phân Tán & Outbox CDC", "Học cách xác định ranh giới Bounded Context để tách Microservices, so sánh REST vs gRPC (HTTP/2 Protobuf), 2PC vs TCC vs Saga (Orchestration/Choreography + Compensating Tx), thảm họa Dual-Write, Transactional Outbox + Debezium đọc WAL Postgres, Real-time Fraud Detection và luyện bộ câu hỏi tình huống CCDAK."]
+                  - ["Ngày 7 - 9 (03/12 - 05/12)", "Pha B: Tiến Hóa Dự Án Lên Microservices Thực Thụ", "AI chuẩn bị khung package proto và cấu hình Debezium Connect trên Worktree mẫu. Bạn tự tay: (1) Tách apps/order-service và apps/wallet-service gọi nhau qua gRPC; (2) Ghi bảng outbox_events trong cùng Transaction với đơn hàng để Debezium đẩy vào Kafka; (3) Code luồng Saga tự động phát lệnh hoàn tiền Ví nếu kho báo lỗi + Sliding Window khóa ví nếu quẹt bất thường >5 lần/10s."]
+
+          - id: tab-c6
+            title: "Cụm 6 (06/12 - 14/12): System Design Scale & Case Studies"
+            text: "Trọng tâm: K2-01, 02 (Estimation, CAP/PACELC), K2-03 (Partitioning/Sharding), K2-07 (LMAX Disruptor), K2-08 (Bitly Shortener), K2-09 (Threads Feed) & K2-10 (Architecture Book)."
+            blocks:
+              - type: table
+                title: "Phân Bổ 9 Ngày Của Cụm 6"
+                columns:
+                  - "Giai đoạn"
+                  - "Nội dung"
+                  - "Chi tiết thực hiện"
+                rows:
+                  - ["Ngày 1 - 6 (06/12 - 11/12)", "Pha A: Học Thiết Kế Hệ Thống Quy Mô Lớn", "Làm chủ công thức tính QPS/Storage/RAM Cache (Pareto 80/20), CAP & PACELC, Range vs Hash Partitioning, Sharding chống Hotspot, LMAX Disruptor Ring Buffer, Hashed Wheel Timer, thiết kế Bitly (Base62 + Snowflake KGS) và thiết kế Newsfeed (Push vs Pull vs Hybrid Celebrity Fan-out)."]
+                  - ["Ngày 7 - 9 (12/12 - 14/12)", "Pha B: Hoàn Thiện Milestone 6 & Đóng Gói Hồ Sơ Kiến Trúc", "Bạn tự tay: (1) Chuyển bảng hóa đơn/sổ cái sang Range Partitioning theo tháng trên Postgres 16; (2) Code tính năng Tạo Short-Link chia sẻ Voucher (Snowflake ID + Base62) và Bảng tin Khuyến mãi 300 cửa hàng (Hybrid Fan-out trên Redis ZSET); (3) Viết bộ Architecture Decision Records (ADRs) chuẩn sách K2-10 vào thư mục docs/ của repo."]
+
+          - id: tab-post
+            title: "Sau 14/12 -> Tết: Mở Rộng Tự Do & Săn Job"
+            text: "Khi đã xong 100% 39 bài học và có cốt lõi hệ thống cực mạnh, bạn dùng thời gian còn lại trước Tết để biến dự án thành sản phẩm độc bản."
+            blocks:
+              - type: steps
+                title: "Các Tính Năng Mở Rộng (Nhóm 3) Bạn Có Thể Thong Thả Độ Thêm Sau Ngày 14/12"
+                items:
+                  - title: "Tuần 3 Tháng 12: Đóng gói Live Demo, Sơ đồ Kiến trúc & Video Playwright E2E"
+                    text: "Quay 1 video Playwright E2E tự động chạy xuyên suốt từ lúc khách bấm săn Flash-Voucher -> Trừ Ví Sổ cái kép -> Bắn Kafka CDC -> Hiển thị Dashboard đối soát 300 cửa hàng, rồi gắn thẳng vào trang đầu của NgoDat2003/portfolio."
+                  - title: "Tuần 4 Tháng 12: Bổ sung tính năng 'Đối Soát Tự Động POS <-> SAP B1 (ERP Reconciliation)'"
+                    text: "Nâng cấp bài toán n8n cũ trong CV của bạn thành 1 module đối soát tự động chạy bằng Kafka Stream + Worker trong chính repo này."
+                  - title: "Tháng 1 (Trước Tết): Bổ sung tính năng tự chọn & Luyện Phản Biện System Design"
+                    text: "Có thể thêm QR Order tại bàn hoặc Tự động trừ định mức nguyên liệu (BOM), đồng thời mỗi ngày dành 45 phút cùng AI luyện phỏng vấn trả lời sâu từng dòng code trong repo."
+
+  - type: section
+    title: "5. Cách Vận Hành '2 Worktree Song Song' Để Bạn Hiểu Sâu Mà Không Bị Đuối Code"
+    blocks:
+      - type: steps
+        title: "Quy Trình 4 Bước Khi Bước Vào Pha B (2 Ngày Cuối Mỗi Cụm)"
+        items:
+          - title: "Bước 1: AI code và kiểm thử hoàn chỉnh trước trên .worktrees/blueprint"
+            text: "Bạn không phải mò mẫm trong bóng tối. AI tạo một nhánh worktree riêng, dựng sẵn toàn bộ phần Vỏ UI React, cấu hình Orval, DTO, Seed data và bản mẫu Core Logic chạy xanh 100% trước."
+          - title: "Bước 2: AI copy sẵn phần 'Vỏ UI / CRUD râu ria' sang nhánh chính cho bạn"
+            text: "Những file giao diện form, bảng hiển thị, cấu hình râu ria không nằm trong trọng tâm bài học sẽ được AI lắp sẵn sang nhánh của bạn để bạn không tốn thời gian gõ HTML/CSS."
+          - title: "Bước 3: Giải phẫu Luồng Đi (Architecture X-Ray) trước khi gõ dòng code đầu tiên"
+            text: "AI mở sơ đồ chỉ rõ: Khi bấm nút trên Next.js -> Orval hook gọi endpoint nào -> đi qua Guard/Interceptor nào của NestJS -> xuống Service nào -> gọi Prisma ra sao."
+          - title: "Bước 4: Cầm tay chỉ việc từng hàm Core Logic (Bạn hiểu tới đâu code tới đó)"
+            text: "Với đúng 1-2 file cốt lõi của Cụm (ví dụ wallet.service.ts và voucher.service.ts ở Cụm 1), AI hướng dẫn bạn viết từng đoạn nhỏ (20-30 dòng), giải thích rõ tại sao phải dùng cú pháp đó và nếu bỏ đi thì bài Stress Test sẽ nổ lỗi gì."
+
+      - type: code
+        language: bash
+        title: "Cấu Trúc Thư Mục 2 Worktree Song Song Khi Bắt Đầu Pha B Cụm 1 (Ngày 30/10)"
+        text: |
+          D:/học/advance-be/
+          ├── Tài Liệu/                        # Kho slide & Markdown 3 khóa học
+          ├── reports/                         # Các bản Teacher Guide HTML từng bài
+          └── omnipos-finledger-hub/           # Clone từ NgoDat2003/create-template-project (Nhánh chính của Đạt)
+              ├── apps/api/                    # NestJS 10 + Prisma 7 (Bạn học & code Core Logic tại đây)
+              ├── apps/web/                    # Next.js 15 + shadcn/ui (AI dựng sẵn Vỏ UI test tải)
+              └── .worktrees/
+                  └── blueprint/               # Worktree nháp của AI (Chứa bản chuẩn đã test để đối chiếu)
+
+  - type: section
+    title: "6. Quản Trị Rủi Ro & Checklist Bắt Đầu Ngay Hôm Nay"
+    blocks:
+      - type: risk-matrix
+        title: "Các Rủi Ro Có Thể Làm Chậm Tiến Độ & Cách Chặn Đứng"
+        items:
+          - area: "Sa đà vào gõ UI/CRUD ngoài nội dung bài học trong giai đoạn 26/10 - 14/12"
+            impact: high
+            likelihood: medium
+            note: "Chặn đứng bằng quy tắc: Mọi UI/CRUD thuộc Nhóm 2 do AI dựng sẵn trên worktree; mọi tính năng mở rộng thuộc Nhóm 3 đẩy hoàn toàn sang sau ngày 14/12."
+          - area: "Quên kiến thức bài đầu Cụm khi tới ngày cuối Cụm mới mở repo code"
+            impact: medium
+            likelihood: low
+            note: "Mỗi Cụm chỉ kéo dài 6-9 ngày và xoay quanh đúng 1 chủ đề xuyên suốt; các câu lệnh SQL bạn tự gõ trên DBX ở Pha A chính là câu lệnh sẽ đưa vào Prisma ở Pha B."
+          - area: "Chưa hiểu luồng có sẵn của create-template-project (Guard, Interceptor, Orval)"
+            impact: high
+            likelihood: medium
+            note: "Dành riêng 30 phút đầu tiên của Ngày 5 Cụm 1 (30/10) để AI dẫn bạn đi hết 1 vòng đời Request trong template gốc trước khi viết code mới."
+
+      - type: checklist
+        title: "Checklist Lộ Trình Cụm 1 (Hoàn Thành Trước Chủ Nhật 01/11/2026)"
+        items:
+          - text: "[Đã xong] Bài 03 & Bài 10: Database Index (B-Tree, Heap TID, HOT Update, Covering Index)"
+            done: true
+          - text: "[Đã xong] Bài 12 (Chặng 1-5): ACID, WAL, Shared Buffers, MVCC xmin/xmax/ctid & VACUUM trên DBX"
+            done: true
+          - text: "[Ngày 1 - 26/10] Pha A: Học nốt Chặng 6-8 Bài 12 (4 Isolation Levels, lỗi 40001 & Write Skew trên DBX)"
+            done: false
+          - text: "[Ngày 2 - 27/10] Pha A: Học nửa đầu Bài 14 (SELECT FOR UPDATE, NOWAIT, SKIP LOCKED & soi pg_locks trên DBX)"
+            done: false
+          - text: "[Ngày 3 - 28/10] Pha A: Học nửa sau Bài 14 (Optimistic Lock version, tạo Deadlock 40P01 & phá bằng Resource Ordering)"
+            done: false
+          - text: "[Ngày 4 - 29/10] Pha A: Học Bài 07 (1NF-3NF, Polymorphic & tự thiết kế bảng Sổ cái kép Debit=Credit trên DBX)"
+            done: false
+          - text: "[Ngày 5 - 30/10] Pha B: Giải phẫu create-template-project + AI dựng Vỏ UI & Seed 300 quán + Migrate Schema Cụm 1"
+            done: false
+          - text: "[Ngày 6 - 31/10-01/11] Pha B: Cùng AI code hàm Săn Flash-Voucher & Chuyển Tiền Sổ Cái Kép + Bấm nút bắn 30 req trên UI"
+            done: false

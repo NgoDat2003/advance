@@ -1,0 +1,36 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region i18n · Bản dịch trong một cột jsonb: thêm ngôn ngữ không cần ALTER TABLE (slide 27)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.191 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.075 ms
+SET
+Time: 0.154 ms
+DROP TABLE IF EXISTS cs_posts;
+DROP TABLE
+Time: 4.696 ms
+CREATE TABLE cs_posts (id int PRIMARY KEY, original_title text NOT NULL, title_translation jsonb NOT NULL DEFAULT '{}');
+CREATE TABLE
+Time: 9.941 ms
+INSERT INTO cs_posts VALUES (1, 'Engineer', '{"vi": "Kỹ Sư", "en": "Engineer", "cn": "工程师"}');
+INSERT 0 1
+Time: 1.430 ms
+UPDATE cs_posts SET title_translation = title_translation || '{"ja": "エンジニア"}' WHERE id = 1;   -- thêm tiếng Nhật
+UPDATE 1
+Time: 2.240 ms
+-- Đọc theo ngôn ngữ người dùng, thiếu bản dịch thì rơi về tiêu đề gốc.
+SELECT lang, coalesce(title_translation->>lang, original_title) AS tieu_de
+FROM cs_posts, unnest(array['vi', 'ja', 'fr']) AS lang WHERE id = 1;
+ lang |  tieu_de   
+------+------------
+ vi   | Kỹ Sư
+ ja   | エンジニア
+ fr   | Engineer
+(3 rows)
+
+Time: 1.440 ms
+-- #endregion

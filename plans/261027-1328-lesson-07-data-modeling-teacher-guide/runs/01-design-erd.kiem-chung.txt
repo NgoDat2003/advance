@@ -1,0 +1,29 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 1
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.183 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.117 ms
+SET
+Time: 0.107 ms
+SELECT 'K1.1' AS ma, CASE WHEN count(*) = 2 THEN '✔' ELSE '✘' END AS ket_qua, 'có 2 entity erd_orders, erd_payment_transactions' AS chi_tiet
+FROM pg_class WHERE relnamespace = 'lab07_modeling'::regnamespace AND relname IN ('erd_orders', 'erd_payment_transactions')
+UNION ALL
+SELECT 'K1.2', CASE WHEN count(*) = 1 THEN '✔' ELSE '✘' END, 'cột tham chiếu order_id nằm ở bảng sinh sau (payment)'
+FROM pg_constraint WHERE contype = 'f' AND conrelid = 'erd_payment_transactions'::regclass AND confrelid = 'erd_orders'::regclass
+UNION ALL
+SELECT 'K1.3', CASE WHEN (SELECT count(*) FROM erd_payment_transactions WHERE kind = 'DONATE' AND order_id IS NULL) = 1 THEN '✔' ELSE '✘' END,
+       'khoản donate lưu được mà không cần đơn hàng';
+  ma  | ket_qua |                       chi_tiet                        
+------+---------+-------------------------------------------------------
+ K1.1 | ✔       | có 2 entity erd_orders, erd_payment_transactions
+ K1.2 | ✔       | cột tham chiếu order_id nằm ở bảng sinh sau (payment)
+ K1.3 | ✔       | khoản donate lưu được mà không cần đơn hàng
+(3 rows)
+
+Time: 3.931 ms
+-- #endregion

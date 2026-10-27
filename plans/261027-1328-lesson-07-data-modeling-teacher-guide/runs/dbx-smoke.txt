@@ -1,0 +1,10 @@
+-- chạy lúc 27/10/2026 21:24 +0700 · DBX MCP (dbx_execute_batch), kết nối ADVANCE_BE_LAB (máy nhà: chưa có ADVANCE_BE_LAB_B)
+1. Thân $$ … ; … $$ chứa dấu chấm phẩy: DBX giữ nguyên thành MỘT câu lệnh → hàm plpgsql trong 09-ledger.sql#ddl dán được nguyên khối.
+2. Kết nối mới: current_setting('search_path') = "lab03_indexing, public" → mỗi region phải mở đầu bằng SET search_path (đúng như contract).
+3. Lỗi giữa script: DBX dừng ở câu lỗi ("ERROR: division by zero"), câu sau không chạy → câu lỗi cố ý luôn đặt CUỐI region.
+4. Không kiểm được qua MCP: SET, BEGIN/COMMIT, CREATE (MCP chặn: "High-risk SQL is disabled", "Transaction statements are not supported by MCP").
+   Giao diện DBX không bị giới hạn này: handoff 27/10 ghi học viên đã tự chạy BEGIN ISOLATION LEVEL SERIALIZABLE … và SELECT … FOR UPDATE trong DBX (Tx: [M]).
+Quyết định cho guide:
+- Cách chạy chuẩn: bôi đen MỘT region → Run Selection, tab ở chế độ auto-commit (BEGIN/COMMIT ghi tường minh trong SQL).
+- Nếu một region dừng ở lỗi khi đang trong BEGIN: chạy riêng ROLLBACK; trước khi chạy region tiếp.
+- Hai phiên: tab A = ADVANCE_BE_LAB, tab B = ADVANCE_BE_LAB_B (nhân bản kết nối như Bài 14). CREATE INDEX CONCURRENTLY chỉ chạy ở tab auto-commit.

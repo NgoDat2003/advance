@@ -1,0 +1,96 @@
+-- chạy lúc 27/10/2026 22:16 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region solution · Sân bay, chuyến bay, ghế, vé
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.170 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.071 ms
+SET
+Time: 0.122 ms
+DROP TABLE IF EXISTS hw_bookings, hw_seats, hw_flights, hw_airports;
+psql:<stdin>:4: NOTICE:  00000: table "hw_bookings" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "hw_seats" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "hw_flights" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "hw_airports" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.440 ms
+-- Bảng cấu hình (config table, slide 8): ít đổi, nhiều nơi tham chiếu.
+CREATE TABLE hw_airports (
+  code       char(3) PRIMARY KEY,                     -- SGN, HAN, DAD
+  name       text NOT NULL,
+  timezone   text NOT NULL,                           -- hiển thị giờ địa phương (slide 24)
+  version    int NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+Time: 22.796 ms
+CREATE TABLE hw_flights (
+  id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code         text NOT NULL,                         -- VN123
+  origin       char(3) NOT NULL REFERENCES hw_airports (code),
+  destination  char(3) NOT NULL REFERENCES hw_airports (code),
+  departs_at   timestamptz NOT NULL,
+  arrives_at   timestamptz NOT NULL,
+  base_fare    numeric(12,2) NOT NULL CHECK (base_fare >= 0),
+  status       text NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED', 'BOARDING', 'DEPARTED', 'CANCELLED')),
+  data         jsonb NOT NULL DEFAULT '{}',           -- thuộc tính mở rộng: loại máy bay, suất ăn…
+  version      int NOT NULL DEFAULT 0,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (code, departs_at),
+  CHECK (arrives_at > departs_at),
+  CHECK (origin <> destination)
+);
+CREATE TABLE
+Time: 122.478 ms
+CREATE INDEX ON hw_flights (origin);
+CREATE INDEX
+Time: 4.633 ms
+CREATE INDEX ON hw_flights (destination);
+CREATE INDEX
+Time: 4.076 ms
+-- Mỗi ghế của mỗi chuyến là một dòng sinh sẵn (giống homestay slide 29): trạng thái và giá riêng từng ghế.
+CREATE TABLE hw_seats (
+  flight_id  bigint NOT NULL REFERENCES hw_flights (id),
+  seat_no    text NOT NULL,                           -- 12A
+  cabin      text NOT NULL CHECK (cabin IN ('ECONOMY', 'BUSINESS')),
+  fare       numeric(12,2) NOT NULL CHECK (fare >= 0),
+  status     text NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'HELD', 'SOLD')),
+  version    int NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (flight_id, seat_no)                    -- index bắt đầu bằng flight_id phục vụ luôn FK
+);
+CREATE TABLE
+Time: 10.451 ms
+CREATE TABLE hw_bookings (
+  id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  flight_id       bigint NOT NULL,
+  seat_no         text NOT NULL,
+  passenger_name  text NOT NULL,
+  amount          numeric(12,2) NOT NULL CHECK (amount >= 0),
+  status          text NOT NULL DEFAULT 'HELD' CHECK (status IN ('HELD', 'PAID', 'CANCELLED')),
+  idempotency_key text NOT NULL UNIQUE,
+  version         int NOT NULL DEFAULT 0,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (flight_id, seat_no) REFERENCES hw_seats (flight_id, seat_no)
+);
+CREATE TABLE
+Time: 13.410 ms
+CREATE INDEX ON hw_bookings (flight_id, seat_no);
+CREATE INDEX
+Time: 4.239 ms
+-- Một ghế chỉ có tối đa một vé còn hiệu lực (vé đã hủy không chặn người sau): EXCLUDE với điều kiện WHERE.
+ALTER TABLE hw_bookings ADD CONSTRAINT hw_bookings_seat_active_uniq EXCLUDE (flight_id WITH =, seat_no WITH =) WHERE (status <> 'CANCELLED');
+ALTER TABLE
+Time: 4.688 ms
+-- #endregion

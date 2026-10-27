@@ -1,0 +1,140 @@
+{
+ "sources": [
+  "06-case-studies.availability",
+  "06-case-studies.exclusion"
+ ],
+ "price": "800000.00",
+ "generated": 1095,
+ "priceUpdate": "UPDATE 1",
+ "book": {
+  "range": "20→23/11",
+  "rows": 3
+ },
+ "retry": {
+  "range": "22→24/11",
+  "rows": 1
+ },
+ "exclusionCode": "23P01",
+ "days": [
+  {
+   "day": "2026-11-01",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-02",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-03",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-04",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-05",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-06",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-07",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-08",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-09",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-10",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-11",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-12",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-13",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-14",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-15",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-16",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-17",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-18",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-19",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-20",
+   "status": "BOOKED"
+  },
+  {
+   "day": "2026-11-21",
+   "status": "BOOKED"
+  },
+  {
+   "day": "2026-11-22",
+   "status": "BOOKED"
+  },
+  {
+   "day": "2026-11-23",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-24",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-25",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-26",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-27",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-28",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-29",
+   "status": "OPEN"
+  },
+  {
+   "day": "2026-11-30",
+   "status": "OPEN"
+  }
+ ]
+}

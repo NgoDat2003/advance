@@ -1,0 +1,84 @@
+── A · bước A1 · 14:09:52.078 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn tồn tại?' AS viec;
+ buoc |     luc      |                 viec                  
+------+--------------+---------------------------------------
+ A1   | 14:09:52.078 | app kiểm tra: cửa hàng 7 còn tồn tại?
+(1 row)
+
+Time: 0.542 ms
+SELECT count(*) AS cua_hang_7_ton_tai FROM race_stores_fk WHERE id = 7;
+ cua_hang_7_ton_tai 
+--------------------
+                  1
+(1 row)
+
+Time: 0.576 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6047.539 ms (00:06.048)
+── B · bước B1 · 14:09:53.090 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn hợp đồng?' AS viec;
+ buoc |     luc      |                  viec                  
+------+--------------+----------------------------------------
+ B1   | 14:09:53.090 | app kiểm tra: cửa hàng 7 còn hợp đồng?
+(1 row)
+
+Time: 0.621 ms
+SELECT count(*) AS hop_dong_cua_7 FROM race_contracts_fk WHERE store_id = 7;
+ hop_dong_cua_7 
+----------------
+              0
+(1 row)
+
+Time: 1.005 ms
+DELETE FROM race_stores_fk WHERE id = 7;
+DELETE 1
+Time: 4.134 ms
+── B · bước B2 · 14:09:53.095 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đã xóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B2   | 14:09:53.095 | đã xóa cửa hàng 7
+(1 row)
+
+Time: 0.151 ms
+-- #endregion
+── A · bước A2 · 14:09:58.127 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'kiểm tra đã qua → tạo hợp đồng' AS viec;
+ buoc |     luc      |              viec              
+------+--------------+--------------------------------
+ A2   | 14:09:58.127 | kiểm tra đã qua → tạo hợp đồng
+(1 row)
+
+Time: 0.182 ms
+INSERT INTO race_contracts_fk (store_id) VALUES (7);
+psql:<stdin>:15: ERROR:  23503: insert or update on table "race_contracts_fk" violates foreign key constraint "race_contracts_fk_store_id_fkey"
+DETAIL:  Key (store_id)=(7) is not present in table "race_stores_fk".
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  race_contracts_fk
+CONSTRAINT NAME:  race_contracts_fk_store_id_fkey
+LOCATION:  ri_ReportViolation, ri_triggers.c:2608
+Time: 0.973 ms
+ROLLBACK;   -- INSERT đã lỗi 23503 nên transaction hỏng; ROLLBACK để đóng nó
+ROLLBACK
+Time: 0.109 ms
+── A · bước A3 · 14:09:58.128 ──
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đếm hợp đồng mồ côi' AS viec;
+ buoc |     luc      |        viec         
+------+--------------+---------------------
+ A3   | 14:09:58.128 | đếm hợp đồng mồ côi
+(1 row)
+
+Time: 0.115 ms
+SELECT count(*) AS orphans FROM race_contracts_fk c WHERE NOT EXISTS (SELECT 1 FROM race_stores_fk s WHERE s.id = c.store_id);
+ orphans 
+---------
+       0
+(1 row)
+
+Time: 0.533 ms
+-- #endregion

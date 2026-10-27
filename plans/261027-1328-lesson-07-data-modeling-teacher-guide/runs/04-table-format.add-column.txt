@@ -1,0 +1,82 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region add-column · Thêm cột trên bảng 500.000 dòng: khi nào PG phải viết lại cả bảng? (slide 14, 17)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.138 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.086 ms
+SET
+Time: 0.079 ms
+DROP TABLE IF EXISTS ddl_contracts, ddl_events;
+psql:<stdin>:4: NOTICE:  00000: table "ddl_contracts" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "ddl_events" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.332 ms
+CREATE TABLE ddl_contracts AS SELECT * FROM lab03_indexing.hw_contracts;
+SELECT 500000
+Time: 418.344 ms
+ALTER TABLE ddl_contracts ADD PRIMARY KEY (id);
+ALTER TABLE
+Time: 161.950 ms
+-- ddl_events ghi lại "filenode" (tên file vật lý của bảng) sau mỗi bước. Filenode đổi = PG đã viết lại toàn bộ bảng.
+CREATE TABLE ddl_events (id int GENERATED ALWAYS AS IDENTITY, buoc text, filenode oid);
+CREATE TABLE
+Time: 4.861 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ban đầu', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 1.394 ms
+ALTER TABLE ddl_contracts ADD COLUMN note text;                                   -- cho phép NULL
+ALTER TABLE
+Time: 1.140 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD note text', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 0.930 ms
+ALTER TABLE ddl_contracts ADD COLUMN version int NOT NULL DEFAULT 0;              -- default hằng số
+ALTER TABLE
+Time: 1.422 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD version DEFAULT 0', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 1.028 ms
+ALTER TABLE ddl_contracts ADD COLUMN created_at timestamptz NOT NULL DEFAULT now(); -- now() tính MỘT lần cho cả bảng
+ALTER TABLE
+Time: 1.279 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD created_at DEFAULT now()', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 0.916 ms
+ALTER TABLE ddl_contracts ADD COLUMN rnd float8 DEFAULT random();                 -- default "volatile": mỗi dòng một giá trị
+ALTER TABLE
+Time: 527.308 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD rnd DEFAULT random()', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 1.466 ms
+ALTER TABLE ddl_contracts ALTER COLUMN customer_id TYPE bigint;                    -- đổi kiểu int → bigint
+ALTER TABLE
+Time: 518.812 ms
+INSERT INTO ddl_events (buoc, filenode) VALUES ('customer_id int → bigint', pg_relation_filenode('ddl_contracts'));
+INSERT 0 1
+Time: 1.665 ms
+SELECT buoc, filenode, filenode <> lag(filenode) OVER (ORDER BY id) AS rewrite FROM ddl_events ORDER BY id;
+             buoc             | filenode | rewrite 
+------------------------------+----------+---------
+ ban đầu                      |    34014 | 
+ ADD note text                |    34014 | f
+ ADD version DEFAULT 0        |    34014 | f
+ ADD created_at DEFAULT now() |    34014 | f
+ ADD rnd DEFAULT random()     |    34030 | t
+ customer_id int → bigint     |    34036 | t
+(6 rows)
+
+Time: 1.388 ms
+SELECT count(DISTINCT created_at) AS so_gia_tri_created_at, count(DISTINCT rnd) AS so_gia_tri_rnd FROM ddl_contracts;
+ so_gia_tri_created_at | so_gia_tri_rnd 
+-----------------------+----------------
+                     1 |         500000
+(1 row)
+
+Time: 254.629 ms
+-- #endregion

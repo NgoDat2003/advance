@@ -1,0 +1,25 @@
+-- chạy lúc 27/10/2026 21:12 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region number · Số nguyên: nhỏ đủ dùng là tốt; INT(1) chỉ có ở MySQL (slide 23)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.136 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.095 ms
+SET
+Time: 0.086 ms
+SELECT pg_column_size(1::smallint) AS smallint_byte, pg_column_size(1::int) AS int_byte, pg_column_size(1::bigint) AS bigint_byte,
+       pg_column_size(123456.78::numeric(12,2)) AS numeric_byte;
+ smallint_byte | int_byte | bigint_byte | numeric_byte 
+---------------+----------+-------------+--------------
+             2 |        4 |           8 |           12
+(1 row)
+
+Time: 1.916 ms
+SELECT 2147483647::int + 1 AS tran_so_int;
+psql:<stdin>:6: ERROR:  22003: integer out of range
+LOCATION:  int4pl, int.c:827
+Time: 0.214 ms
+-- #endregion

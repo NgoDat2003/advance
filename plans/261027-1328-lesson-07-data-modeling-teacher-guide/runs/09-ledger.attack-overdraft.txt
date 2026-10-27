@@ -1,0 +1,30 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region attack-overdraft · Tấn công 1: mua quá số dư
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.150 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.088 ms
+SET
+Time: 0.082 ms
+SELECT balance AS so_du_cua_dat FROM wallets WHERE id = 3;
+ so_du_cua_dat 
+---------------
+      55000.00
+(1 row)
+
+Time: 1.454 ms
+SELECT post_transfer(3, 2, 999999, 'order-DH002', 'DH002');
+psql:<stdin>:5: ERROR:  23514: new row for relation "wallets" violates check constraint "wallets_check"
+DETAIL:  Failing row contains (3, CUS_DAT, Khách Đạt, -944999.00, f, 3, 2026-10-27 15:25:29.159946+00, 2026-10-27 15:25:29.751943+00).
+CONTEXT:  SQL statement "UPDATE lab07_modeling.wallets SET balance = balance - p_amount, version = version + 1, updated_at = now() WHERE id = p_from"
+PL/pgSQL function post_transfer(bigint,bigint,numeric,text,text) line 7 at SQL statement
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  wallets
+CONSTRAINT NAME:  wallets_check
+LOCATION:  ExecConstraints, execMain.c:2109
+Time: 3.385 ms
+-- #endregion

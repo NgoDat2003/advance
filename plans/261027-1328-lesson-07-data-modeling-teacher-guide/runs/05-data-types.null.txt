@@ -1,0 +1,47 @@
+-- chạy lúc 27/10/2026 21:12 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region null · NULL rẻ khi lưu nhưng có bẫy khi so sánh (slide 25)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.143 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.080 ms
+SET
+Time: 0.084 ms
+DROP TABLE IF EXISTS ty_nulls;
+psql:<stdin>:4: NOTICE:  00000: table "ty_nulls" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.307 ms
+CREATE TABLE ty_nulls (id int, a bigint, b bigint, c text);
+CREATE TABLE
+Time: 12.186 ms
+INSERT INTO ty_nulls VALUES (1, 100, 200, 'có giá trị'), (2, NULL, NULL, NULL);
+INSERT 0 2
+Time: 3.352 ms
+SELECT id, pg_column_size(t.*) AS byte_ca_dong FROM ty_nulls t ORDER BY id;
+ id | byte_ca_dong 
+----+--------------
+  1 |           63
+  2 |           28
+(2 rows)
+
+Time: 0.700 ms
+-- Bẫy NOT IN: danh sách loại trừ có một NULL → không dòng nào thỏa.
+SELECT count(*) AS so_dong FROM nf_products WHERE product_id NOT IN (SELECT x FROM (VALUES (1), (NULL)) v(x));
+ so_dong 
+---------
+       0
+(1 row)
+
+Time: 2.409 ms
+SELECT count(*) AS so_dong FROM nf_products p WHERE NOT EXISTS (SELECT 1 FROM (VALUES (1), (NULL)) v(x) WHERE v.x = p.product_id);
+ so_dong 
+---------
+      76
+(1 row)
+
+Time: 0.902 ms
+-- #endregion

@@ -1,0 +1,75 @@
+{
+ "sources": [
+  "05-data-types.string",
+  "05-data-types.number",
+  "05-data-types.money",
+  "05-data-types.time",
+  "05-data-types.null",
+  "05-data-types.string-limit",
+  "05-data-types.string-index"
+ ],
+ "fields": [
+  {
+   "field": "Tên món",
+   "pg": "text",
+   "prisma": "String",
+   "bytes": "trong bảng: text = varchar(255) = 9 byte cho \"xin chao\"",
+   "trap": "ghi chuỗi dài vào varchar(10) → 22001; nhưng ép kiểu ::varchar(10) thì PG cắt im lặng"
+  },
+  {
+   "field": "Giá bán",
+   "pg": "numeric(12,2)",
+   "prisma": "Decimal @db.Decimal(12,2)",
+   "bytes": "numeric(12,2) 123456.78: 9 byte trong bảng (int 4, bigint 8)",
+   "trap": "float: 0.1 + 0.2 = 0.30000000000000004"
+  },
+  {
+   "field": "created_at",
+   "pg": "timestamptz",
+   "prisma": "DateTime @db.Timestamptz(3)",
+   "bytes": "timestamptz = timestamp = 8 byte",
+   "trap": "DateTime mặc định của Prisma là timestamp(3), không múi giờ"
+  },
+  {
+   "field": "Giờ hẹn giao hàng",
+   "pg": "timestamptz + cột timezone",
+   "prisma": "DateTime @db.Timestamptz(3) + String",
+   "bytes": "8 byte",
+   "trap": "'09:00+07'::timestamp bỏ mất +07, không báo lỗi"
+  },
+  {
+   "field": "Số lượng",
+   "pg": "int",
+   "prisma": "Int",
+   "bytes": "smallint 2 · int 4 · bigint 8 byte",
+   "trap": "2147483647 + 1 → 22003 integer out of range"
+  },
+  {
+   "field": "Ghi chú dài",
+   "pg": "text",
+   "prisma": "String",
+   "bytes": "10008 ký tự lặp lại chỉ còn 148 byte (nén TOAST)",
+   "trap": "đánh B-tree lên chuỗi > 2704 byte → 54000"
+  },
+  {
+   "field": "Trạng thái",
+   "pg": "text + CHECK (hoặc enum)",
+   "prisma": "enum, hoặc String + CHECK trong migration.sql",
+   "bytes": "như text",
+   "trap": "không có CHECK thì \"Psot\" cũng lưu được (chặng 8)"
+  }
+ ],
+ "money": {
+  "floatAdd": "0.30000000000000004",
+  "floatSum": "100000.00000133288",
+  "numericSum": "100000.0",
+  "nwRealRaw": "1265793.038653364",
+  "nwNumericRaw": "1265793.0395",
+  "nwReal": "1265792.95",
+  "nwNumeric": "1265793.29"
+ },
+ "nullRow": {
+  "full": 63,
+  "allNull": 28
+ }
+}

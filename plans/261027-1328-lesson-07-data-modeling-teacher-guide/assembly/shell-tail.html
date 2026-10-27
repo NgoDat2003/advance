@@ -1,0 +1,340 @@
+
+<!-- BÀI TẬP -->
+<section id="bai-tap" class="stage col">
+  <h2>Bài tập slide 35: đặt vé máy bay theo table template</h2>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_35_img_01.png" alt="Slide 35: bài tập thiết kế schema đặt vé máy bay dùng table template" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 35 · Homework: design schema for booking flights</figcaption></figure>
+  <p class="goal"><b>Mục tiêu:</b> tự thiết kế schema đặt vé máy bay trong <code>lab07_modeling</code> (tên bảng bắt đầu bằng <code>hw_</code>), áp dụng đủ những gì đã đo trong 9 chặng, rồi tự chấm bằng <code>hw-check.sql</code>.</p>
+  <div class="callout challenge" id="bai-tap-tu-lam">
+    <span class="tag">Tự làm · tối Day 05 · 45 phút</span>
+    <p>Yêu cầu nghiệp vụ: có sân bay, chuyến bay (giờ cất cánh/hạ cánh theo múi giờ), ghế của từng chuyến (giá riêng từng ghế), vé (một ghế chỉ bán một lần, vé đã hủy thì ghế được bán lại), và gửi lại cùng request đặt vé không tạo vé thứ hai.</p>
+    <p><b>PASS</b> khi <code>hw-check.sql</code> trả 10 dòng ✔ (H0–H9). Ý nghĩa từng luật:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Luật</th><th>Kiểm tra gì</th><th>Học ở</th></tr></thead>
+      <tbody>
+        <tr><td>H0–H1</td><td>Có bảng <code>hw_*</code>, mỗi bảng có khóa chính</td><td><a class="stage-link" href="#chang-1">chặng 1</a></td></tr>
+        <tr><td>H2</td><td><code>created_at</code>, <code>updated_at</code> kiểu <code>timestamptz</code>, và không cột nào dùng <code>timestamp</code> không múi giờ</td><td><a class="stage-link" href="#chang-5">chặng 5</a></td></tr>
+        <tr><td>H3</td><td>Cột <code>version</code> (khóa lạc quan Bài 14)</td><td><a class="stage-link" href="#chang-4">chặng 4</a></td></tr>
+        <tr><td>H4</td><td>Cột tiền không dùng float</td><td><a class="stage-link" href="#chang-5">chặng 5</a></td></tr>
+        <tr><td>H5</td><td>Mỗi khóa ngoại có index bắt đầu bằng cột FK</td><td><a class="stage-link" href="#chang-3">chặng 3</a></td></tr>
+        <tr><td>H6</td><td>Cột <code>status</code> có CHECK hoặc enum</td><td><a class="stage-link" href="#chang-4">chặng 4</a></td></tr>
+        <tr><td>H7</td><td>Không dùng <code>json</code>, chỉ <code>jsonb</code></td><td><a class="stage-link" href="#chang-4">chặng 4</a></td></tr>
+        <tr><td>H8</td><td>Bảng vé (tên chứa <code>booking</code>/<code>ticket</code>) có UNIQUE index (kể cả partial) hoặc EXCLUDE trên cột chuyến + cột ghế</td><td><a class="stage-link" href="#chang-6">chặng 6</a></td></tr>
+        <tr><td>H9</td><td>Bảng vé có cột idempotency key với UNIQUE</td><td><a class="stage-link" href="#chang-9">chặng 9</a></td></tr>
+      </tbody>
+    </table></div>
+    <p>Cách làm: viết DDL trong một tab DBX (nhớ dòng <code>SET search_path = lab07_modeling;</code>), chạy, rồi mở <code>hw-check.sql</code> → Ctrl+A → Run. Sửa tới khi đủ ✔.</p>
+    <label class="fields"><span class="muted">Dán DDL của bạn vào đây để lưu lại</span>
+      <textarea class="field" data-store="l07-hw-ddl" placeholder="CREATE TABLE hw_flights (…);"></textarea>
+    </label>
+  </div>
+  <p>Ví dụ một bài làm SAI (bộ kiểm tra của controller): tiền dùng <code>double precision</code>, giờ bay dùng <code>timestamp</code>, thiếu <code>version</code> và <code>updated_at</code>, khóa ngoại không có index, không có idempotency key. <code>hw-check.sql</code> báo đúng 5 luật:</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>hw-check.sql</code> trên bài làm sai</div>
+  <div class="code terminal"><pre class="code terminal" data-run="hw-check.bad-fixture"> H2 | ✘       | mỗi bảng có created_at, updated_at kiểu timestamptz và KHÔNG cột nào dùng timestamp không múi giờ (slide 20, 24). Sai: hw_flights.updated_at, hw_flights.departs_at timestamp
+ H3 | ✘       | mỗi bảng có cột version kiểu số nguyên (slide 20, optimistic lock Bài 14). Thiếu: hw_bookings, hw_flights
+ H4 | ✘       | cột tiền không dùng float/real/double (slide 23). Vi phạm: hw_flights.fare double precision
+ H5 | ✘       | mỗi khóa ngoại có index bắt đầu bằng cột FK (PG không tự tạo, slide 11). 1 FK, thiếu index: hw_bookings.flight_id
+ H9 | ✘       | bảng vé có cột idempotency key với UNIQUE: gửi lại cùng request không tạo vé thứ hai (chặng 9). Tìm thấy: —</pre></div>
+  <details class="fold"><summary>Lời giải mẫu (chỉ mở sau khi bạn đã có 10 ✔ hoặc đã bí thật sự)</summary><div class="fold-body">
+    <p>Ghế được sinh sẵn mỗi chuyến một dòng, giống lịch homestay ở slide 29. Vé giữ cặp <code>(flight_id, seat_no)</code> làm khóa ngoại tới ghế. "Một ghế một vé còn hiệu lực" là <code>EXCLUDE … WHERE (status &lt;&gt; 'CANCELLED')</code>: vé đã hủy không chặn người sau. Chạy file này sẽ xóa các bảng <code>hw_*</code> cùng tên của bạn.</p>
+<!--@SQL hw-solution#solution@-->
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>hw-check.sql</code> trên lời giải mẫu</div>
+    <div class="code terminal"><pre class="code terminal" data-run="hw-check.solution"> H0 | ✔       | 4 bảng hw_*: hw_airports, hw_bookings, hw_flights, hw_seats
+…
+ H8 | ✔       | bảng vé (tên chứa booking hoặc ticket) có UNIQUE index (kể cả partial) hoặc EXCLUDE trên cột chuyến bay + cột ghế: chặn bán trùng một ghế (Bài 14). Tìm thấy: lab07_modeling.hw_bookings_seat_active_uniq
+ H9 | ✔       | bảng vé có cột idempotency key với UNIQUE: gửi lại cùng request không tạo vé thứ hai (chặng 9). Tìm thấy: hw_bookings.idempotency_key</pre></div>
+  </div></details>
+</section>
+
+<!-- PRISMA DRILL -->
+<section id="prisma-drill" class="stage col">
+  <h2>Prisma 7 drill: rà một schema do AI viết</h2>
+  <p class="goal"><b>Mục tiêu:</b> tìm 6 lỗi thiết kế trong <code>prisma-drill.schema.prisma</code>, cộng một chỗ đúng được cài vào để thử bạn. Mỗi lỗi phải chỉ ra được số đo ở chặng nào chứng minh nó. Phiên bản: <code>prisma@7.9.0</code>, đúng bản app <code>quan-ly-hop-dong</code> của bạn đang khai báo.</p>
+<!--@SQL prisma-drill.schema.prisma@-->
+  <div class="fields">
+    <label>Lỗi 1<input class="field" data-store="l07-prisma-1" placeholder="model / field / vì sao"></label>
+    <label>Lỗi 2<input class="field" data-store="l07-prisma-2"></label>
+    <label>Lỗi 3<input class="field" data-store="l07-prisma-3"></label>
+    <label>Lỗi 4<input class="field" data-store="l07-prisma-4"></label>
+    <label>Lỗi 5<input class="field" data-store="l07-prisma-5"></label>
+    <label>Lỗi 6<input class="field" data-store="l07-prisma-6"></label>
+    <label>Chỗ đúng (mồi)<input class="field" data-store="l07-prisma-decoy"></label>
+  </div>
+  <p>Không phải bài tập trên giấy: app thật của bạn đang có đúng hai lỗi này. Đọc (chỉ đọc) 7 file migration của <code>quan-ly-hop-dong</code>:</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · đọc migration.sql của qlhd</div>
+  <div class="code terminal"><pre class="code terminal" data-run="qlhd-migrations">cot_TIMESTAMP(3): 16
+cot_TIMESTAMPTZ: 0
+…
+THIEU_INDEX lease_contracts.created_by_user_id
+THIEU_INDEX lease_contracts.approved_by_user_id
+THIEU_INDEX contract_attachments.uploaded_by_user_id
+THIEU_INDEX contract_store_allocations.store_id
+THIEU_INDEX sap_export_logs.exported_by_user_id</pre></div>
+  <details class="fold"><summary>Đáp án và bằng chứng</summary><div class="fold-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Chỗ sai</th><th>Sửa</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>balance Float</code>, <code>amount Float</code> (3 model)</td><td><code>Decimal @db.Decimal(18,2)</code></td><td>Prisma: Float trên PostgreSQL = <code>double precision</code>. <a href="#chang-5">Chặng 5</a>: 0.1 + 0.2 = <b class="m" data-run="05-data-types.money">0.30000000000000004</b></td></tr>
+        <tr><td>2</td><td><code>DateTime</code> không có native type</td><td><code>DateTime @db.Timestamptz(3)</code></td><td>Prisma: DateTime mặc định = <code>timestamp(3)</code>, không múi giờ. App qlhd: <b class="m" data-run="qlhd-migrations">cot_TIMESTAMP(3): 16</b>, <b class="m" data-run="qlhd-migrations">cot_TIMESTAMPTZ: 0</b>. <a href="#chang-5">Chặng 5</a>: cùng một thời điểm hiện <code>09:00+07</code> hay <code>02:00+00</code> tùy phiên</td></tr>
+        <tr><td>3</td><td><code>storeId</code>, <code>transferId</code>, <code>walletId</code> không có <code>@@index</code></td><td><code>@@index([storeId])</code>, <code>@@index([transferId])</code>, <code>@@index([walletId])</code></td><td>Prisma không tự tạo index cho cột quan hệ; PostgreSQL cũng không (<a href="#chang-3">chặng 3</a>: xóa một cha mất <b class="m" data-run="03-foreign-keys.index">time=7.222</b> ms khi chưa có index, <b class="m" data-run="03-foreign-keys.index">time=0.519</b> ms khi có)</td></tr>
+        <tr><td>4</td><td><code>tags String</code> chứa "takeaway,24h,delivery"</td><td><code>tags String[]</code> + <code>@@index([tags], type: Gin)</code></td><td>Vi phạm 1NF (<a href="#chang-2">chặng 2</a>). GIN trên mảng: <a href="#chang-6">chặng 6</a> dùng Bitmap Index Scan</td></tr>
+        <tr><td>5</td><td><code>idempotencyKey String</code> không <code>@unique</code></td><td><code>idempotencyKey String @unique</code></td><td><a href="#chang-9">Chặng 9</a>: gửi lại order-DH001 → <b class="m" data-run="09-ledger.attack-duplicate">23505</b>; thiếu UNIQUE thì ghi sổ 2 lần</td></tr>
+        <tr><td>6</td><td><code>Comment</code> dùng <code>commentableType</code> + <code>commentableId</code></td><td>Exclusive arc (2 relation tùy chọn) hoặc model bình luận riêng cho từng loại cha; CHECK viết trong <code>migration.sql</code></td><td><a href="#chang-8">Chặng 8</a>: cách type + id để lại 4 bình luận mồ côi</td></tr>
+        <tr><td>Mồi</td><td><code>settings Json @default("{}")</code></td><td>Giữ nguyên: đúng</td><td>Prisma: Json trên PostgreSQL = <code>jsonb</code>, có GIN (<a href="#chang-4">chặng 4</a>)</td></tr>
+      </tbody>
+    </table></div>
+    <p>Thêm một lỗi không nằm trong schema: Prisma schema không có cú pháp <code>CHECK</code> hay <code>EXCLUDE</code>. Ràng buộc <code>balance &gt;= 0</code> và "tổng bút toán bằng 0" phải viết tay trong <code>migration.sql</code> (tạo bằng <code>prisma migrate dev --create-only</code> rồi sửa file).</p>
+    <p class="muted">Trích dẫn tài liệu Prisma (ghi ngày 27/10/2026): <a href="https://www.prisma.io/docs/orm/reference/prisma-schema-reference" target="_blank" rel="noreferrer">Prisma schema reference</a> (Float = double precision, Decimal mặc định decimal(65,30), DateTime = timestamp(3), Json = jsonb, <code>@db.Timestamptz(x)</code>, <code>@db.Decimal(p, s)</code>) · <a href="https://www.prisma.io/docs/orm/prisma-schema/data-model/indexes" target="_blank" rel="noreferrer">Indexes</a> (<code>type: Gin</code>) · <a href="https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/relation-mode" target="_blank" rel="noreferrer">Relation mode</a> ("manually add an index on your relation scalar fields").</p>
+  </div></details>
+</section>
+
+<!-- PHỎNG VẤN -->
+<section id="phong-van" class="stage col">
+  <h2>Kiểm tra cuối bài: 10 câu phỏng vấn</h2>
+  <p>Tự trả lời thành tiếng trước, rồi mới mở đáp án. Mỗi đáp án dẫn về số đo trên máy bạn.</p>
+  <div id="examList"></div>
+  <label class="fields"><span class="muted">Đối chiếu với ghi chú đầu bài: bạn đã đổi suy nghĩ ở điểm nào?</span>
+    <textarea class="field" data-store="l07-wrapup" placeholder="Trước tôi nghĩ… giờ tôi thấy…"></textarea>
+  </label>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat-sheet" class="stage col">
+  <h2>Cheat sheet một trang</h2>
+  <h3>Chọn kiểu (PG 16 + Prisma 7.9)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Dữ liệu</th><th>PostgreSQL</th><th>Prisma</th><th>Bẫy</th></tr></thead>
+    <tbody>
+      <tr><td>Tiền</td><td><code>numeric(18,2)</code></td><td><code>Decimal @db.Decimal(18,2)</code></td><td>float lệch từ phép cộng đầu tiên</td></tr>
+      <tr><td>Thời điểm</td><td><code>timestamptz</code></td><td><code>DateTime @db.Timestamptz(3)</code></td><td>DateTime mặc định là timestamp(3)</td></tr>
+      <tr><td>Chuỗi</td><td><code>text</code> (+ CHECK độ dài nếu cần)</td><td><code>String</code></td><td>B-tree tối đa 2704 byte/giá trị</td></tr>
+      <tr><td>Thuộc tính mở rộng</td><td><code>jsonb</code> + index biểu thức hoặc GIN</td><td><code>Json</code></td><td><code>json</code> không có GIN</td></tr>
+      <tr><td>Tag</td><td><code>text[]</code> + GIN</td><td><code>String[]</code> + <code>@@index(type: Gin)</code></td><td>chuỗi phân cách dấu phẩy phá 1NF</td></tr>
+      <tr><td>Trạng thái</td><td><code>text</code> + CHECK</td><td>enum</td><td>không CHECK thì giá trị gõ sai vẫn lưu</td></tr>
+      <tr><td>Khoảng thời gian</td><td><code>daterange</code>/<code>tstzrange</code> + EXCLUDE</td><td>Unsupported → SQL tay</td><td>cần <code>btree_gist</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Mã lỗi gặp trong bài</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mã</th><th>Nghĩa</th><th>Chặng</th></tr></thead>
+    <tbody>
+      <tr><td>23502</td><td>NOT NULL bị vi phạm</td><td>2</td></tr>
+      <tr><td>23503</td><td>Khóa ngoại bị vi phạm</td><td>3</td></tr>
+      <tr><td>23505</td><td>Trùng UNIQUE (kể cả NULLS NOT DISTINCT, idempotency key)</td><td>5, 9</td></tr>
+      <tr><td>23514</td><td>CHECK bị vi phạm (kể cả trigger tự RAISE mã này)</td><td>8, 9</td></tr>
+      <tr><td>23P01</td><td>EXCLUDE bị vi phạm (đặt phòng chồng ngày)</td><td>6</td></tr>
+      <tr><td>22001 · 22003</td><td>Chuỗi quá dài · số vượt miền</td><td>5</td></tr>
+      <tr><td>54000</td><td>Giá trị quá lớn cho B-tree</td><td>5</td></tr>
+      <tr><td>42704</td><td>Kiểu không có operator class (GIN trên json)</td><td>4</td></tr>
+      <tr><td>25001</td><td>CREATE INDEX CONCURRENTLY trong transaction</td><td>4</td></tr>
+      <tr><td>55P03</td><td>Hết <code>lock_timeout</code></td><td>4</td></tr>
+      <tr><td>55000</td><td>REFRESH … CONCURRENTLY thiếu unique index</td><td>6</td></tr>
+      <tr><td>44000</td><td>Ghi qua view vi phạm WITH CHECK OPTION</td><td>7</td></tr>
+      <tr><td>40P01</td><td>Deadlock</td><td>9</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Quy tắc thiết kế</h3>
+  <ol>
+    <li>Bắt đầu ở 3NF. Phi chuẩn hóa chỉ khi đo được lợi ích đọc, và luôn có câu đối soát (chặng 2, 9).</li>
+    <li>Giữ khóa ngoại và đánh index cho cột FK. Kiểm tra trong app không thay được FK (chặng 3).</li>
+    <li>Cột tham chiếu đặt ở entity sinh sau (slide 12).</li>
+    <li>Migration: <code>SET lock_timeout</code>, ADD COLUMN với default hằng, index bằng <code>CONCURRENTLY</code> trong tab auto-commit (chặng 4).</li>
+    <li>Table template: id, status có CHECK, <code>data jsonb</code>, version, created/updated at/by (slide 20).</li>
+    <li>Sổ cái kép: bút toán là sự thật, số dư là cache; mỗi giao dịch tổng bằng 0; khóa ví theo id; idempotency key UNIQUE (chặng 9).</li>
+  </ol>
+  <h3>Ba câu đối soát sổ cái</h3>
+  <div class="code"><pre><code>SELECT transfer_id FROM ledger_entries GROUP BY transfer_id HAVING sum(amount) &lt;&gt; 0;   -- phải 0 dòng
+SELECT sum(amount) FROM ledger_entries;                                                -- phải = 0
+SELECT w.id FROM wallets w
+WHERE w.balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);  -- phải 0 dòng</code></pre></div>
+</section>
+
+<!-- BẢN ĐỒ SLIDE -->
+<section id="ban-do-slide" class="stage col">
+  <h2>Bản đồ 43 slide</h2>
+  <p>Mỗi chip dẫn tới chỗ slide được giải thích. Gạch chân xanh là slide có khung "Slide nói / PG 16 đo được" riêng.</p>
+  <div class="chips" id="slideMap"></div>
+</section>
+
+<!-- THAM KHẢO -->
+<section id="tham-khao" class="stage col">
+  <h2>Tài liệu tham khảo</h2>
+  <h4>Slide 36</h4>
+  <ul>
+    <li><a href="https://stackoverflow.com/questions/42513839/mysql-view-performance-temptable-or-merge" target="_blank" rel="noreferrer">MySQL view performance: TEMPTABLE or MERGE</a></li>
+    <li><a href="https://stackoverflow.com/questions/2023481/mysql-large-varchar-vs-text" target="_blank" rel="noreferrer">MySQL large VARCHAR vs TEXT</a></li>
+    <li><a href="https://stackoverflow.com/questions/4244685/create-an-index-on-a-huge-mysql-production-table-without-table-locking" target="_blank" rel="noreferrer">Create an index on a huge MySQL production table without table locking</a></li>
+    <li><a href="https://dba.stackexchange.com/questions/261752/adding-indexes-to-very-large-tables-in-mysql" target="_blank" rel="noreferrer">Adding indexes to very large tables in MySQL</a></li>
+  </ul>
+  <h4>PostgreSQL 16 (nguồn cho các nhãn "PG khác" / "Cần sửa")</h4>
+  <ul>
+    <li><a href="https://www.postgresql.org/docs/16/sql-altertable.html" target="_blank" rel="noreferrer">ALTER TABLE (Notes: khi nào viết lại bảng)</a> · <a href="https://www.postgresql.org/docs/16/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY" target="_blank" rel="noreferrer">CREATE INDEX CONCURRENTLY</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/ddl-constraints.html" target="_blank" rel="noreferrer">Constraints: CHECK, UNIQUE NULLS NOT DISTINCT, FOREIGN KEY, EXCLUDE</a> · <a href="https://www.postgresql.org/docs/16/btree-gist.html" target="_blank" rel="noreferrer">btree_gist</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/datatype-character.html" target="_blank" rel="noreferrer">Character types</a> · <a href="https://www.postgresql.org/docs/16/datatype-numeric.html" target="_blank" rel="noreferrer">Numeric types</a> · <a href="https://www.postgresql.org/docs/16/datatype-datetime.html" target="_blank" rel="noreferrer">Date/Time types</a> · <a href="https://www.postgresql.org/docs/16/storage-toast.html" target="_blank" rel="noreferrer">TOAST</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/datatype-json.html" target="_blank" rel="noreferrer">JSON types (jsonb indexing)</a> · <a href="https://www.postgresql.org/docs/16/arrays.html" target="_blank" rel="noreferrer">Arrays</a> · <a href="https://www.postgresql.org/docs/16/rangetypes.html" target="_blank" rel="noreferrer">Range types</a></li>
+    <li><a href="https://www.postgresql.org/docs/16/sql-createview.html" target="_blank" rel="noreferrer">CREATE VIEW (updatable views, CHECK OPTION)</a> · <a href="https://www.postgresql.org/docs/16/rules-materializedviews.html" target="_blank" rel="noreferrer">Materialized views</a> · <a href="https://www.postgresql.org/docs/16/sql-createtrigger.html" target="_blank" rel="noreferrer">CREATE TRIGGER (CONSTRAINT, DEFERRABLE)</a></li>
+  </ul>
+  <h4>Prisma</h4>
+  <ul>
+    <li><a href="https://www.prisma.io/docs/orm/reference/prisma-schema-reference" target="_blank" rel="noreferrer">Prisma schema reference</a> · <a href="https://www.prisma.io/docs/orm/prisma-schema/data-model/indexes" target="_blank" rel="noreferrer">Indexes</a> · <a href="https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/relation-mode" target="_blank" rel="noreferrer">Relation mode</a></li>
+  </ul>
+</section>
+
+<!-- TIẾP THEO -->
+<section id="tiep-theo" class="stage col">
+  <div class="callout key">
+    <span class="tag">Tiếp theo · Mốc Cụm 1 → Pha B</span>
+    <h3 style="margin-top:4px">Đắp sổ cái kép vào OmniPOS</h3>
+    <p>Bài 07 khép lại phần lý thuyết của Cụm 1 (Bài 03 → 12 → 14 → 07). Bước kế tiếp theo lộ trình là Pha B: đưa <code>wallets</code> + <code>transfers</code> + <code>ledger_entries</code> của chặng 9 vào repo <code>create-template-project</code> bằng Prisma 7.9, với đúng những sửa ở Prisma drill (Decimal, Timestamptz, @@index, idempotency key @unique, CHECK trong migration.sql), rồi làm Boss Challenge 1 trên <code>quan-ly-hop-dong</code>. Sau đó sang Cụm 2 với Bài 06 Redis.</p>
+    <p>Nếu Bài 14 còn dở chặng 3–8, học nốt bên đó trước Pha B: <code>post_transfer()</code> của chặng 9 chính là "khóa theo thứ tự id" của <a href="lesson_14_locking_teacher_guide.html#chang-5">Bài 14 chặng 5</a>.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+/* === GUIDE_DATA_START === */
+var SLIDES = [
+  { n: 1, title: 'Data Modeling', href: '#cach-hoc', pg: false, chip: 'Đúng trên PG16' },
+  { n: 2, title: 'Outline', href: '#cach-hoc', pg: false, chip: null },
+  { n: 3, title: '1. Database Design', href: '#chang-1', pg: false, chip: null },
+  { n: 4, title: '1.1. Design Process', href: '#chang-1', pg: false, chip: null },
+  { n: 5, title: '2.2. Design Process', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 6, title: '1.2. Schema', href: '#chang-1', pg: false, chip: null },
+  { n: 7, title: '1.2.1. Entity-Relationship Diagram', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 8, title: '1.2.2. Types of Tables', href: '#chang-1', pg: false, chip: 'Đúng trên PG16' },
+  { n: 9, title: '1.2.3. Normalization', href: '#chang-2', pg: false, chip: 'Đúng trên PG16' },
+  { n: 10, title: '1.2.4. Denormalization', href: '#chang-2', pg: false, chip: 'Đúng trên PG16' },
+  { n: 11, title: '1.2.5. Problem 4: Foreign Key', href: '#sl-11', pg: true, chip: 'Cần sửa' },
+  { n: 12, title: '1.3.5. Where is reference column placed?', href: '#chang-3', pg: false, chip: 'Đúng trên PG16' },
+  { n: 13, title: '1.3. Table Format', href: '#chang-4', pg: false, chip: null },
+  { n: 14, title: '1.3.1. Problem 1: ADD COLUMN lock', href: '#sl-14', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 15, title: '1.3.1. JSON datatype', href: '#chang-4', pg: false, chip: 'Đúng trên PG16' },
+  { n: 16, title: '1.3.2. Problem 2: index a JSON field', href: '#sl-16', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 17, title: '1.3.2. Redundant Columns', href: '#sl-17', pg: true, chip: 'Cần sửa' },
+  { n: 18, title: '1.3.3. Problem 3: ADD INDEX lock', href: '#sl-18', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 19, title: '1.3.4. Table Template', href: '#chang-4', pg: false, chip: 'Đúng trên PG16' },
+  { n: 20, title: '1.3.4. Common Columns', href: '#chang-4', pg: false, chip: 'Đúng trên PG16' },
+  { n: 21, title: '1.1. Data Types', href: '#chang-5', pg: false, chip: null },
+  { n: 22, title: '1.1.1. String', href: '#sl-22', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 23, title: '1.1.2. Number', href: '#sl-23', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 24, title: '1.1.3. Date', href: '#sl-24', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 25, title: '1.1.4. Choosing Data Types', href: '#sl-25', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 26, title: '2. Case Studies', href: '#chang-6', pg: false, chip: null },
+  { n: 27, title: '2.1. Multiple Languages', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 28, title: '2.2. Ordering', href: '#sl-28', pg: true, chip: 'Cần sửa' },
+  { n: 29, title: '2.3. Homestay Booking', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 30, title: '2.3. Homestay Booking', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 31, title: '2.4. Calendar', href: '#sl-31', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 32, title: '2.5. Tagging / Labeling', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 33, title: '2.6. Report', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 34, title: 'Recap', href: '#chang-6', pg: false, chip: 'Đúng trên PG16' },
+  { n: 35, title: 'Homework', href: '#bai-tap', pg: false, chip: 'Đúng trên PG16' },
+  { n: 36, title: 'References', href: '#tham-khao', pg: false, chip: null },
+  { n: 37, title: 'Thank you', href: '#tiep-theo', pg: false, chip: null },
+  { n: 38, title: '(trang trống)', href: '#chang-7', pg: false, chip: null },
+  { n: 39, title: '2. View', href: '#chang-7', pg: false, chip: null },
+  { n: 40, title: '1.1. Introduction', href: '#sl-40', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 41, title: '1.2. How View Works?', href: '#sl-41', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 42, title: '1.3. Limitation', href: '#sl-42', pg: true, chip: 'MySQL đúng, PG khác' },
+  { n: 43, title: '1.4. Practices', href: '#chang-7', pg: false, chip: 'Đúng trên PG16' },
+];
+
+var QUIZ = /*@QUIZ@*/;
+
+var EXAM = [
+  { q: '1. Chuẩn hóa tới 3NF giải quyết những bất thường nào? Cho ví dụ có số đo.', a: 'Update anomaly: đổi tên một món ở bảng phẳng sửa 38 dòng (UPDATE 38), ở nf_products chỉ UPDATE 1. Delete anomaly: xóa đơn của khách chỉ có một đơn làm mất luôn thành phố của 1 khách. Insert anomaly: không lưu được món chưa ai đặt vì order_id nằm trong khóa chính (23502). Ghép lại các bảng 3NF ra đúng bảng phẳng (lệch 0 dòng cả hai chiều), nên tách không mất dữ liệu. Cái giá là phải JOIN khi đọc.' },
+  { q: '2. Slide 11 khuyên bỏ khóa ngoại, tự kiểm tra trong app. Bạn trả lời thế nào?', a: 'Cái giá có thật: 200.000 INSERT có FK mất 3947.629 ms, không FK 381.176 ms. Nhưng kiểm tra trong app có race: hai request cùng "kiểm tra trước" rồi cùng ghi, để lại 1 hợp đồng mồ côi; cùng code có FK thì INSERT đến sau nhận 23503 và mồ côi = 0. Giữ FK, đo bằng chứng trước khi bỏ, và nếu bỏ thì phải tự khóa dòng cha (chính là làm lại FK). Đồng thời đánh index cột FK: PG không tự tạo, xóa một cha mất 7.222 ms khi chưa có index, 0.519 ms khi có.' },
+  { q: '3. Thêm cột vào bảng 500.000 dòng đang chạy production trên PG 16 có làm treo hệ thống không?', a: 'ADD COLUMN cho phép NULL, có DEFAULT hằng số, hoặc DEFAULT now() chỉ sửa catalog: khoảng 1 ms, filenode không đổi. DEFAULT random() hoặc đổi int → bigint thì PG viết lại cả bảng (khoảng 520 ms ở đây, lâu hơn nhiều trên bảng thật). Nhưng các ALTER đổi cấu trúc (ADD COLUMN, đổi kiểu) đều xin AccessExclusiveLock (một số ALTER nhẹ như SET (fillfactor) chỉ lấy ShareUpdateExclusiveLock); đứng sau một transaction quên đóng là mọi SELECT xếp hàng sau nó (Bài 14 chặng 3). Vì vậy migration luôn SET lock_timeout và thử lại. Cột dự phòng col1, col2 (slide 17) không cần trên PG.' },
+  { q: '4. CREATE INDEX và CREATE INDEX CONCURRENTLY khác nhau thế nào?', a: 'CREATE INDEX giữ ShareLock tới hết transaction: đọc vẫn chạy, ghi phải chờ (phiên ghi nhận 55P03 sau lock_timeout 2s). CONCURRENTLY giữ ShareUpdateExclusiveLock nên ghi vẫn chạy; đổi lại nó phải đợi mọi transaction mở từ trước, kể cả transaction chỉ đọc giữ snapshot cũ (phase "waiting for writers before build"), và quét bảng hai lần, nên lâu hơn. Đặt lock_timeout đủ dài cho nó: hết giờ giữa chừng thì báo 55P03. Không chạy được trong transaction (25001), nên ở DBX phải dùng tab auto-commit. Nếu bị hủy giữa chừng, index nằm lại với indisvalid = false và phải DROP rồi tạo lại.' },
+  { q: '5. Vì sao tiền không được dùng float? Prisma liên quan gì?', a: '0.1 + 0.2 trong float8 ra 0.30000000000000004; cộng 0,1 một triệu lần ra 100000.00000133288 thay vì 100000.0. Dữ liệu northwind lưu đơn giá bằng real: làm tròn từng dòng về 2 số lẻ như hóa đơn thì doanh thu bằng float là 1265792.95, bằng numeric là 1265793.29 (không làm tròn thì hai bên chỉ lệch chưa tới 0,001: lỗi nằm ở chỗ float làm tròn sai các giá trị x,xx5). Prisma Float trên PostgreSQL là double precision, nên phải dùng Decimal @db.Decimal(p, s).' },
+  { q: '6. timestamp và timestamptz khác nhau thế nào? Chọn cái nào?', a: 'Cả hai đều 8 byte. timestamptz lưu một thời điểm tuyệt đối: ghi 09:00 ở phiên Asia/Ho_Chi_Minh, đọc ở phiên UTC thấy 02:00+00, cùng một khoảnh khắc. timestamp chỉ lưu chữ số trên đồng hồ: đọc ở đâu cũng 09:00, không biết của múi giờ nào; ép "09:00+07" vào timestamp còn bỏ mất +07 mà không báo lỗi. Dùng timestamptz cho mọi thời điểm; với lịch hẹn lặp lại thì lưu thêm tên múi giờ. Prisma DateTime mặc định là timestamp(3), phải thêm @db.Timestamptz(3).' },
+  { q: '7. Thiết kế quan hệ đa hình (bình luận cho bài viết hoặc sản phẩm) thế nào?', a: 'Cặp type + id không khai báo được FK: đo được 4 bình luận mồ côi (2 do xóa bài viết, 1 do gõ sai loại "Psot", 1 trỏ tới sản phẩm 99 không tồn tại). Exclusive arc: mỗi loại cha một cột FK cho phép NULL, CHECK num_nonnulls(...) = 1 (vi phạm → 23514), ON DELETE CASCADE và partial index, mồ côi = 0. Hoặc mỗi loại cha một bảng bình luận riêng, gộp bằng UNION ALL khi cần đọc chung. Prisma không có polymorphic relation, nên dùng một trong hai cách trên.' },
+  { q: '8. Thiết kế sổ cái kép cho ví điện tử thế nào để không mất tiền?', a: 'wallets (số dư là cache, CHECK allow_negative OR balance >= 0), transfers (idempotency_key UNIQUE, order_ref), ledger_entries (amount <> 0, âm là ra, dương là vào). Mỗi giao dịch ghi ít nhất 2 bút toán có tổng 0, được constraint trigger DEFERRED kiểm lúc COMMIT; sổ chỉ được thêm (trigger chặn UPDATE/DELETE với 23001), sửa sai bằng bút toán đảo. Hàm ghi sổ khóa các ví bằng ORDER BY id FOR UPDATE rồi trừ trước cộng sau. Đo được: mua quá số dư → 23514, ghi một bút toán → 23514 lúc COMMIT, gửi lại request → 23505. Khóa ngược chiều thì có đúng một 40P01 (lặp 3 lần đều vậy); đi qua hàm có ORDER BY thì 0 deadlock, phiên sau chỉ chờ.' },
+  { q: '9. Số dư nên lưu thẳng hay tính từ sổ cái?', a: 'Sự thật nằm ở ledger_entries; balance trên wallets là phi chuẩn hóa để đọc nhanh và để CHECK chặn âm. Cái giá là có thể lệch: một lần "cộng bù" tay 5000 làm 1 ví lệch, câu đối soát (balance khác SUM(amount) theo ví) bắt được ngay, và sửa bằng cách tính lại từ sổ. Chạy đối soát định kỳ và chỉ cho phép đổi số dư qua hàm ghi sổ.' },
+  { q: '10. View và materialized view khác nhau thế nào trên PostgreSQL?', a: 'View không lưu dữ liệu. PG không có lựa chọn MERGE/TEMPTABLE như MySQL: view đơn giản được trải phẳng nên plan giống hệt câu viết tay, điều kiện trên cột GROUP BY vẫn được đẩy xuống dưới bước gộp; view có LIMIT thì thành Subquery Scan và lọc sau. View đơn giản ghi được, WITH CHECK OPTION chặn ghi ra ngoài phạm vi (44000). Materialized view lưu kết quả thật, chỉ đổi khi REFRESH (đếm click 136001 → 136002 sau REFRESH); REFRESH CONCURRENTLY không chặn người đọc nhưng cần unique index, thiếu thì 55000.' }
+];
+/* === GUIDE_DATA_END === */
+
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* chế độ riêng tư: bỏ qua, trang vẫn chạy */ } }
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const run = (id) => { try { return JSON.parse($('#run-' + id).textContent); } catch { return null; } };
+  const press = (group, btn) => { $$('[aria-pressed]', group).forEach((b) => b.setAttribute('aria-pressed', String(b === btn))); };
+
+  // Giao diện sáng/tối (khóa l07-theme)
+  const theme = store.get('l07-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  $('#themeBtn')?.addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('l07-theme', next);
+  });
+
+  // Ô điền tay: chỉ dùng khóa l07-* (data-store)
+  $$('[data-store]').forEach((el) => {
+    const key = el.dataset.store;
+    if (!key.startsWith('l07-')) return;
+    const saved = store.get(key);
+    if (el.type === 'checkbox') {
+      el.checked = saved === 'true';
+      el.addEventListener('change', () => store.set(key, String(el.checked)));
+    } else {
+      el.value = saved ?? '';
+      el.addEventListener('input', () => store.set(key, el.value));
+    }
+  });
+
+  // Bảng walkthrough: nhãn cột cho dạng thẻ trên màn nhỏ
+  $$('table.walk').forEach((t) => {
+    const heads = $$('thead th', t).map((th) => th.textContent.trim());
+    $$('tbody tr', t).forEach((tr) => $$('td', tr).forEach((td, i) => { if (i > 0 && heads[i]) td.dataset.label = heads[i]; }));
+  });
+
+  // Quiz
+  $$('.quiz[data-quiz]').forEach((box) => {
+    const n = box.dataset.quiz;
+    const qs = QUIZ[n];
+    if (!qs) return;
+    let score = 0, answered = 0;
+    box.innerHTML = `<div class="quiz-head"><h4>Tự kiểm tra chặng ${n}</h4><span class="quiz-score num" aria-live="polite">0/${qs.length}</span></div>` +
+      qs.map((x, i) => {
+        const order = x.opts.map((_, j) => j).sort(() => Math.random() - 0.5);
+        return `<div class="q" data-i="${i}"><p class="q-text">${i + 1}. ${esc(x.q)}</p><div class="q-opts">${order.map((j) => `<button type="button" class="q-opt" data-j="${j}">${esc(x.opts[j])}</button>`).join('')}</div></div>`;
+      }).join('');
+    $$('.q', box).forEach((qel) => {
+      const x = qs[+qel.dataset.i];
+      $$('.q-opt', qel).forEach((btn) => btn.addEventListener('click', () => {
+        const j = +btn.dataset.j;
+        $$('.q-opt', qel).forEach((b) => { b.disabled = true; if (+b.dataset.j === x.ans) b.classList.add('right'); });
+        if (j === x.ans) score++; else btn.classList.add('wrong');
+        answered++;
+        const ex = document.createElement('div');
+        ex.className = 'q-explain';
+        ex.innerHTML = `<strong>${j === x.ans ? 'Đúng.' : 'Chưa đúng.'}</strong> ${esc(x.why)}`;
+        qel.appendChild(ex);
+        $('.quiz-score', box).textContent = `${score}/${qs.length}${answered === qs.length ? (score === qs.length ? ' · Đạt' : ' · Xem lại phần sai') : ''}`;
+      }));
+    });
+  });
+
+  // Phỏng vấn + bản đồ slide
+  const exam = $('#examList');
+  if (exam) exam.innerHTML = EXAM.map((e) => `<details class="fold"><summary>${esc(e.q)}</summary><div class="fold-body"><p>${esc(e.a)}</p></div></details>`).join('');
+  const chipClass = { 'Đúng trên PG16': 'ok', 'MySQL đúng, PG khác': 'diff', 'Cần sửa': 'fix' };
+  const map = $('#slideMap');
+  if (map) map.innerHTML = SLIDES.map((s) => `<a class="chip${s.pg ? ' pg' : ''}" href="${s.href}"><b>${s.n}</b> ${esc(s.title)}${s.chip ? ` <span class="vchip ${chipClass[s.chip]}">${esc(s.chip)}</span>` : ''}</a>`).join('');
+
+  /*@WIDGETS@*/
+})();
+</script>
+</body>
+</html>

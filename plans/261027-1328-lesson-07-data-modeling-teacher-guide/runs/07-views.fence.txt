@@ -1,0 +1,29 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region fence · View có LIMIT: PG không thể trải phẳng, phải tính view trước rồi mới lọc (giống TEMPTABLE, slide 41–42)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.160 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.100 ms
+SET
+Time: 0.075 ms
+CREATE OR REPLACE VIEW v_top_lines AS
+SELECT order_id, product_id, quantity FROM nf_order_lines ORDER BY quantity DESC LIMIT 100;
+CREATE VIEW
+Time: 4.901 ms
+EXPLAIN (COSTS OFF) SELECT * FROM v_top_lines WHERE product_id = 1;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Subquery Scan on v_top_lines
+   Filter: (v_top_lines.product_id = 1)
+   ->  Limit
+         ->  Sort
+               Sort Key: nf_order_lines.quantity DESC
+               ->  Seq Scan on nf_order_lines
+(6 rows)
+
+Time: 1.024 ms
+-- #endregion

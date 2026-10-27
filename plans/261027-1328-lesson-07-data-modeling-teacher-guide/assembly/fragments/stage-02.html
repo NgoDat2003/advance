@@ -1,0 +1,310 @@
+<!-- CHẶNG 2 -->
+<section id="chang-2" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">02</span>
+    <div>
+      <div class="stage-meta"><span>Slide 9–10 + 1NF → 3NF</span><span>35 phút</span><span>Day 05</span></div>
+      <h2>Chuẩn hóa 0NF → 3NF trên phiếu đơn northwind, rồi phi chuẩn hóa có kiểm soát</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> tự tay gây ra 3 loại bất thường (sửa, xóa, thêm) trên một bảng phẳng, tách nó tới 3NF, chứng minh tách không mất dữ liệu, rồi cố ý thêm một cột dư và bắt được lúc nó lệch.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Chuẩn hóa: mỗi sự thật chỉ nằm ở một chỗ. 1NF: mỗi ô một giá trị. 2NF: cột không phải khóa phụ thuộc vào <b>toàn bộ</b> khóa. 3NF: không phụ thuộc bắc cầu qua một cột không phải khóa.</dd>
+    <dt>TẠI SAO?</dt><dd>Một sự thật chép N lần thì phải sửa N lần; quên một lần là dữ liệu tự mâu thuẫn, và không ai biết bản nào đúng.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Màn hình đọc rất nhiều và phép tính đắt (danh sách đơn kèm tổng tiền, báo cáo): thêm cột cache, nhưng phải có chỗ cập nhật duy nhất và câu đối soát.</dd>
+  </dl>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_09_diagram.png" alt="Slide 9: bảng Student có Class ID và Class Name lặp, tách thành Student, Enroll, Class" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 9 · "2 Math" và "1 English" lặp lại → tách Student, Enroll, Class</figcaption></figure>
+
+  <div class="callout key">
+    <span class="tag">Slide 9 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Chuẩn hóa giảm dư thừa, tăng toàn vẹn, bằng cách tách bảng lớn thành bảng nhỏ có quan hệ. Nhược: schema phức tạp hơn, phải JOIN, có lúc không tận dụng được index.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Đúng. Tên món số 1 bị chép <b class="m" data-run="02-normal-forms#1nf">38</b> lần; đổi tên ở bảng phẳng là <b class="m" data-run="02-normal-forms#2nf">UPDATE 38</b>, ở bảng đã tách là <b class="m" data-run="02-normal-forms#2nf">UPDATE 1</b>. Cái giá: dựng lại phiếu phẳng cần JOIN 4 bảng (region <code>lossless</code>).</p></div>
+    </div>
+  </div>
+
+  <p>Ví dụ của slide có đủ 3 bước: <code>Class Name</code> phụ thuộc <code>Class ID</code> chứ không phụ thuộc học sinh (bắc cầu → bảng <code>Class</code>); một học sinh học nhiều lớp nên cần bảng relation <code>Enroll</code> (loại thứ 2 ở slide 8). Giờ làm lại trên dữ liệu thật: <code>order_sheet</code> là phiếu đơn phẳng northwind, mỗi dòng một món, khóa chính <code>(order_id, product_id)</code>.</p>
+
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · mỗi bước một region</span>
+    <p>Mở <code>02-normal-forms.sql</code>, chạy lần lượt <code>0nf</code> → <code>1nf</code> → <code>2nf</code> → <code>3nf</code> → <code>lossless</code> → <code>denorm</code>. Thao tác "phá" dữ liệu đều nằm trong <code>BEGIN … ROLLBACK</code>. Region <code>3nf</code> cố ý kết thúc bằng một lỗi: DBX dừng ở đó là đúng.</p>
+  </div>
+
+  <h4>Bước 0 · 0NF: một ô chứa nhiều món</h4>
+  <div class="code"><pre data-sql="02-normal-forms#0nf"><code>-- #region 0nf · Ô không nguyên tử: một ô chứa nhiều món (vi phạm 1NF)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT order_id, customer_name, items FROM order_sheet_raw ORDER BY order_id LIMIT 3;
+-- Muốn hỏi "đơn nào có món Chai?" phải dùng LIKE trên chuỗi; muốn đếm món phải tách chuỗi:
+SELECT count(*) AS so_dong_mon FROM order_sheet_raw, string_to_table(items, '; ') AS mon;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #0nf</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#0nf"> order_id |       customer_name       |                                                items
+----------+---------------------------+------------------------------------------------------------------------------------------------------
+    10248 | Vins et alcools Chevalier | Queso Cabrales x12; Singaporean Hokkien Fried Mee x10; Mozzarella di Giovanni x5
+    10249 | Toms Spezialitäten        | Tofu x9; Manjimup Dried Apples x40
+    10250 | Hanari Carnes             | Jack's New England Clam Chowder x10; Manjimup Dried Apples x35; Louisiana Fiery Hot Pepper Sauce x15
+(3 rows)
+ so_dong_mon
+-------------
+        2155
+(1 row)</pre></div>
+  <p><b class="m" data-run="02-normal-forms#2nf">830</b> đơn, nhưng muốn biết có bao nhiêu dòng món phải tách chuỗi: <b class="m" data-run="02-normal-forms#0nf">2155</b>. Hỏi "đơn nào có món Chai" chỉ còn <code>LIKE</code>, không index B-tree nào giúp được, và không gì bảo đảm tên món trong chuỗi là món có thật.</p>
+
+  <h4>Bước 1 · 1NF: mỗi ô một giá trị, nhưng sự thật bị chép</h4>
+  <div class="code"><pre data-sql="02-normal-forms#1nf"><code>-- #region 1nf · 1NF: mỗi ô một giá trị, mỗi dòng một món — nhưng thông tin bị lặp
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT order_id, product_id, customer_name, customer_city, product_name, category_name, quantity
+FROM order_sheet ORDER BY order_id, product_id LIMIT 5;
+-- Cùng một sự thật bị chép lại bao nhiêu lần?
+SELECT 'tên món product_id = 1' AS su_that, count(*) AS so_lan_lap FROM order_sheet WHERE product_id = 1
+UNION ALL SELECT 'thành phố của khách SAVEA', count(*) FROM order_sheet WHERE customer_id = 'SAVEA';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #1nf</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#1nf"> order_id | product_id |       customer_name       | customer_city |         product_name          | category_name  | quantity
+----------+------------+---------------------------+---------------+-------------------------------+----------------+----------
+    10248 |         11 | Vins et alcools Chevalier | Reims         | Queso Cabrales                | Dairy Products |       12
+    10248 |         42 | Vins et alcools Chevalier | Reims         | Singaporean Hokkien Fried Mee | Grains/Cereals |       10
+    10248 |         72 | Vins et alcools Chevalier | Reims         | Mozzarella di Giovanni        | Dairy Products |        5
+    10249 |         14 | Toms Spezialitäten        | Münster       | Tofu                          | Produce        |        9
+    10249 |         51 | Toms Spezialitäten        | Münster       | Manjimup Dried Apples         | Produce        |       40
+(5 rows)
+          su_that          | so_lan_lap
+---------------------------+------------
+ tên món product_id = 1    |         38
+ thành phố của khách SAVEA |        116
+(2 rows)</pre></div>
+  <p>Thành phố của khách SAVEA nằm trên <b class="m" data-run="02-normal-forms#1nf">116</b> dòng. Bảng đạt 1NF nhưng chưa đạt 2NF.</p>
+
+  <h4>Bước 2 · 2NF: tách cột chỉ phụ thuộc một phần khóa</h4>
+  <p>Khóa là <code>(order_id, product_id)</code>. Tên món, nhóm hàng, nhà cung cấp chỉ cần <code>product_id</code> → <code>nf_products</code>. Ngày đặt, khách, nhân viên chỉ cần <code>order_id</code> → <code>nf_orders</code>. Giá, số lượng, chiết khấu của <i>dòng</i> cần cả khóa → <code>nf_order_lines</code>.</p>
+  <div class="code"><pre data-sql="02-normal-forms#2nf"><code>-- #region 2nf · 2NF: tách thuộc tính chỉ phụ thuộc MỘT PHẦN khóa (product_id) ra bảng riêng
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+-- CASCADE: xóa luôn các view của chặng 7 (nếu đã tạo) vì chúng đọc nf_*; chạy lại 07-views.sql sau.
+DROP TABLE IF EXISTS nf_order_lines, nf_orders, nf_products, nf_customers CASCADE;
+CREATE TABLE nf_products AS
+  SELECT DISTINCT product_id, product_name, category_name, supplier_name FROM order_sheet;
+ALTER TABLE nf_products ADD PRIMARY KEY (product_id);
+CREATE TABLE nf_orders AS   -- 2NF: vẫn còn customer_name, customer_city phụ thuộc bắc cầu qua customer_id
+  SELECT DISTINCT order_id, order_date, customer_id, customer_name, customer_city, employee_name FROM order_sheet;
+ALTER TABLE nf_orders ADD PRIMARY KEY (order_id);
+CREATE TABLE nf_order_lines AS
+  SELECT order_id, product_id, unit_price, quantity, discount FROM order_sheet;
+ALTER TABLE nf_order_lines ADD PRIMARY KEY (order_id, product_id);
+-- Update anomaly: đổi tên món số 1 ở bảng phẳng phải sửa nhiều dòng; ở bảng đã tách chỉ 1 dòng.
+BEGIN;
+UPDATE order_sheet SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+UPDATE nf_products SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+ROLLBACK;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #2nf</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#2nf">CREATE TABLE nf_products AS
+  SELECT DISTINCT product_id, product_name, category_name, supplier_name FROM order_sheet;
+SELECT 77
+…
+UPDATE order_sheet SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+UPDATE 38
+Time: 0.762 ms
+UPDATE nf_products SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+UPDATE 1</pre></div>
+
+  <h4>Bước 3 · 3NF: bỏ phụ thuộc bắc cầu, thêm khóa ngoại</h4>
+  <p><code>customer_name</code>, <code>customer_city</code> phụ thuộc <code>customer_id</code>, còn <code>customer_id</code> phụ thuộc <code>order_id</code>: đó là bắc cầu. Tách <code>nf_customers</code>, nối bằng 3 khóa ngoại, thêm index cho cột FK (chặng 3 giải thích vì sao bắt buộc).</p>
+  <div class="code"><pre data-sql="02-normal-forms#3nf"><code>-- #region 3nf · 3NF: tách phụ thuộc bắc cầu customer_id → tên, thành phố; thêm khóa ngoại
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+-- Chạy lại được: lấy khách từ order_sheet (nf_orders có thể đã bỏ cột ở lần chạy trước), khóa ngoại có tên cố định.
+DROP TABLE IF EXISTS nf_customers CASCADE;
+CREATE TABLE nf_customers AS
+  SELECT DISTINCT customer_id, customer_name, customer_city FROM order_sheet;
+ALTER TABLE nf_customers ADD PRIMARY KEY (customer_id);
+ALTER TABLE nf_orders DROP COLUMN IF EXISTS customer_name, DROP COLUMN IF EXISTS customer_city;
+ALTER TABLE nf_orders ADD CONSTRAINT nf_orders_customer_fk FOREIGN KEY (customer_id) REFERENCES nf_customers (customer_id);
+ALTER TABLE nf_order_lines DROP CONSTRAINT IF EXISTS nf_order_lines_order_fk, DROP CONSTRAINT IF EXISTS nf_order_lines_product_fk,
+  ADD CONSTRAINT nf_order_lines_order_fk FOREIGN KEY (order_id) REFERENCES nf_orders (order_id),
+  ADD CONSTRAINT nf_order_lines_product_fk FOREIGN KEY (product_id) REFERENCES nf_products (product_id);
+CREATE INDEX IF NOT EXISTS nf_orders_customer_id_idx ON nf_orders (customer_id);
+CREATE INDEX IF NOT EXISTS nf_order_lines_product_id_idx ON nf_order_lines (product_id);
+-- Delete anomaly: xóa các đơn của khách chỉ có 1 đơn ở bảng phẳng → mất luôn thành phố của khách đó.
+BEGIN;
+DELETE FROM order_sheet WHERE customer_id IN (
+  SELECT customer_id FROM order_sheet GROUP BY customer_id HAVING count(DISTINCT order_id) = 1);
+SELECT count(*) AS khach_mat_thanh_pho
+FROM nf_customers c WHERE NOT EXISTS (SELECT 1 FROM order_sheet s WHERE s.customer_id = c.customer_id);
+ROLLBACK;
+-- Ở 3NF thành phố nằm trong nf_customers nên vẫn còn dù khách không còn đơn nào.
+SELECT count(*) AS khach_trong_northwind, (SELECT count(*) FROM nf_customers) AS khach_trong_nf_customers FROM northwind.customers;
+-- Insert anomaly: bảng phẳng không lưu được món mới chưa ai đặt, vì order_id là một phần khóa chính.
+INSERT INTO order_sheet (order_id, product_id, product_name) VALUES (NULL, 999, 'Cà phê muối');
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #3nf</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#3nf">DELETE FROM order_sheet WHERE customer_id IN (
+  SELECT customer_id FROM order_sheet GROUP BY customer_id HAVING count(DISTINCT order_id) = 1);
+DELETE 2
+Time: 2.798 ms
+SELECT count(*) AS khach_mat_thanh_pho
+FROM nf_customers c WHERE NOT EXISTS (SELECT 1 FROM order_sheet s WHERE s.customer_id = c.customer_id);
+ khach_mat_thanh_pho
+---------------------
+                   1
+…
+SELECT count(*) AS khach_trong_northwind, (SELECT count(*) FROM nf_customers) AS khach_trong_nf_customers FROM northwind.customers;
+ khach_trong_northwind | khach_trong_nf_customers
+-----------------------+--------------------------
+                    91 |                       89
+…
+INSERT INTO order_sheet (order_id, product_id, product_name) VALUES (NULL, 999, 'Cà phê muối');
+psql:&lt;stdin&gt;:26: ERROR:  23502: null value in column "order_id" of relation "order_sheet" violates not-null constraint</pre></div>
+  <ul>
+    <li><b>Delete anomaly:</b> xóa đơn của khách chỉ có một đơn ở bảng phẳng → <b class="m" data-run="02-normal-forms#3nf">1</b> khách mất luôn thành phố. Ở 3NF thành phố nằm trong <code>nf_customers</code>, không phụ thuộc đơn còn hay mất.</li>
+    <li><b>Insert anomaly:</b> món chưa ai đặt không có chỗ trong bảng phẳng, vì <code>order_id</code> là một phần khóa chính → <b class="m" data-run="02-normal-forms#3nf">23502</b>. Cùng lý do, northwind có <b class="m" data-run="02-normal-forms#3nf">91</b> khách nhưng <code>nf_customers</code> chỉ dựng được <b class="m" data-run="02-normal-forms#3nf">89</b>: khách chưa từng đặt đơn chưa bao giờ có mặt trong phiếu phẳng.</li>
+  </ul>
+
+  <h4>Chứng minh tách không mất dữ liệu</h4>
+  <p>Region <code>lossless</code> tạo view <code>rejoin</code> JOIN lại 4 bảng 3NF, rồi <code>EXCEPT</code> hai chiều với <code>order_sheet</code>:</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #lossless</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#lossless"> so_dong_lech
+--------------
+            0
+(1 row)
+ so_dong_lech
+--------------
+            0
+(1 row)</pre></div>
+  <p><code>EXCEPT</code> hai chiều đều ra 0: ghép 4 bảng lại được đúng từng dòng của phiếu cũ. Phần tự làm dùng lại đúng mẫu câu này.</p>
+
+  <div class="widget" id="w2">
+    <div class="widget-head"><h4>W2 · Bậc thang chuẩn hóa</h4><span class="eyebrow">run-w2 · 02-normal-forms</span></div>
+    <div class="widget-body">
+      <p>Chọn một bước. Lưới mẫu lấy từ các dòng đã chạy ở trên; ô tô màu là giá trị bị chép lại.</p>
+      <div class="btns" id="w2-btns" role="group" aria-label="Chọn bước chuẩn hóa"></div>
+      <div id="w2-grid"></div>
+      <div class="out" id="w2-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_10_diagram.png" alt="Slide 10: Student và Enroll gộp thành Student có cột Classes đếm số lớp" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 10 · cột dư <code>Classes</code> lưu sẵn số lớp của mỗi học sinh</figcaption></figure>
+
+  <div class="callout key">
+    <span class="tag">Slide 10 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Phi chuẩn hóa là gộp bảng hoặc thêm dữ liệu dư. Lợi: đọc nhanh, tận dụng index. Hại: tốn chỗ, dữ liệu có thể không nhất quán.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Đúng cả hai mặt. <code>dn_orders.order_total</code> cho top 5 đơn không cần JOIN hay SUM; nhưng sửa một dòng món mà quên cache thì câu đối soát bắt được <b class="m" data-run="02-normal-forms#denorm">1</b> đơn lệch.</p></div>
+    </div>
+  </div>
+
+  <div class="code"><pre data-sql="02-normal-forms#denorm"><code>-- #region denorm · Phi chuẩn hóa: cache tổng tiền đơn để đọc nhanh, và cái giá phải trả là "lệch"
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS dn_orders;
+CREATE TABLE dn_orders AS
+SELECT o.order_id, o.customer_id, o.order_date,
+       sum(round(l.unit_price::numeric * l.quantity * (1 - l.discount::numeric), 2)) AS order_total   -- cột dư thừa
+FROM nf_orders o JOIN nf_order_lines l USING (order_id) GROUP BY o.order_id;
+ALTER TABLE dn_orders ADD PRIMARY KEY (order_id);
+-- Đọc 5 đơn lớn nhất: không cần JOIN, không cần SUM.
+SELECT order_id, customer_id, order_total FROM dn_orders ORDER BY order_total DESC LIMIT 5;
+-- Sửa một dòng món mà quên cập nhật cache → số liệu lệch. Câu đối soát bắt được ngay.
+BEGIN;
+UPDATE nf_order_lines SET quantity = quantity + 1 WHERE order_id = 10248 AND product_id = 11;
+SELECT count(*) AS lech FROM dn_orders d
+WHERE d.order_total &lt;&gt; (SELECT sum(round(l.unit_price::numeric * l.quantity * (1 - l.discount::numeric), 2))
+                        FROM nf_order_lines l WHERE l.order_id = d.order_id);
+ROLLBACK;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #denorm</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#denorm"> order_id | customer_id | order_total
+----------+-------------+-------------
+    10865 | QUICK       |    16387.50
+    10981 | HANAR       |    15810.00
+    11030 | SAVEA       |    12615.05
+    10889 | RATTC       |    11380.00
+    10417 | SIMOB       |    11188.40
+(5 rows)
+…
+UPDATE nf_order_lines SET quantity = quantity + 1 WHERE order_id = 10248 AND product_id = 11;
+UPDATE 1
+…
+ lech
+------
+    1
+(1 row)</pre></div>
+  <p>Luật khi phi chuẩn: bảng chuẩn vẫn là nguồn sự thật; cache được cập nhật trong <b>cùng transaction</b> với dòng gốc, ở một chỗ duy nhất trong code; câu đối soát chạy định kỳ. <a href="#chang-9">Chặng 9</a> dùng đúng mẫu này cho số dư ví.</p>
+
+  <h3>Kiểm chứng chặng 2</h3>
+  <div class="code"><pre data-sql="02-normal-forms#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 2
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K2.1' AS ma, CASE WHEN (SELECT count(*) FROM nf_products) = 77 AND (SELECT count(*) FROM nf_orders) = 830
+                           AND (SELECT count(*) FROM nf_customers) = 89 AND (SELECT count(*) FROM nf_order_lines) = 2155
+                      THEN '✔' ELSE '✘' END AS ket_qua, 'đủ 4 bảng 3NF: 77 món, 830 đơn, 89 khách, 2155 dòng món' AS chi_tiet
+UNION ALL
+SELECT 'K2.2', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND conrelid::regclass::text LIKE 'nf_%'
+                           AND connamespace = 'lab07_modeling'::regnamespace) = 3 THEN '✔' ELSE '✘' END, 'có 3 khóa ngoại giữa các bảng nf_*'
+UNION ALL
+SELECT 'K2.3', CASE WHEN NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'nf_orders'::regclass AND attname = 'customer_city' AND NOT attisdropped)
+               THEN '✔' ELSE '✘' END, 'nf_orders không còn cột customer_city (đã hết phụ thuộc bắc cầu)'
+UNION ALL
+SELECT 'K2.4', CASE WHEN (SELECT count(*) FROM dn_orders) = 830 THEN '✔' ELSE '✘' END, 'dn_orders có cache order_total cho 830 đơn';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>02-normal-forms.sql #kiem-chung</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="02-normal-forms#kiem-chung">  ma  | ket_qua |                             chi_tiet
+------+---------+------------------------------------------------------------------
+ K2.1 | ✔       | đủ 4 bảng 3NF: 77 món, 830 đơn, 89 khách, 2155 dòng món
+ K2.2 | ✔       | có 3 khóa ngoại giữa các bảng nf_*
+ K2.3 | ✔       | nf_orders không còn cột customer_city (đã hết phụ thuộc bắc cầu)
+ K2.4 | ✔       | dn_orders có cache order_total cho 830 đơn
+(4 rows)</pre></div>
+
+  <div class="callout challenge" id="chang-2-tu-lam">
+    <span class="tag">Tự làm · chặng 2</span>
+    <p><b>Đề:</b> kho F&amp;B ghi "phiếu nhập kho" phẳng như dưới. Tách tới 3NF thành <code>my_kho</code>, <code>my_nha_cung_cap</code>, <code>my_nguyen_lieu</code>, <code>my_phieu_nhap</code>, <code>my_phieu_nhap_dong</code> (giữ tên cột). Bạn quyết định cột nào đi bảng nào, khóa chính, khóa ngoại.</p>
+    <div class="code"><pre><code>SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+DROP TABLE IF EXISTS my_phieu_nhap_phang;
+CREATE TABLE my_phieu_nhap_phang (
+  phieu_id text, ngay date, kho_id text, ten_kho text, ncc_id text, ten_ncc text, sdt_ncc text,
+  nguyen_lieu_id text, ten_nguyen_lieu text, don_vi text, so_luong numeric, don_gia numeric,
+  PRIMARY KEY (phieu_id, nguyen_lieu_id));
+INSERT INTO my_phieu_nhap_phang VALUES
+('PN01','2026-10-20','K1','Kho Quận 7','NCC1','Trà Xanh Lâm Đồng','0901000001','NL01','Trà ô long','kg',5,180000),
+('PN01','2026-10-20','K1','Kho Quận 7','NCC1','Trà Xanh Lâm Đồng','0901000001','NL02','Sữa tươi','lít',20,32000),
+('PN02','2026-10-21','K1','Kho Quận 7','NCC2','Sữa Đà Lạt','0902000002','NL02','Sữa tươi','lít',30,31000),
+('PN02','2026-10-21','K1','Kho Quận 7','NCC2','Sữa Đà Lạt','0902000002','NL03','Đường nâu','kg',10,25000),
+('PN03','2026-10-22','K2','Kho Thủ Đức','NCC1','Trà Xanh Lâm Đồng','0901000001','NL01','Trà ô long','kg',3,185000),
+('PN03','2026-10-22','K2','Kho Thủ Đức','NCC1','Trà Xanh Lâm Đồng','0901000001','NL04','Trân châu đen','kg',8,40000);</code></pre></div>
+    <p><b>PASS khi:</b> câu tự kiểm trả <code>thua = 0</code>, <code>thieu = 0</code>, <code>so_fk = 4</code>; đổi tên <code>NL01</code> ở bảng mới chỉ ra <code>UPDATE 1</code> (trong <code>BEGIN … ROLLBACK</code>); và bạn viết được một câu: vì sao <code>don_gia</code> không đi theo nguyên liệu?</p>
+    <div class="code"><pre><code>SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+WITH g AS (
+  SELECT p.phieu_id, p.ngay, p.kho_id, k.ten_kho, p.ncc_id, n.ten_ncc, n.sdt_ncc,
+         d.nguyen_lieu_id, l.ten_nguyen_lieu, l.don_vi, d.so_luong, d.don_gia
+  FROM my_phieu_nhap_dong d JOIN my_phieu_nhap p USING (phieu_id) JOIN my_kho k USING (kho_id)
+       JOIN my_nha_cung_cap n USING (ncc_id) JOIN my_nguyen_lieu l USING (nguyen_lieu_id))
+SELECT (SELECT count(*) FROM (SELECT * FROM g EXCEPT SELECT * FROM my_phieu_nhap_phang) x) AS thua,
+       (SELECT count(*) FROM (SELECT * FROM my_phieu_nhap_phang EXCEPT SELECT * FROM g) y) AS thieu,
+       (SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND connamespace = 'lab07_modeling'::regnamespace
+          AND conrelid::regclass::text IN ('my_phieu_nhap', 'my_phieu_nhap_dong')) AS so_fk;</code></pre></div>
+    <details class="fold"><summary>Đáp án</summary><div class="fold-body">
+      <p>2NF: <code>ten_nguyen_lieu</code>, <code>don_vi</code> chỉ cần <code>nguyen_lieu_id</code>; <code>ngay</code>, <code>kho_id</code>, <code>ncc_id</code> chỉ cần <code>phieu_id</code>. 3NF: <code>ten_kho</code> phụ thuộc <code>kho_id</code>; <code>ten_ncc</code>, <code>sdt_ncc</code> phụ thuộc <code>ncc_id</code>. <code>don_gia</code> ở lại dòng phiếu: cùng NL01 mà PN01 và PN03 có giá khác nhau, nên nó là giá của lần nhập (cả khóa), không phải thuộc tính nguyên liệu.</p>
+      <div class="code"><pre><code>SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+DROP TABLE IF EXISTS my_phieu_nhap_dong, my_phieu_nhap, my_nguyen_lieu, my_nha_cung_cap, my_kho;
+CREATE TABLE my_kho AS SELECT DISTINCT kho_id, ten_kho FROM my_phieu_nhap_phang;
+CREATE TABLE my_nha_cung_cap AS SELECT DISTINCT ncc_id, ten_ncc, sdt_ncc FROM my_phieu_nhap_phang;
+CREATE TABLE my_nguyen_lieu AS SELECT DISTINCT nguyen_lieu_id, ten_nguyen_lieu, don_vi FROM my_phieu_nhap_phang;
+CREATE TABLE my_phieu_nhap AS SELECT DISTINCT phieu_id, ngay, kho_id, ncc_id FROM my_phieu_nhap_phang;
+CREATE TABLE my_phieu_nhap_dong AS SELECT phieu_id, nguyen_lieu_id, so_luong, don_gia FROM my_phieu_nhap_phang;
+ALTER TABLE my_kho ADD PRIMARY KEY (kho_id);
+ALTER TABLE my_nha_cung_cap ADD PRIMARY KEY (ncc_id);
+ALTER TABLE my_nguyen_lieu ADD PRIMARY KEY (nguyen_lieu_id);
+ALTER TABLE my_phieu_nhap ADD PRIMARY KEY (phieu_id),
+  ADD FOREIGN KEY (kho_id) REFERENCES my_kho, ADD FOREIGN KEY (ncc_id) REFERENCES my_nha_cung_cap;
+ALTER TABLE my_phieu_nhap_dong ADD PRIMARY KEY (phieu_id, nguyen_lieu_id),
+  ADD FOREIGN KEY (phieu_id) REFERENCES my_phieu_nhap, ADD FOREIGN KEY (nguyen_lieu_id) REFERENCES my_nguyen_lieu;
+CREATE INDEX ON my_phieu_nhap (kho_id); CREATE INDEX ON my_phieu_nhap (ncc_id); CREATE INDEX ON my_phieu_nhap_dong (nguyen_lieu_id);</code></pre></div>
+    </div></details>
+  </div>
+
+  <div class="quiz" data-quiz="2"></div>
+</section>

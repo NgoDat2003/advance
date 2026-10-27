@@ -1,0 +1,37 @@
+-- chạy lúc 27/10/2026 21:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 6
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.219 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.106 ms
+SET
+Time: 0.129 ms
+SELECT 'K6.1' AS ma, CASE WHEN (SELECT title_translation ? 'ja' FROM cs_posts WHERE id = 1) THEN '✔' ELSE '✘' END AS ket_qua,
+       'bản dịch tiếng Nhật thêm được mà không đổi schema' AS chi_tiet
+UNION ALL
+SELECT 'K6.2', CASE WHEN (SELECT count(*) FROM cs_availability) = 1095 THEN '✔' ELSE '✘' END, 'đã sinh 3 × 365 dòng lịch phòng'
+UNION ALL
+SELECT 'K6.3', CASE WHEN (SELECT count(*) FROM cs_availability WHERE homestay_id = 1 AND status = 'BOOKED') = 3 THEN '✔' ELSE '✘' END,
+       'căn 1 có đúng 3 đêm đã đặt, không bị bán trùng'
+UNION ALL
+SELECT 'K6.4', CASE WHEN (SELECT count(*) FROM cs_stays WHERE homestay_id = 1) = 1 THEN '✔' ELSE '✘' END, 'EXCLUDE chặn lượt đặt chồng lấn: căn 1 chỉ có 1 lượt'
+UNION ALL
+SELECT 'K6.5', CASE WHEN to_regclass('lab07_modeling.cs_articles_tags_idx') IS NOT NULL THEN '✔' ELSE '✘' END, 'cột tags có GIN index'
+UNION ALL
+SELECT 'K6.6', CASE WHEN to_regclass('lab07_modeling.cs_mv_clicks_daily') IS NOT NULL THEN '✔' ELSE '✘' END, 'có materialized view cs_mv_clicks_daily';
+  ma  | ket_qua |                       chi_tiet                       
+------+---------+------------------------------------------------------
+ K6.1 | ✔       | bản dịch tiếng Nhật thêm được mà không đổi schema
+ K6.2 | ✔       | đã sinh 3 × 365 dòng lịch phòng
+ K6.3 | ✔       | căn 1 có đúng 3 đêm đã đặt, không bị bán trùng
+ K6.4 | ✔       | EXCLUDE chặn lượt đặt chồng lấn: căn 1 chỉ có 1 lượt
+ K6.5 | ✔       | cột tags có GIN index
+ K6.6 | ✔       | có materialized view cs_mv_clicks_daily
+(6 rows)
+
+Time: 3.440 ms
+-- #endregion

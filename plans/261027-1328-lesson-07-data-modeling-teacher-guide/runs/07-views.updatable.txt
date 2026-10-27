@@ -1,0 +1,36 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region updatable · View đơn giản ghi được; WITH CHECK OPTION chặn ghi ra ngoài phạm vi của view (slide 40)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.185 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.087 ms
+SET
+Time: 0.074 ms
+CREATE OR REPLACE VIEW v_cheap_products AS
+SELECT product_id, product_name, category_name, supplier_name FROM nf_products WHERE category_name = 'Beverages'
+WITH CHECK OPTION;
+CREATE VIEW
+Time: 6.097 ms
+INSERT INTO v_cheap_products VALUES (901, 'Trà đào cam sả', 'Beverages', 'MayCha');   -- nằm trong phạm vi view: được
+INSERT 0 1
+Time: 2.563 ms
+SELECT product_id, product_name FROM nf_products WHERE product_id = 901;              -- dòng đã vào bảng gốc
+ product_id |  product_name  
+------------+----------------
+        901 | Trà đào cam sả
+(1 row)
+
+Time: 0.467 ms
+DELETE FROM v_cheap_products WHERE product_id = 901;
+DELETE 1
+Time: 4.725 ms
+INSERT INTO v_cheap_products VALUES (902, 'Bánh mì', 'Grains/Cereals', 'MayCha');      -- ngoài phạm vi: bị chặn
+psql:<stdin>:10: ERROR:  44000: new row violates check option for view "v_cheap_products"
+DETAIL:  Failing row contains (902, Bánh mì, Grains/Cereals, MayCha).
+LOCATION:  ExecWithCheckOptions, execMain.c:2219
+Time: 0.346 ms
+-- #endregion

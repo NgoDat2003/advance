@@ -1,0 +1,42 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region money · Tiền không bao giờ dùng float (slide 23)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.161 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.138 ms
+SET
+Time: 0.090 ms
+SELECT 0.1::float8 + 0.2::float8 AS float_cong, (0.1::float8 + 0.2::float8) = 0.3 AS float_bang_0_3,
+       0.1::numeric + 0.2::numeric AS numeric_cong;
+     float_cong      | float_bang_0_3 | numeric_cong 
+---------------------+----------------+--------------
+ 0.30000000000000004 | f              |          0.3
+(1 row)
+
+Time: 2.030 ms
+-- Cộng 0,1 một triệu lần:
+SELECT sum(0.1::float8) AS tong_float, sum(0.1::numeric) AS tong_numeric FROM generate_series(1, 1000000);
+     tong_float     | tong_numeric 
+--------------------+--------------
+ 100000.00000133288 |     100000.0
+(1 row)
+
+Time: 125.054 ms
+-- Dữ liệu thật: northwind lưu đơn giá, chiết khấu bằng real (float 4 byte). So cùng một cách tính:
+-- (1) không làm tròn: float lệch rất nhỏ; (2) làm tròn từng dòng về 2 số lẻ như hóa đơn: float lệch hẳn.
+SELECT sum(unit_price * quantity * (1 - discount)) AS real_khong_lam_tron,
+       sum(unit_price::numeric * quantity * (1 - discount::numeric)) AS numeric_khong_lam_tron,
+       sum(round((unit_price * quantity * (1 - discount))::numeric, 2)) AS real_lam_tron_tung_dong,
+       sum(round(unit_price::numeric * quantity * (1 - discount::numeric), 2)) AS numeric_lam_tron_tung_dong
+FROM order_sheet;
+ real_khong_lam_tron | numeric_khong_lam_tron | real_lam_tron_tung_dong | numeric_lam_tron_tung_dong 
+---------------------+------------------------+-------------------------+----------------------------
+   1265793.038653364 |           1265793.0395 |              1265792.95 |                 1265793.29
+(1 row)
+
+Time: 8.732 ms
+-- #endregion

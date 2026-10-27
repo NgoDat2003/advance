@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Region inline so plan của SELECT qua v_order_lines với JOIN viết tay. Kết quả đo được là gì?",
+    "opts": [
+      "Hai plan giống hệt nhau, cùng dùng Bitmap Index Scan on nf_order_lines_pkey",
+      "Plan qua view có thêm nút Subquery Scan nên chậm hơn",
+      "Plan qua view không dùng được index nf_order_lines_pkey",
+      "PG báo lỗi vì view không có cột order_id"
+    ],
+    "ans": 0,
+    "why": "runs/07-views.inline.txt: cả hai EXPLAIN đều ra đúng 8 dòng Hash Join → Bitmap Index Scan on nf_order_lines_pkey. View đơn giản được trải phẳng, giống MERGE của MySQL."
+  },
+  {
+    "q": "View v_top_lines có ORDER BY quantity DESC LIMIT 100. Lọc WHERE product_id = 1 từ bên ngoài thì vì sao PG không đẩy điều kiện xuống?",
+    "opts": [
+      "Vì PG không bao giờ đẩy điều kiện vào view",
+      "Vì cột product_id không có index",
+      "Vì lọc trước rồi LIMIT sẽ cho kết quả khác, nên PG giữ Subquery Scan và lọc sau cùng",
+      "Vì view được lưu thành bảng tạm trên đĩa"
+    ],
+    "ans": 2,
+    "why": "runs/07-views.fence.txt: plan là Subquery Scan on v_top_lines, Filter: (v_top_lines.product_id = 1) nằm trên Limit → Sort → Seq Scan. Đây là trường hợp giống TEMPTABLE, nhưng không ghi bảng tạm."
+  },
+  {
+    "q": "INSERT qua view v_cheap_products (WITH CHECK OPTION, chỉ category Beverages) một dòng category Grains/Cereals. PG trả gì?",
+    "opts": [
+      "INSERT 0 1, dòng vào bảng gốc nhưng không thấy qua view",
+      "Lỗi 44000: new row violates check option for view",
+      "Báo lỗi vì view trên PG không bao giờ ghi được",
+      "Lỗi 23514 từ CHECK của bảng nf_products"
+    ],
+    "ans": 1,
+    "why": "runs/07-views.updatable.txt: dòng 901 (Beverages) được INSERT 0 1; dòng 902 (Grains/Cereals) nhận ERROR 44000. View đơn giản trên PG tự động ghi được."
+  },
+  {
+    "q": "Slide 42 nói MySQL không có materialized view. Trên PostgreSQL 16 thì sao?",
+    "opts": [
+      "PG cũng không có, phải tự tạo bảng và cron",
+      "PG có, và nó tự cập nhật ngay khi bảng gốc đổi",
+      "PG chỉ có materialized view trong bản Enterprise",
+      "PG có CREATE MATERIALIZED VIEW; muốn số mới phải REFRESH, và REFRESH CONCURRENTLY cần unique index"
+    ],
+    "ans": 3,
+    "why": "runs/06-case-studies.report.txt (chặng 6): CREATE MATERIALIZED VIEW cs_mv_clicks_daily chạy được, REFRESH thường chạy được, REFRESH … CONCURRENTLY khi chưa có unique index trả 55000."
+  }
+]

@@ -1,0 +1,37 @@
+-- chạy lúc 27/10/2026 22:36 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region cic · B tạo index CONCURRENTLY trong lúc A đang ghi
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.184 ms
+SET statement_timeout = '60s'; SET lock_timeout = '15s';   -- CIC phải chờ A xong (A ngủ 6 giây); hết lock_timeout giữa chừng sẽ để lại index hỏng
+SET
+Time: 0.133 ms
+SET
+Time: 0.103 ms
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'CREATE INDEX CONCURRENTLY' AS viec;
+ buoc |     luc      |           viec            
+------+--------------+---------------------------
+ B1   | 15:36:09.952 | CREATE INDEX CONCURRENTLY
+(1 row)
+
+Time: 0.991 ms
+CREATE INDEX CONCURRENTLY ddl_contracts_status_cic ON ddl_contracts (status, store_id);
+CREATE INDEX
+Time: 5587.924 ms (00:05.588)
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'index xong' AS viec;
+ buoc |     luc      |    viec    
+------+--------------+------------
+ B2   | 15:36:15.541 | index xong
+(1 row)
+
+Time: 0.306 ms
+SELECT indexrelid::regclass AS index_moi, indisvalid AS hop_le FROM pg_index WHERE indexrelid = 'ddl_contracts_status_cic'::regclass;
+        index_moi         | hop_le 
+--------------------------+--------
+ ddl_contracts_status_cic | t
+(1 row)
+
+Time: 1.815 ms
+-- #endregion

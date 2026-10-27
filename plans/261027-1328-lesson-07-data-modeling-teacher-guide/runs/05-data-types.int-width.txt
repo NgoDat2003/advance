@@ -1,0 +1,19 @@
+-- chạy lúc 27/10/2026 22:29 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region int-width · INT(1) của MySQL không tồn tại trên PG (slide 23)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.166 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.096 ms
+SET
+Time: 0.090 ms
+SELECT 1::int(1);
+psql:<stdin>:4: ERROR:  42601: syntax error at or near "("
+LINE 1: SELECT 1::int(1);
+                     ^
+LOCATION:  scanner_yyerror, scan.l:1244
+Time: 0.212 ms
+-- #endregion

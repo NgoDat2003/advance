@@ -1,0 +1,65 @@
+-- chạy lúc 27/10/2026 21:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region ordering · Cột thứ tự có khoảng trống: chèn giữa = (trên + dưới) / 2. Chèn được bao nhiêu lần? (slide 28)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.157 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.089 ms
+SET
+Time: 0.107 ms
+DROP TABLE IF EXISTS cs_tasks;
+psql:<stdin>:4: NOTICE:  00000: table "cs_tasks" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.306 ms
+CREATE TABLE cs_tasks (id int PRIMARY KEY, name text NOT NULL, pos float8 NOT NULL);
+CREATE TABLE
+Time: 10.891 ms
+INSERT INTO cs_tasks VALUES (1, 'TV', 1000), (4, 'Working', 1500), (2, 'Commuting', 2000), (3, 'Gaming', 3000);
+INSERT 0 4
+Time: 1.241 ms
+INSERT INTO cs_tasks VALUES (5, 'Cafe', (1000 + 1500) / 2.0);        -- kéo "Cafe" vào giữa TV và Working
+INSERT 0 1
+Time: 1.384 ms
+SELECT name, pos FROM cs_tasks ORDER BY pos;
+   name    | pos  
+-----------+------
+ TV        | 1000
+ Cafe      | 1250
+ Working   | 1500
+ Commuting | 2000
+ Gaming    | 3000
+(5 rows)
+
+Time: 0.504 ms
+-- Người dùng cứ kéo việc mới vào ngay sau "TV": khoảng trống chia đôi mãi. Đếm số lần chia được trước khi hết chỗ.
+WITH RECURSIVE
+  i(n, lo, hi) AS (SELECT 0, 1000::bigint, 2000::bigint UNION ALL SELECT n + 1, lo, (lo + hi) / 2 FROM i WHERE (lo + hi) / 2 NOT IN (lo, hi)),
+  d(n, lo, hi) AS (SELECT 0, 1000::float8, 2000::float8 UNION ALL SELECT n + 1, lo, (lo + hi) / 2 FROM d WHERE (lo + hi) / 2 NOT IN (lo, hi)),
+  f(n, lo, hi) AS (SELECT 0, 1000::float4, 2000::float4 UNION ALL SELECT n + 1, lo, ((lo + hi) / 2)::float4 FROM f WHERE ((lo + hi) / 2)::float4 NOT IN (lo, hi))
+SELECT (SELECT max(n) FROM i) AS so_lan_int, (SELECT max(n) FROM d) AS so_lan_float8, (SELECT max(n) FROM f) AS so_lan_float4;
+ so_lan_int | so_lan_float8 | so_lan_float4 
+------------+---------------+---------------
+          9 |            53 |            24
+(1 row)
+
+Time: 2.264 ms
+-- Cách sửa: khi khoảng trống cạn, đánh số lại cả danh sách bằng MỘT câu lệnh.
+UPDATE cs_tasks t SET pos = r.rn * 1000 FROM (SELECT id, row_number() OVER (ORDER BY pos) AS rn FROM cs_tasks) r WHERE r.id = t.id;
+UPDATE 5
+Time: 1.488 ms
+SELECT name, pos FROM cs_tasks ORDER BY pos;
+   name    | pos  
+-----------+------
+ TV        | 1000
+ Cafe      | 2000
+ Working   | 3000
+ Commuting | 4000
+ Gaming    | 5000
+(5 rows)
+
+Time: 0.176 ms
+-- #endregion

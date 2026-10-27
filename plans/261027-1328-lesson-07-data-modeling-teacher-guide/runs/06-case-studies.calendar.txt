@@ -1,0 +1,55 @@
+-- chạy lúc 27/10/2026 21:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region calendar · Lịch lặp hằng tuần: sinh sẵn các khung giờ, lưu kèm tên múi giờ (slide 31, tùy chọn)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.186 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.175 ms
+SET
+Time: 0.079 ms
+DROP TABLE IF EXISTS cs_time_slots;
+DROP TABLE
+Time: 69.071 ms
+CREATE TABLE cs_time_slots (
+  id         int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  event_name text NOT NULL,
+  slot       tstzrange NOT NULL,
+  timezone   text NOT NULL                       -- giữ tên múi giờ để hiển thị lại đúng "9 giờ sáng thứ Hai"
+);
+CREATE TABLE
+Time: 10.517 ms
+-- Họp giao ban 9:00–10:00 thứ Hai theo giờ Việt Nam, 12 tuần, bắt đầu 02/11/2026.
+INSERT INTO cs_time_slots (event_name, slot, timezone)
+SELECT 'Họp giao ban', tstzrange((d::date + time '09:00') AT TIME ZONE 'Asia/Ho_Chi_Minh', (d::date + time '10:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'), 'Asia/Ho_Chi_Minh'
+FROM generate_series(date '2026-11-02', date '2027-01-18', interval '7 day') d;
+INSERT 0 12
+Time: 2.952 ms
+-- Ca trực mỗi ngày 14:00–16:00 trong tuần đầu.
+INSERT INTO cs_time_slots (event_name, slot, timezone)
+SELECT 'Ca trực', tstzrange((d::date + time '14:00') AT TIME ZONE 'Asia/Ho_Chi_Minh', (d::date + time '16:00') AT TIME ZONE 'Asia/Ho_Chi_Minh'), 'Asia/Ho_Chi_Minh'
+FROM generate_series(date '2026-11-02', date '2026-11-06', interval '1 day') d;
+INSERT 0 5
+Time: 1.539 ms
+CREATE INDEX ON cs_time_slots USING gist (slot);
+CREATE INDEX
+Time: 2.090 ms
+-- "Tuần này có gì?" = các khung giờ chồng lên khoảng của tuần.
+SELECT event_name, to_char(lower(slot) AT TIME ZONE timezone, 'Dy DD/MM HH24:MI') AS bat_dau_gio_vn
+FROM cs_time_slots
+WHERE slot && tstzrange('2026-11-02 00:00+07', '2026-11-09 00:00+07')
+ORDER BY lower(slot);
+  event_name  | bat_dau_gio_vn  
+--------------+-----------------
+ Họp giao ban | Mon 02/11 09:00
+ Ca trực      | Mon 02/11 14:00
+ Ca trực      | Tue 03/11 14:00
+ Ca trực      | Wed 04/11 14:00
+ Ca trực      | Thu 05/11 14:00
+ Ca trực      | Fri 06/11 14:00
+(6 rows)
+
+Time: 1.318 ms
+-- #endregion

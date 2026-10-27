@@ -1,0 +1,113 @@
+/* === Bài 07: lớp mới (contract §7) === */
+.callout.challenge { background: var(--surface); border-left: 3px solid var(--warn); }
+.callout.challenge .tag { background: var(--warn-soft); color: var(--warn); }
+.erd { margin: 16px 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px; overflow-x: auto; }
+.erd svg { display: block; width: 100%; min-width: 520px; height: auto; }
+.erd .erd-box { fill: var(--surface-2); stroke: var(--accent); stroke-width: 1.5; }
+.erd .erd-box.on { fill: var(--accent-soft); stroke-width: 3; }
+.erd .erd-title { fill: var(--fg); font: 700 13px var(--font-mono); }
+.erd .erd-col { fill: var(--muted); font: 400 11px var(--font-mono); }
+.erd .erd-key { fill: var(--accent); font: 600 11px var(--font-mono); }
+.erd .erd-edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.erd g[role="button"] { cursor: pointer; }
+.erd g[role="button"]:focus-visible .erd-box { stroke: var(--fg); stroke-width: 3; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+figure.slide-fig figcaption code { background: #eceff4; color: #1a1d24; }   /* ảnh slide luôn nền trắng, kể cả giao diện tối */
+.nf-grid td.dup { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal .dow { font: 600 0.7rem/1.6 var(--font-mono); color: var(--muted); text-align: center; }
+.cal .day { min-height: 44px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 600 0.8rem var(--font-mono); cursor: pointer; padding: 2px; }
+.cal .day.open { background: var(--ok-soft); color: var(--ok); }
+.cal .day.booked { background: var(--bad-soft); color: var(--bad); }
+.cal .day.blocked { background: var(--surface-2); color: var(--muted); }
+.cal .day.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ledger { font: 400 0.84rem/1.5 var(--font-mono); }
+.ledger td.neg { color: var(--bad); font-weight: 600; }
+.ledger td.pos { color: var(--ok); font-weight: 600; }
+.plan-text { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius); padding: 14px; overflow-x: auto; font: 400 0.8rem/1.55 var(--font-mono); }
+.plan-text mark { background: var(--warn); color: var(--code-bg); border-radius: 3px; padding: 0 3px; }
+@media (max-width: 560px) { .cal { gap: 2px; } .cal .day { font-size: 0.7rem; } .widget-body:has(.cal) { padding: 12px 8px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<main>
+
+<header class="hero col">
+  <div class="hero-top">
+    <p class="eyebrow">Advance Backend · Bài 07 / 16 · Day 05 · sau Bài 14 Locking</p>
+    <button type="button" class="theme-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">Sáng / Tối</button>
+  </div>
+  <h1>Data Modeling</h1>
+  <p class="lead">Bạn sẽ tách một phiếu đơn hàng thật của northwind từ dạng phẳng lên 3NF, đo cái giá của khóa ngoại, xem PG thêm cột trên 500.000 dòng trong 1 ms, rồi tự dựng sổ cái kép mà mọi giao dịch đều cộng lại bằng 0. Mọi con số trong trang đều đo trên PostgreSQL 16.15 của máy bạn, ngày 27/10/2026.</p>
+  <div class="hero-meta">
+    <span><b>43</b> slide</span><span><b>9</b> chặng · Day 05</span><span><b>280</b> phút lõi + 60 tùy chọn</span><span><b>20</b> file SQL chạy bằng DBX</span><span><b>36</b> câu quiz + <b>10</b> câu phỏng vấn</span>
+  </div>
+  <p class="epigraph">"Engineering = building the thing right. Leadership = building the right thing." · slide 1</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Slide viết theo MySQL, còn bạn chạy PostgreSQL 16. Mỗi slide có một nhãn: <span class="vchip ok">Đúng trên PG16</span> <span class="vchip diff">MySQL đúng, PG khác</span> <span class="vchip fix">Cần sửa</span>. Nhãn nào cũng có một lần chạy thật đi kèm.</p>
+  <p>Nhịp mỗi chặng giống Bài 14: đọc 3 dòng LÀ GÌ / TẠI SAO / KHI NÀO KHÔNG, chạy SQL trong DBX, so với kết quả đã ghi trên máy bạn, bấm widget, làm phần "Tự làm", rồi làm quiz. Cuối mỗi file SQL có một region <code>kiem-chung</code> trả về bảng ✔/✘ để bạn tự biết mình xong chưa.</p>
+
+  <div class="table-wrap">
+    <table class="plan">
+      <thead><tr><th>Chặng</th><th>Nội dung</th><th>Slide</th><th>Thời gian</th><th>File SQL</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Bật DB, dựng dữ liệu, nhân bản kết nối DBX</td><td>1–2</td><td class="n">10 phút</td><td>00-setup, check</td></tr>
+        <tr><td><a class="stage-link" href="#chang-1">1</a></td><td>Quy trình thiết kế, ERD, 4 loại bảng</td><td>3–8</td><td class="n">20 phút</td><td>01-design-erd</td></tr>
+        <tr><td><a class="stage-link" href="#chang-2">2</a></td><td>0NF → 1NF → 2NF → 3NF và phi chuẩn hóa</td><td>9–10</td><td class="n">35 phút</td><td>02-normal-forms</td></tr>
+        <tr><td><a class="stage-link" href="#chang-3">3</a></td><td>Khóa ngoại: cái giá, index, race "kiểm tra trong app"</td><td>11–12</td><td class="n">30 + 10 phút</td><td>03-foreign-keys, 03-fk-race</td></tr>
+        <tr><td><a class="stage-link" href="#chang-4">4</a></td><td>Thêm cột, JSON, thêm index online, table template</td><td>13–20</td><td class="n">35 + 10 phút</td><td>04-table-format, 04-index-online</td></tr>
+        <tr><td><a class="stage-link" href="#chang-5">5</a></td><td>Kiểu dữ liệu: chuỗi, số, tiền, thời gian, NULL</td><td>21–25</td><td class="n">25 phút</td><td>05-data-types</td></tr>
+        <tr><td><a class="stage-link" href="#chang-6">6</a></td><td>Case study: đa ngôn ngữ, thứ tự, homestay, lịch, tag, báo cáo</td><td>26–34</td><td class="n">40 + 15 phút</td><td>06-case-studies</td></tr>
+        <tr data-spill><td><a class="stage-link" href="#chang-7">7</a></td><td>View (tùy chọn)</td><td>38–43</td><td class="n">15 phút</td><td>07-views</td></tr>
+        <tr><td><a class="stage-link" href="#chang-8">8</a></td><td>Quan hệ đa hình (polymorphic)</td><td>—</td><td class="n">20 phút</td><td>08-polymorphic</td></tr>
+        <tr><td><a class="stage-link" href="#chang-9">9</a></td><td>Sổ cái kép: tổng kết cả bài + khóa của Bài 14</td><td>10, 12, 20, 23</td><td class="n">45 + 10 phút</td><td>09-ledger, 09-ledger-race</td></tr>
+        <tr><td><a class="stage-link" href="#bai-tap">+</a></td><td>Phỏng vấn, cheat sheet, Prisma drill</td><td>34–37</td><td class="n">20 phút</td><td>prisma-drill.schema.prisma</td></tr>
+        <tr data-spill><td>+</td><td>Tối Day 05: bài tập đặt vé máy bay (slide 35)</td><td>35</td><td class="n">45 phút</td><td>hw-check</td></tr>
+        <tr data-total><td></td><td>Tổng: lõi 280 phút (4 giờ 40) + tùy chọn 60 + bài tập tối 45</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">Nhắc nhanh Bài 14</span>
+    <p>Bài này dùng lại 3 thứ của Bài 14, nên nếu bạn chưa học xong chặng 3–5 bên đó cũng không sao, chỉ cần nhớ:</p>
+    <ul>
+      <li>ALTER đổi cấu trúc (thêm cột, đổi kiểu) lấy <code>AccessExclusiveLock</code>, nên đứng sau một transaction quên đóng là cả bảng treo (<a href="lesson_14_locking_teacher_guide.html#chang-3">Bài 14 chặng 3</a>).</li>
+      <li>INSERT dòng con lấy <code>FOR KEY SHARE</code> trên dòng cha (<a href="lesson_14_locking_teacher_guide.html#chang-2">chặng 2</a>).</li>
+      <li>Khóa nhiều dòng thì khóa theo cùng một thứ tự (<code>ORDER BY id FOR UPDATE</code>) để không có 40P01 (<a href="lesson_14_locking_teacher_guide.html#chang-5">chặng 5</a>). Lưới an toàn cuối cùng là <code>CHECK</code>, vi phạm thì ra 23514.</li>
+    </ul>
+    <p>Nếu bạn đang để mở một transaction cũ trên DB (ví dụ demo chặng 3 Bài 14 còn "idle in transaction"), hãy COMMIT/ROLLBACK nó trước khi học chặng 4: transaction cũ làm <code>CREATE INDEX CONCURRENTLY</code> phải chờ, và index mới tạo có thể chưa được planner dùng.</p>
+  </div>
+
+  <div class="panel">
+    <h4>Chuẩn bị (10 phút)</h4>
+    <ol>
+      <li>Bật Docker Desktop, rồi chạy <code>docker start quan-ly-hop-dong-postgres-1</code> (cổng 5433).</li>
+      <li>Trong DBX, kết nối <code>ADVANCE_BE_LAB</code> đã có sẵn. Chuột phải → Duplicate để có thêm <code>ADVANCE_BE_LAB_B</code> (cần cho chặng 3, 4, 9). Mỗi kết nối là một phiên PostgreSQL riêng.</li>
+      <li>Mở <code>labs/lesson-07-data-modeling/00-setup.sql</code> trong DBX, Ctrl+A → Run. File này dựng schema <code>lab07_modeling</code> từ northwind và không ghi vào schema nào khác.</li>
+      <li>Mở <code>check.sql</code>, Ctrl+A → Run. Phải thấy C01–C08 ✔; C09–C12 là "–" cho tới khi bạn làm chặng 9.</li>
+    </ol>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>00-setup.sql</code></div>
+    <div class="code terminal"><pre class="code terminal" data-run="00-setup">      bang       | so_dong | so_don | so_khach | so_mon
+-----------------+---------+--------+----------+--------
+ order_sheet     |    2155 |    830 |       89 |     77
+ order_sheet_raw |     830 |    830 |       89 |
+(2 rows)</pre></div>
+    <h4>Cách chạy một region trong DBX</h4>
+    <p>Mỗi file chia thành nhiều region, mở bằng dòng <code>-- #region tên · tiêu đề</code> và đóng bằng <code>-- #endregion</code>. Bôi đen từ dòng mở tới dòng đóng → <b>Run Selection</b>. Tab để chế độ auto-commit; các chỗ cần transaction đã có sẵn <code>BEGIN … COMMIT/ROLLBACK</code> trong SQL.</p>
+    <ul>
+      <li>Dòng đầu mỗi region là <code>SET search_path = lab07_modeling;</code>. Lý do: DB của bạn đặt mặc định <code>search_path = lab03_indexing, public</code> (kiểm tra C08), thiếu dòng này thì bảng sẽ bị tạo nhầm sang schema của Bài 3.</li>
+      <li>DBX dừng ở câu lỗi đầu tiên (đã thử trên máy bạn). Vì vậy câu lỗi cố ý đặt cuối region, hoặc nằm trong <code>BEGIN … ROLLBACK</code> để các câu sau vẫn có nghĩa khi chạy bằng psql. Nếu một region dừng ở lỗi khi đang trong <code>BEGIN</code>, chạy riêng <code>ROLLBACK;</code> rồi mới chạy region tiếp.</li>
+      <li>Region của file <code>*.A.sql</code> chạy ở tab <code>ADVANCE_BE_LAB</code>, file <code>*.B.sql</code> ở tab <code>ADVANCE_BE_LAB_B</code>. Chạy A trước, trong lúc A đang <code>pg_sleep</code> thì chạy B.</li>
+    </ul>
+  </div>
+  <label class="fields"><span class="muted">Ghi chú trước khi học: bạn đang nghĩ "thiết kế DB tốt" là gì? (sẽ đối chiếu ở cuối bài)</span>
+    <textarea class="field" id="warmup" data-store="l07-warmup" placeholder="Ví dụ: chuẩn hóa càng cao càng tốt, khóa ngoại làm chậm…"></textarea>
+  </label>
+</section>
+

@@ -1,0 +1,89 @@
+-- chạy lúc 27/10/2026 21:09 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region fk · Cùng code app, nhưng bảng có FK
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.234 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.104 ms
+SET
+Time: 0.159 ms
+DROP TABLE IF EXISTS race_contracts_fk, race_stores_fk;
+psql:<stdin>:4: NOTICE:  00000: table "race_contracts_fk" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "race_stores_fk" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.439 ms
+CREATE TABLE race_stores_fk (id int PRIMARY KEY, name text NOT NULL);
+CREATE TABLE
+Time: 22.967 ms
+CREATE TABLE race_contracts_fk (id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                                store_id int NOT NULL REFERENCES race_stores_fk (id));
+CREATE TABLE
+Time: 14.769 ms
+CREATE INDEX ON race_contracts_fk (store_id);
+CREATE INDEX
+Time: 10.438 ms
+INSERT INTO race_stores_fk VALUES (7, 'MayCha Quận 7');
+INSERT 0 1
+Time: 4.063 ms
+BEGIN;
+BEGIN
+Time: 0.126 ms
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn tồn tại?' AS viec;
+ buoc |     luc      |                 viec                  
+------+--------------+---------------------------------------
+ A1   | 14:09:52.078 | app kiểm tra: cửa hàng 7 còn tồn tại?
+(1 row)
+
+Time: 0.542 ms
+SELECT count(*) AS cua_hang_7_ton_tai FROM race_stores_fk WHERE id = 7;
+ cua_hang_7_ton_tai 
+--------------------
+                  1
+(1 row)
+
+Time: 0.576 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6047.539 ms (00:06.048)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'kiểm tra đã qua → tạo hợp đồng' AS viec;
+ buoc |     luc      |              viec              
+------+--------------+--------------------------------
+ A2   | 14:09:58.127 | kiểm tra đã qua → tạo hợp đồng
+(1 row)
+
+Time: 0.182 ms
+INSERT INTO race_contracts_fk (store_id) VALUES (7);
+psql:<stdin>:15: ERROR:  23503: insert or update on table "race_contracts_fk" violates foreign key constraint "race_contracts_fk_store_id_fkey"
+DETAIL:  Key (store_id)=(7) is not present in table "race_stores_fk".
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  race_contracts_fk
+CONSTRAINT NAME:  race_contracts_fk_store_id_fkey
+LOCATION:  ri_ReportViolation, ri_triggers.c:2608
+Time: 0.973 ms
+ROLLBACK;   -- INSERT đã lỗi 23503 nên transaction hỏng; ROLLBACK để đóng nó
+ROLLBACK
+Time: 0.109 ms
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đếm hợp đồng mồ côi' AS viec;
+ buoc |     luc      |        viec         
+------+--------------+---------------------
+ A3   | 14:09:58.128 | đếm hợp đồng mồ côi
+(1 row)
+
+Time: 0.115 ms
+SELECT count(*) AS orphans FROM race_contracts_fk c WHERE NOT EXISTS (SELECT 1 FROM race_stores_fk s WHERE s.id = c.store_id);
+ orphans 
+---------
+       0
+(1 row)
+
+Time: 0.533 ms
+-- #endregion

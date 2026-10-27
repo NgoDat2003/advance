@@ -1,0 +1,28 @@
+-- chạy lúc 27/10/2026 21:09 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region error · Xóa cha còn con: DB từ chối với mã 23503 và nêu tên ràng buộc
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.129 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.058 ms
+SET
+Time: 0.065 ms
+SELECT count(*) AS so_con_cua_cha_5 FROM fk_child WHERE parent_id = 5;
+ so_con_cua_cha_5 
+------------------
+               10
+(1 row)
+
+Time: 1.709 ms
+DELETE FROM fk_parent WHERE id = 5;
+psql:<stdin>:5: ERROR:  23503: update or delete on table "fk_parent" violates foreign key constraint "fk_child_parent_id_fkey" on table "fk_child"
+DETAIL:  Key (id)=(5) is still referenced from table "fk_child".
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  fk_child
+CONSTRAINT NAME:  fk_child_parent_id_fkey
+LOCATION:  ri_ReportViolation, ri_triggers.c:2621
+Time: 0.878 ms
+-- #endregion

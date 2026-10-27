@@ -1,0 +1,106 @@
+-- chạy lúc 27/10/2026 21:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region tags · Tag dạng mảng + GIN (inverted index) so với bảng nối N–N (slide 32)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.144 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.086 ms
+SET
+Time: 0.067 ms
+DROP TABLE IF EXISTS cs_article_tags, cs_tags, cs_articles;
+psql:<stdin>:4: NOTICE:  00000: table "cs_article_tags" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "cs_tags" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "cs_articles" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.456 ms
+CREATE TABLE cs_articles (id int PRIMARY KEY, title text NOT NULL, tags text[] NOT NULL DEFAULT '{}');
+CREATE TABLE
+Time: 10.169 ms
+-- 100.000 bài; tag "postgres" chỉ có ở 1% số bài.
+INSERT INTO cs_articles
+SELECT g, 'Bài viết ' || g,
+       array_remove(array[(array['backend', 'frontend', 'devops', 'career'])[1 + g % 4], (array['nestjs', 'react', 'docker', 'redis', 'kafka'])[1 + g % 5],
+                           CASE WHEN g % 100 = 0 THEN 'postgres' END], NULL)
+FROM generate_series(1, 100000) g;
+INSERT 0 100000
+Time: 195.625 ms
+CREATE INDEX cs_articles_tags_idx ON cs_articles USING gin (tags);
+CREATE INDEX
+Time: 45.208 ms
+ANALYZE cs_articles;
+ANALYZE
+Time: 87.597 ms
+SELECT id, title, tags FROM cs_articles WHERE id = 100;                                   -- (1) tag của một bài: đọc 1 dòng
+ id  |    title     |           tags            
+-----+--------------+---------------------------
+ 100 | Bài viết 100 | {backend,nestjs,postgres}
+(1 row)
+
+Time: 0.449 ms
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM cs_articles WHERE tags @> '{postgres}'; -- (2) bài theo tag: dùng GIN
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.875..0.876 rows=1 loops=1)
+   ->  Bitmap Heap Scan on cs_articles (actual time=0.282..0.839 rows=1000 loops=1)
+         Recheck Cond: (tags @> '{postgres}'::text[])
+         Heap Blocks: exact=1000
+         ->  Bitmap Index Scan on cs_articles_tags_idx (actual time=0.190..0.190 rows=1000 loops=1)
+               Index Cond: (tags @> '{postgres}'::text[])
+ Planning Time: 0.328 ms
+ Execution Time: 0.931 ms
+(8 rows)
+
+Time: 2.220 ms
+-- Cách chuẩn hóa: bảng tag + bảng nối.
+CREATE TABLE cs_tags (id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL UNIQUE);
+CREATE TABLE
+Time: 10.868 ms
+INSERT INTO cs_tags (name) SELECT DISTINCT unnest(tags) FROM cs_articles;
+INSERT 0 10
+Time: 40.821 ms
+CREATE TABLE cs_article_tags (article_id int NOT NULL REFERENCES cs_articles (id), tag_id int NOT NULL REFERENCES cs_tags (id),
+                              PRIMARY KEY (article_id, tag_id));
+CREATE TABLE
+Time: 5.343 ms
+INSERT INTO cs_article_tags SELECT a.id, t.id FROM cs_articles a, unnest(a.tags) u(name) JOIN cs_tags t ON t.name = u.name;
+INSERT 0 201000
+Time: 7260.779 ms (00:07.261)
+CREATE INDEX ON cs_article_tags (tag_id);
+CREATE INDEX
+Time: 75.313 ms
+ANALYZE cs_tags, cs_article_tags;
+ANALYZE
+Time: 18.924 ms
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT count(*) FROM cs_article_tags at JOIN cs_tags t ON t.id = at.tag_id WHERE t.name = 'postgres';
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.829..0.830 rows=1 loops=1)
+   ->  Nested Loop (actual time=0.185..0.796 rows=1000 loops=1)
+         ->  Seq Scan on cs_tags t (actual time=0.005..0.007 rows=1 loops=1)
+               Filter: (name = 'postgres'::text)
+               Rows Removed by Filter: 9
+         ->  Bitmap Heap Scan on cs_article_tags at (actual time=0.178..0.741 rows=1000 loops=1)
+               Recheck Cond: (tag_id = t.id)
+               Heap Blocks: exact=890
+               ->  Bitmap Index Scan on cs_article_tags_tag_id_idx (actual time=0.109..0.109 rows=1000 loops=1)
+                     Index Cond: (tag_id = t.id)
+ Planning Time: 0.569 ms
+ Execution Time: 0.870 ms
+(12 rows)
+
+Time: 1.843 ms
+SELECT pg_size_pretty(pg_total_relation_size('cs_articles')) AS mang_ca_index, pg_size_pretty(pg_total_relation_size('cs_article_tags')) AS bang_noi_ca_index;
+ mang_ca_index | bang_noi_ca_index 
+---------------+-------------------
+ 12 MB         | 13 MB
+(1 row)
+
+Time: 1.461 ms
+-- #endregion

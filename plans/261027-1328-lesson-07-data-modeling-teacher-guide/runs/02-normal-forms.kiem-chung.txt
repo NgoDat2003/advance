@@ -1,0 +1,33 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 2
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.138 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.088 ms
+SET
+Time: 0.073 ms
+SELECT 'K2.1' AS ma, CASE WHEN (SELECT count(*) FROM nf_products) = 77 AND (SELECT count(*) FROM nf_orders) = 830
+                           AND (SELECT count(*) FROM nf_customers) = 89 AND (SELECT count(*) FROM nf_order_lines) = 2155
+                      THEN '✔' ELSE '✘' END AS ket_qua, 'đủ 4 bảng 3NF: 77 món, 830 đơn, 89 khách, 2155 dòng món' AS chi_tiet
+UNION ALL
+SELECT 'K2.2', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND conrelid::regclass::text LIKE 'nf_%'
+                           AND connamespace = 'lab07_modeling'::regnamespace) = 3 THEN '✔' ELSE '✘' END, 'có 3 khóa ngoại giữa các bảng nf_*'
+UNION ALL
+SELECT 'K2.3', CASE WHEN NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'nf_orders'::regclass AND attname = 'customer_city' AND NOT attisdropped)
+               THEN '✔' ELSE '✘' END, 'nf_orders không còn cột customer_city (đã hết phụ thuộc bắc cầu)'
+UNION ALL
+SELECT 'K2.4', CASE WHEN (SELECT count(*) FROM dn_orders) = 830 THEN '✔' ELSE '✘' END, 'dn_orders có cache order_total cho 830 đơn';
+  ma  | ket_qua |                             chi_tiet                             
+------+---------+------------------------------------------------------------------
+ K2.1 | ✔       | đủ 4 bảng 3NF: 77 món, 830 đơn, 89 khách, 2155 dòng món
+ K2.2 | ✔       | có 3 khóa ngoại giữa các bảng nf_*
+ K2.3 | ✔       | nf_orders không còn cột customer_city (đã hết phụ thuộc bắc cầu)
+ K2.4 | ✔       | dn_orders có cache order_total cho 830 đơn
+(4 rows)
+
+Time: 6.417 ms
+-- #endregion

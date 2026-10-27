@@ -1,0 +1,40 @@
+-- chạy lúc 27/10/2026 21:09 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 3
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.137 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.124 ms
+SET
+Time: 0.100 ms
+SELECT 'K3.1' AS ma, CASE WHEN (SELECT count(*) FROM fk_child) = 200000 AND (SELECT count(*) FROM fk_child_nofk) = 200000 THEN '✔' ELSE '✘' END AS ket_qua,
+       'đã ghi 200.000 dòng vào cả hai bảng con' AS chi_tiet
+UNION ALL
+SELECT 'K3.2', CASE WHEN EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = 'fk_child'::regclass
+                                  AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = 'fk_child'::regclass AND attname = 'parent_id'))
+               THEN '✔' ELSE '✘' END, 'cột FK parent_id đã có index'
+UNION ALL
+SELECT 'K3.3', CASE WHEN (SELECT count(*) FROM fk_child c WHERE NOT EXISTS (SELECT 1 FROM fk_parent p WHERE p.id = c.parent_id)) = 0
+               THEN '✔' ELSE '✘' END, 'fk_child không có dòng mồ côi'
+UNION ALL
+SELECT 'K3.4', CASE WHEN to_regclass('lab07_modeling.race_contracts') IS NULL THEN '–'
+                    WHEN (SELECT count(*) FROM race_contracts c WHERE NOT EXISTS (SELECT 1 FROM race_stores s WHERE s.id = c.store_id)) = 1 THEN '✔' ELSE '✘' END,
+       'race không FK để lại đúng 1 hợp đồng mồ côi (chạy 03-fk-race #nofk trước)'
+UNION ALL
+SELECT 'K3.5', CASE WHEN to_regclass('lab07_modeling.race_contracts_fk') IS NULL THEN '–'
+                    WHEN (SELECT count(*) FROM race_contracts_fk c WHERE NOT EXISTS (SELECT 1 FROM race_stores_fk s WHERE s.id = c.store_id)) = 0 THEN '✔' ELSE '✘' END,
+       'race có FK: 0 hợp đồng mồ côi (chạy 03-fk-race #fk trước)';
+  ma  | ket_qua |                                 chi_tiet                                  
+------+---------+---------------------------------------------------------------------------
+ K3.1 | ✔       | đã ghi 200.000 dòng vào cả hai bảng con
+ K3.2 | ✔       | cột FK parent_id đã có index
+ K3.3 | ✔       | fk_child không có dòng mồ côi
+ K3.4 | ✔       | race không FK để lại đúng 1 hợp đồng mồ côi (chạy 03-fk-race #nofk trước)
+ K3.5 | ✔       | race có FK: 0 hợp đồng mồ côi (chạy 03-fk-race #fk trước)
+(5 rows)
+
+Time: 32.719 ms
+-- #endregion

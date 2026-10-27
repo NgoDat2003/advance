@@ -1,0 +1,72 @@
+-- chạy lúc 27/10/2026 22:36 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region cic · A là một request ghi bình thường đang chạy dở khi B tạo index CONCURRENTLY
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.407 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.264 ms
+SET
+Time: 0.197 ms
+DROP INDEX IF EXISTS ddl_contracts_status_cic;
+psql:<stdin>:4: NOTICE:  00000: index "ddl_contracts_status_cic" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP INDEX
+Time: 0.722 ms
+BEGIN;
+BEGIN
+Time: 0.151 ms
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'request ghi thứ nhất' AS viec;
+ buoc |     luc      |         viec         
+------+--------------+----------------------
+ A1   | 15:36:08.934 | request ghi thứ nhất
+(1 row)
+
+Time: 0.953 ms
+UPDATE ddl_contracts SET note = 'sửa lần 1' WHERE id = 2;
+UPDATE 1
+Time: 2.973 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6002.513 ms (00:06.003)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B đang tạo index: A vẫn ghi được không?' AS viec;
+ buoc |     luc      |                  viec                   
+------+--------------+-----------------------------------------
+ A2   | 15:36:14.940 | B đang tạo index: A vẫn ghi được không?
+(1 row)
+
+Time: 0.199 ms
+UPDATE ddl_contracts SET note = 'sửa lần 2' WHERE id = 3;
+UPDATE 1
+Time: 0.989 ms
+SELECT l.mode, l.granted FROM pg_locks l WHERE l.relation = 'ddl_contracts'::regclass AND l.pid <> pg_backend_pid();
+           mode           | granted 
+--------------------------+---------
+ ShareUpdateExclusiveLock | t
+(1 row)
+
+Time: 6.980 ms
+SELECT phase FROM pg_stat_progress_create_index;
+              phase               
+----------------------------------
+ waiting for writers before build
+(1 row)
+
+Time: 3.110 ms
+COMMIT;
+COMMIT
+Time: 1.272 ms
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A commit → B được đi tiếp' AS viec;
+ buoc |     luc      |           viec            
+------+--------------+---------------------------
+ A3   | 15:36:14.953 | A commit → B được đi tiếp
+(1 row)
+
+Time: 0.205 ms
+-- #endregion

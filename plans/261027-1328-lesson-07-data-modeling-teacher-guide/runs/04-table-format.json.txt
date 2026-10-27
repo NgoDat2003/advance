@@ -1,0 +1,82 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region json · Cột jsonb và hai cách đánh index cho trường bên trong JSON (slide 15–16)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.137 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.107 ms
+SET
+Time: 0.071 ms
+ALTER TABLE ddl_contracts ADD COLUMN IF NOT EXISTS data jsonb;
+ALTER TABLE
+Time: 2.028 ms
+DROP INDEX IF EXISTS ddl_contracts_channel_idx, ddl_contracts_data_gin;
+psql:<stdin>:5: NOTICE:  00000: index "ddl_contracts_channel_idx" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:5: NOTICE:  00000: index "ddl_contracts_data_gin" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP INDEX
+Time: 0.197 ms
+-- 1% hợp đồng ký qua kênh WEB, 0,1% là khách VIP.
+UPDATE ddl_contracts SET data = jsonb_build_object('channel', CASE WHEN id % 100 = 0 THEN 'WEB' ELSE 'POS' END, 'vip', id % 1000 = 0);
+UPDATE 500000
+Time: 4912.370 ms (00:04.912)
+ANALYZE ddl_contracts;
+ANALYZE
+Time: 224.351 ms
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data->>'channel' = 'WEB';
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Finalize Aggregate (actual time=60.840..65.437 rows=1 loops=1)
+   ->  Gather (actual time=60.686..65.430 rows=3 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         ->  Partial Aggregate (actual time=51.017..51.018 rows=1 loops=3)
+               ->  Parallel Seq Scan on ddl_contracts (actual time=22.209..50.885 rows=1667 loops=3)
+                     Filter: ((data ->> 'channel'::text) = 'WEB'::text)
+                     Rows Removed by Filter: 165000
+ Planning Time: 1.658 ms
+ Execution Time: 65.506 ms
+(10 rows)
+
+Time: 71.996 ms
+-- Cách 1: index biểu thức trên đúng một trường.
+CREATE INDEX ddl_contracts_channel_idx ON ddl_contracts ((data->>'channel'));
+CREATE INDEX
+Time: 223.879 ms
+ANALYZE ddl_contracts;
+ANALYZE
+Time: 182.602 ms
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data->>'channel' = 'WEB';
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=10.345..10.346 rows=1 loops=1)
+   ->  Index Scan using ddl_contracts_channel_idx on ddl_contracts (actual time=0.022..10.046 rows=5000 loops=1)
+         Index Cond: ((data ->> 'channel'::text) = 'WEB'::text)
+ Planning Time: 0.156 ms
+ Execution Time: 10.375 ms
+(5 rows)
+
+Time: 10.866 ms
+-- Cách 2: GIN trên cả cột, phục vụ toán tử chứa @> cho mọi khóa.
+CREATE INDEX ddl_contracts_data_gin ON ddl_contracts USING gin (data jsonb_path_ops);
+CREATE INDEX
+Time: 157.071 ms
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data @> '{"vip": true}';
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.876..0.878 rows=1 loops=1)
+   ->  Bitmap Heap Scan on ddl_contracts (actual time=0.138..0.732 rows=500 loops=1)
+         Recheck Cond: (data @> '{"vip": true}'::jsonb)
+         Heap Blocks: exact=500
+         ->  Bitmap Index Scan on ddl_contracts_data_gin (actual time=0.087..0.088 rows=500 loops=1)
+               Index Cond: (data @> '{"vip": true}'::jsonb)
+ Planning Time: 0.318 ms
+ Execution Time: 0.923 ms
+(8 rows)
+
+Time: 1.975 ms
+-- #endregion

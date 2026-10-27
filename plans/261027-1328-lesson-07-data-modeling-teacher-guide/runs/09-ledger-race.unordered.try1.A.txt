@@ -1,0 +1,62 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region unordered · Khóa ví theo thứ tự "nguồn trước, đích sau" (viết tay, không dùng post_transfer)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.223 ms
+SET statement_timeout = '60s'; SET lock_timeout = '10s';
+SET
+Time: 0.090 ms
+SET
+Time: 0.088 ms
+BEGIN;
+BEGIN
+Time: 0.072 ms
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'ghi 2 bút toán, trừ ví 3 (khóa ví 3)' AS viec;
+ buoc |     luc      |                 viec                 
+------+--------------+--------------------------------------
+ A1   | 15:25:32.648 | ghi 2 bút toán, trừ ví 3 (khóa ví 3)
+(1 row)
+
+Time: 0.734 ms
+WITH t AS (INSERT INTO transfers (idempotency_key, amount) VALUES ('race-A-' || txid_current(), 1000) RETURNING id)
+INSERT INTO ledger_entries (transfer_id, wallet_id, amount) SELECT id, 3, -1000 FROM t UNION ALL SELECT id, 2, 1000 FROM t;
+INSERT 0 2
+Time: 4.145 ms
+UPDATE wallets SET balance = balance - 1000 WHERE id = 3;
+UPDATE 1
+Time: 0.912 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B (trong 5 giây đầu)
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6010.058 ms (00:06.010)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'cộng ví 2 (xin khóa ví 2)' AS viec;
+ buoc |     luc      |           viec            
+------+--------------+---------------------------
+ A2   | 15:25:38.664 | cộng ví 2 (xin khóa ví 2)
+(1 row)
+
+Time: 0.366 ms
+UPDATE wallets SET balance = balance + 1000 WHERE id = 2;
+psql:<stdin>:11: ERROR:  40P01: deadlock detected
+DETAIL:  Process 15185 waits for ShareLock on transaction 17405; blocked by process 15206.
+Process 15206 waits for ShareLock on transaction 17404; blocked by process 15185.
+HINT:  See server log for query details.
+CONTEXT:  while updating tuple (0,9) in relation "wallets"
+LOCATION:  DeadLockReport, deadlock.c:1130
+Time: 1001.469 ms (00:01.001)
+COMMIT;   -- nếu A là nạn nhân 40P01, transaction đã hỏng: COMMIT chỉ còn tác dụng ROLLBACK (DBX dừng ở lỗi thì tự chạy ROLLBACK;)
+ROLLBACK
+Time: 0.098 ms
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A kết thúc' AS viec;
+ buoc |     luc      |    viec    
+------+--------------+------------
+ A3   | 15:25:39.666 | A kết thúc
+(1 row)
+
+Time: 0.228 ms
+-- #endregion

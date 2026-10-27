@@ -1,0 +1,35 @@
+-- chạy lúc 27/10/2026 22:26 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 9 (giống C09–C12 của check.sql)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.165 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.107 ms
+SET
+Time: 0.090 ms
+SELECT 'K9.1' AS ma, CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END AS ket_qua, 'không giao dịch nào lệch (tổng bút toán = 0)' AS chi_tiet
+FROM (SELECT transfer_id FROM ledger_entries GROUP BY transfer_id HAVING sum(amount) <> 0) x
+UNION ALL
+SELECT 'K9.2', CASE WHEN (SELECT coalesce(sum(amount), 0) FROM ledger_entries) = 0 THEN '✔' ELSE '✘' END, 'tổng mọi bút toán của hệ thống = 0'
+UNION ALL
+SELECT 'K9.3', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END, 'số dư cache khớp tổng bút toán của từng ví'
+FROM wallets w WHERE balance <> (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id)
+UNION ALL
+SELECT 'K9.4', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END, 'không ví khách nào bị âm' FROM wallets WHERE balance < 0 AND NOT allow_negative
+UNION ALL
+SELECT 'K9.5', CASE WHEN (SELECT count(*) FROM transfers WHERE idempotency_key = 'order-DH001') = 1 THEN '✔' ELSE '✘' END,
+       'request DH001 gửi 2 lần chỉ ghi sổ 1 lần';
+  ma  | ket_qua |                   chi_tiet                   
+------+---------+----------------------------------------------
+ K9.1 | ✔       | không giao dịch nào lệch (tổng bút toán = 0)
+ K9.2 | ✔       | tổng mọi bút toán của hệ thống = 0
+ K9.3 | ✔       | số dư cache khớp tổng bút toán của từng ví
+ K9.4 | ✔       | không ví khách nào bị âm
+ K9.5 | ✔       | request DH001 gửi 2 lần chỉ ghi sổ 1 lần
+(5 rows)
+
+Time: 5.713 ms
+-- #endregion

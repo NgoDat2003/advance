@@ -1,0 +1,33 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region pushdown · View có GROUP BY: điều kiện trên cột nhóm vẫn được đẩy xuống dưới bước gộp (slide 41)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.179 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.105 ms
+SET
+Time: 0.182 ms
+CREATE OR REPLACE VIEW v_customer_revenue AS
+SELECT o.customer_id, count(*) AS so_dong_mon, sum(l.unit_price::numeric * l.quantity) AS doanh_thu
+FROM nf_orders o JOIN nf_order_lines l USING (order_id) GROUP BY o.customer_id;
+CREATE VIEW
+Time: 5.792 ms
+EXPLAIN (COSTS OFF) SELECT * FROM v_customer_revenue WHERE customer_id = 'SAVEA';
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ GroupAggregate
+   ->  Hash Join
+         Hash Cond: (l.order_id = o.order_id)
+         ->  Seq Scan on nf_order_lines l
+         ->  Hash
+               ->  Bitmap Heap Scan on nf_orders o
+                     Recheck Cond: ((customer_id)::text = 'SAVEA'::text)
+                     ->  Bitmap Index Scan on nf_orders_customer_id_idx
+                           Index Cond: ((customer_id)::text = 'SAVEA'::text)
+(9 rows)
+
+Time: 8.157 ms
+-- #endregion

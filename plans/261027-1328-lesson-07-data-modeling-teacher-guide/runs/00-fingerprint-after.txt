@@ -1,0 +1,46 @@
+-- chạy lúc 27/10/2026 22:41 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+SELECT 'northwind.'||t AS bang, (xpath('/row/c/text()', query_to_xml('select count(*) as c from northwind.'||t, false, true, '')))[1]::text AS so_dong
+FROM unnest(array['customers','orders','order_details','products','categories','suppliers','employees','shippers']) t;
+          bang           | so_dong 
+-------------------------+---------
+ northwind.customers     | 91
+ northwind.orders        | 830
+ northwind.order_details | 2155
+ northwind.products      | 77
+ northwind.categories    | 8
+ northwind.suppliers     | 29
+ northwind.employees     | 9
+ northwind.shippers      | 6
+(8 rows)
+
+Time: 31.542 ms
+SELECT md5(string_agg(order_id||':'||product_id||':'||quantity||':'||unit_price, ',' ORDER BY order_id, product_id)) AS md5_order_details FROM northwind.order_details;
+        md5_order_details         
+----------------------------------
+ 49ecaa361444dc616ad401b1c9e2d4f7
+(1 row)
+
+Time: 6.171 ms
+SELECT count(*) AS hw_count, sum(total) AS hw_sum, max(id) AS hw_max FROM lab03_indexing.hw_contracts;
+ hw_count |     hw_sum      | hw_max 
+----------+-----------------+--------
+   500000 | 247233281893.33 | 500000
+(1 row)
+
+Time: 130.942 ms
+SELECT d.datname, array_to_string(s.setconfig, ',') AS db_setting FROM pg_db_role_setting s JOIN pg_database d ON d.oid = s.setdatabase WHERE d.datname = 'advance_be_lab';
+    datname     |             db_setting             
+----------------+------------------------------------
+ advance_be_lab | search_path=lab03_indexing, public
+(1 row)
+
+Time: 4.839 ms
+SELECT version();
+                                         version                                          
+------------------------------------------------------------------------------------------
+ PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+Time: 0.192 ms

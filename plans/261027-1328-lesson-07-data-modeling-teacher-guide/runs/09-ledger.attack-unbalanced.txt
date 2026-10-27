@@ -1,0 +1,34 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region attack-unbalanced · Tấn công 2: code lỗi chỉ ghi một bút toán (tiền tự sinh ra)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.144 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.075 ms
+SET
+Time: 0.075 ms
+BEGIN;
+BEGIN
+Time: 0.059 ms
+INSERT INTO transfers (idempotency_key, amount) VALUES ('bug-001', 50000);
+INSERT 0 1
+Time: 2.538 ms
+INSERT INTO ledger_entries (transfer_id, wallet_id, amount) SELECT id, 3, 50000 FROM transfers WHERE idempotency_key = 'bug-001';
+INSERT 0 1
+Time: 1.927 ms
+SELECT 'chưa lỗi: trigger DEFERRED chỉ kiểm tra lúc COMMIT' AS ghi_chu;
+                      ghi_chu                       
+----------------------------------------------------
+ chưa lỗi: trigger DEFERRED chỉ kiểm tra lúc COMMIT
+(1 row)
+
+Time: 0.125 ms
+COMMIT;
+psql:<stdin>:8: ERROR:  23514: giao dịch 4 lệch: tổng bút toán khác 0
+CONTEXT:  PL/pgSQL function ledger_check_balanced() line 4 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3897
+Time: 2.048 ms
+-- #endregion

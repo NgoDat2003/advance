@@ -1,0 +1,58 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region denorm · Phi chuẩn hóa: cache tổng tiền đơn để đọc nhanh, và cái giá phải trả là "lệch"
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.150 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.085 ms
+SET
+Time: 0.064 ms
+DROP TABLE IF EXISTS dn_orders;
+psql:<stdin>:4: NOTICE:  00000: table "dn_orders" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.313 ms
+CREATE TABLE dn_orders AS
+SELECT o.order_id, o.customer_id, o.order_date,
+       sum(round(l.unit_price::numeric * l.quantity * (1 - l.discount::numeric), 2)) AS order_total   -- cột dư thừa
+FROM nf_orders o JOIN nf_order_lines l USING (order_id) GROUP BY o.order_id;
+SELECT 830
+Time: 12.148 ms
+ALTER TABLE dn_orders ADD PRIMARY KEY (order_id);
+ALTER TABLE
+Time: 5.387 ms
+-- Đọc 5 đơn lớn nhất: không cần JOIN, không cần SUM.
+SELECT order_id, customer_id, order_total FROM dn_orders ORDER BY order_total DESC LIMIT 5;
+ order_id | customer_id | order_total 
+----------+-------------+-------------
+    10865 | QUICK       |    16387.50
+    10981 | HANAR       |    15810.00
+    11030 | SAVEA       |    12615.05
+    10889 | RATTC       |    11380.00
+    10417 | SIMOB       |    11188.40
+(5 rows)
+
+Time: 1.869 ms
+-- Sửa một dòng món mà quên cập nhật cache → số liệu lệch. Câu đối soát bắt được ngay.
+BEGIN;
+BEGIN
+Time: 0.112 ms
+UPDATE nf_order_lines SET quantity = quantity + 1 WHERE order_id = 10248 AND product_id = 11;
+UPDATE 1
+Time: 0.717 ms
+SELECT count(*) AS lech FROM dn_orders d
+WHERE d.order_total <> (SELECT sum(round(l.unit_price::numeric * l.quantity * (1 - l.discount::numeric), 2))
+                        FROM nf_order_lines l WHERE l.order_id = d.order_id);
+ lech 
+------
+    1
+(1 row)
+
+Time: 4.799 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.111 ms
+-- #endregion

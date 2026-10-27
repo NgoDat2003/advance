@@ -1,0 +1,40 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region ordered · Cùng nghiệp vụ qua post_transfer
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.165 ms
+SET statement_timeout = '60s'; SET lock_timeout = '10s';
+SET
+Time: 0.099 ms
+SET
+Time: 0.058 ms
+BEGIN;
+BEGIN
+Time: 0.066 ms
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'post_transfer 2 → 3 (khóa ví 2 trước: chờ A)' AS viec;
+ buoc |     luc      |                     viec                     
+------+--------------+----------------------------------------------
+ B1   | 15:25:41.487 | post_transfer 2 → 3 (khóa ví 2 trước: chờ A)
+(1 row)
+
+Time: 0.891 ms
+SELECT post_transfer(2, 3, 500, 'race-ord-B-' || txid_current()) AS transfer_id;
+ transfer_id 
+-------------
+           9
+(1 row)
+
+Time: 4926.950 ms (00:04.927)
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'hết chờ, B commit' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B2   | 15:25:46.415 | hết chờ, B commit
+(1 row)
+
+Time: 0.578 ms
+COMMIT;
+COMMIT
+Time: 6.052 ms
+-- #endregion

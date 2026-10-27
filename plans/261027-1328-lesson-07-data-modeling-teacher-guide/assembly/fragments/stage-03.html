@@ -1,0 +1,318 @@
+<!-- CHẶNG 3 -->
+<section id="chang-3" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">03</span>
+    <div>
+      <div class="stage-meta"><span>Slide 11–12</span><span>30 phút + 10 tùy chọn</span><span>Day 05</span></div>
+      <h2>Khóa ngoại: cái giá đo được, cái bẫy thiếu index, và race khi bỏ FK</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> đo cái giá thật của FK, thấy PG không tự index cột FK, rồi chạy race 2 phiên để thấy đề xuất "bỏ FK, kiểm tra ở app" của slide 11 để lại dữ liệu mồ côi.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>FK là ràng buộc DB tự kiểm tra: ghi bảng con thì cha phải tồn tại; xóa hoặc đổi khóa bảng cha thì không được còn con. Reference column chỉ là cột chứa id, không ai kiểm tra.</dd>
+    <dt>TẠI SAO?</dt><dd>Kiểm tra ở app là "đọc rồi ghi" bằng hai câu riêng; giữa hai câu, phiên khác chen vào. FK kiểm tra ngay trong DB và khóa dòng cha trong lúc kiểm tra.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Hai bảng nằm ở hai DB/service khác nhau (FK không vượt được ranh giới DB), hoặc bảng log ghi cực nhiều mà mồ côi vô hại. Khi đó dùng reference column + job đối soát.</dd>
+  </dl>
+
+  <div class="callout warn" id="sl-11">
+    <span class="tag">Slide 11 · <span class="vchip fix">Cần sửa</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>FK bắt DB kiểm tra khóa được tham chiếu mỗi lần insert/update, làm schema phức tạp, app phải bắt exception để biết lý do, backup phức tạp. Giải pháp ("ý kiến của tôi"): bỏ FK, tự kiểm tra ở tầng app. Ghi chú: Foreign Key ≠ Reference Column.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Cái giá là thật: 200.000 dòng con có FK mất <b class="m" data-run="03-foreign-keys#cost">3947.629 ms</b>, không FK <b class="m" data-run="03-foreign-keys#cost">381.176 ms</b>. Nhưng app tự kiểm tra để lại <b class="m" data-run="03-fk-race.nofk.timeline">1</b> hợp đồng mồ côi trong race 2 phiên, còn FK để lại <b class="m" data-run="03-fk-race.fk.timeline">0</b>. Lỗi <b class="m" data-run="03-foreign-keys#error">23503</b> kèm tên ràng buộc nên app bắt dễ. Cái bẫy thật nằm chỗ khác: PG <b>không</b> tự index cột FK, xóa cha phải quét bảng con (<b class="m" data-run="03-foreign-keys#index">time=7.222</b> → <b class="m" data-run="03-foreign-keys#index">time=0.519</b> khi có index).</p></div>
+    </div>
+    <p><b>Kết luận:</b> giữ FK, index mọi cột FK; chỉ bỏ FK khi có lý do cụ thể ở mục "KHI NÀO KHÔNG".</p>
+  </div>
+
+  <h4>1 · Cái giá khi ghi: mỗi dòng con là một lần tìm cha</h4>
+  <p>FK được cài bằng trigger nội bộ (RI trigger). Mỗi dòng ghi vào <code>fk_child</code>, trigger chạy một câu kiểu <code>SELECT 1 FROM fk_parent WHERE id = $1 FOR KEY SHARE</code>: tìm cha qua khóa chính và khóa dòng cha ở chế độ nhẹ nhất, để không ai xóa nó trước khi bạn commit. 200.000 dòng là 200.000 lần như vậy.</p>
+  <div class="code"><pre data-sql="03-foreign-keys#cost"><code>-- #region cost · Ghi 200.000 dòng con: có FK và không có FK
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS fk_child, fk_child_nofk, fk_parent;
+CREATE TABLE fk_parent (id int PRIMARY KEY, name text NOT NULL);
+-- 20.000 cha có con; id 20001–20010 cố ý KHÔNG có con để đo phép xóa cha ở region index.
+INSERT INTO fk_parent SELECT g, 'cửa hàng ' || g FROM generate_series(1, 20010) g;
+CREATE TABLE fk_child (id int PRIMARY KEY, parent_id int NOT NULL REFERENCES fk_parent (id), note text);
+CREATE TABLE fk_child_nofk (id int PRIMARY KEY, parent_id int NOT NULL, note text);   -- chỉ là "reference column", không có ràng buộc
+-- Đồng hồ: xem dòng thời gian (Time / Execution time) của 2 câu INSERT dưới đây.
+INSERT INTO fk_child      SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+INSERT INTO fk_child_nofk SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+ANALYZE fk_parent, fk_child, fk_child_nofk;
+-- PG không tự tạo index cho cột FK: fk_child chỉ có index của khóa chính.
+SELECT indexrelid::regclass AS index_cua_fk_child FROM pg_index WHERE indrelid = 'fk_child'::regclass;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-foreign-keys.sql #cost</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-foreign-keys#cost">INSERT INTO fk_child      SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+INSERT 0 200000
+Time: 3947.629 ms (00:03.948)
+INSERT INTO fk_child_nofk SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+INSERT 0 200000
+Time: 381.176 ms
+…
+SELECT indexrelid::regclass AS index_cua_fk_child FROM pg_index WHERE indrelid = 'fk_child'::regclass;
+ index_cua_fk_child
+--------------------
+ fk_child_pkey
+(1 row)</pre></div>
+  <p>Chậm hơn khoảng một bậc khi nạp lô lớn, nhưng chia ra mỗi dòng chỉ thêm khoảng 18 micro giây ((3947.629 − 381.176) ms / 200.000 dòng). Với API tạo từng hợp đồng, phần này không phải nút thắt. Dòng cuối mới là điều cần nhớ: <code>fk_child</code> chỉ có <b class="m" data-run="03-foreign-keys#cost">fk_child_pkey</b>.</p>
+
+  <h4>2 · Cái bẫy khi xóa cha: không có index thì quét cả bảng con</h4>
+  <p>Xóa một cửa hàng, RI trigger phải hỏi "còn con nào trỏ tới id này?" bằng <code>… FROM fk_child WHERE parent_id = $1</code>. Không có index trên <code>parent_id</code>, câu đó là Seq Scan toàn bảng, cho mỗi dòng cha bị xóa. Region đo 2 cha không có con (id 20001, 20002), trước và sau khi tạo index.</p>
+  <div class="code"><pre data-sql="03-foreign-keys#index"><code>-- #region index · Xóa một cha: PG phải tìm con trong fk_child. Không có index thì quét cả bảng
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP INDEX IF EXISTS fk_child_parent_id_idx;
+BEGIN;
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20001;   -- cha không có con
+ROLLBACK;
+CREATE INDEX fk_child_parent_id_idx ON fk_child (parent_id);
+BEGIN;
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20002;   -- cha không có con, giờ đã có index
+ROLLBACK;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-foreign-keys.sql #index</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-foreign-keys#index">EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20001;   -- cha không có con
+ Delete on fk_parent (actual time=0.067..0.067 rows=0 loops=1)
+   -&gt;  Index Scan using fk_parent_pkey on fk_parent (actual time=0.014..0.014 rows=1 loops=1)
+ Trigger for constraint fk_child_parent_id_fkey: time=7.222 calls=1
+ Execution Time: 7.371 ms
+…
+CREATE INDEX fk_child_parent_id_idx ON fk_child (parent_id);
+CREATE INDEX
+…
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20002;   -- cha không có con, giờ đã có index
+ Trigger for constraint fk_child_parent_id_fkey: time=0.519 calls=1
+ Execution Time: 0.609 ms</pre></div>
+  <p>Kế hoạch của DELETE giống hệt nhau; thời gian nằm ở dòng <code>Trigger for constraint</code>: <b class="m" data-run="03-foreign-keys#index">7.222</b> ms → <b class="m" data-run="03-foreign-keys#index">0.519</b> ms. Con số đầu tăng theo kích thước bảng con. Prisma 7.9 tạo FK cho <code>@relation</code> nhưng không tạo index cho cột scalar như <code>storeId</code>: thêm <code>@@index([storeId])</code> bằng tay.</p>
+
+  <h4>3 · Lỗi 23503: app không phải đoán</h4>
+  <div class="code"><pre data-sql="03-foreign-keys#error"><code>-- #region error · Xóa cha còn con: DB từ chối với mã 23503 và nêu tên ràng buộc
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT count(*) AS so_con_cua_cha_5 FROM fk_child WHERE parent_id = 5;
+DELETE FROM fk_parent WHERE id = 5;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-foreign-keys.sql #error</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-foreign-keys#error">SELECT count(*) AS so_con_cua_cha_5 FROM fk_child WHERE parent_id = 5;
+ so_con_cua_cha_5
+------------------
+               10
+DELETE FROM fk_parent WHERE id = 5;
+psql:&lt;stdin&gt;:5: ERROR:  23503: update or delete on table "fk_parent" violates foreign key constraint "fk_child_parent_id_fkey" on table "fk_child"
+DETAIL:  Key (id)=(5) is still referenced from table "fk_child".
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  fk_child
+CONSTRAINT NAME:  fk_child_parent_id_fkey</pre></div>
+  <p>SQLSTATE <code>23503</code> + <code>CONSTRAINT NAME</code> đủ để app trả một lỗi nghiệp vụ rõ ràng ("cửa hàng còn hợp đồng"). Slide lo "app phải bắt exception", nhưng bắt một mã lỗi rẻ hơn nhiều so với dọn dữ liệu mồ côi.</p>
+
+  <h4>4 · Race: app tự kiểm tra so với FK</h4>
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · cùng một code app, chỉ khác có FK hay không</span>
+    <p>A tạo hợp đồng cho cửa hàng 7: kiểm tra cửa hàng còn không → (gọi API khác, giả lập bằng <code>pg_sleep(6)</code>) → INSERT. B xóa cửa hàng 7: kiểm tra còn hợp đồng không → DELETE. Mỗi bên đều "kiểm tra trước", đúng như slide 11 đề xuất. Lỗ hổng: B kiểm tra lúc hợp đồng của A <b>chưa tồn tại</b> (và dù A đã INSERT mà chưa commit, B cũng không thấy).</p>
+  </div>
+  <div class="code"><pre data-sql="03-fk-race.A#nofk"><code>-- #region nofk · Không có FK, app tự kiểm tra (đề xuất ở slide 11)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS race_contracts, race_stores;
+CREATE TABLE race_stores (id int PRIMARY KEY, name text NOT NULL);
+CREATE TABLE race_contracts (id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, store_id int NOT NULL);   -- không có REFERENCES
+INSERT INTO race_stores VALUES (7, 'MayCha Quận 7');
+BEGIN;
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn tồn tại?' AS viec;
+SELECT count(*) AS cua_hang_7_ton_tai FROM race_stores WHERE id = 7;
+SELECT pg_sleep(6);   -- giả lập app gọi API khác / tính toán. Lúc này hãy chạy phiên B.
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'kiểm tra đã qua → tạo hợp đồng' AS viec;
+INSERT INTO race_contracts (store_id) VALUES (7);
+COMMIT;
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đếm hợp đồng mồ côi' AS viec;
+SELECT count(*) AS orphans FROM race_contracts c WHERE NOT EXISTS (SELECT 1 FROM race_stores s WHERE s.id = c.store_id);
+-- #endregion</code></pre></div>
+  <div class="code"><pre data-sql="03-fk-race.B#nofk"><code>-- #region nofk · Không có FK: app kiểm tra "cửa hàng còn hợp đồng không?" rồi xóa
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn hợp đồng?' AS viec;
+SELECT count(*) AS hop_dong_cua_7 FROM race_contracts WHERE store_id = 7;   -- 0: A mới kiểm tra, chưa ghi hợp đồng nào
+DELETE FROM race_stores WHERE id = 7;
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đã xóa cửa hàng 7' AS viec;
+-- #endregion</code></pre></div>
+  <p>Region <code>fk</code> của hai file giống hệt, chỉ khác bảng <code>race_contracts_fk</code> có <code>REFERENCES race_stores_fk (id)</code> và index cho <code>store_id</code>; A kết thúc bằng <code>ROLLBACK</code>.</p>
+
+  <p>Tùy chọn (+10 phút): chạy tay trong 2 tab DBX, ghi lại những gì bạn thấy.</p>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>ADVANCE_BE_LAB (A)</th><th>ADVANCE_BE_LAB_B (B)</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>03-fk-race.A.sql</code>: bôi đen region <code>nofk</code> → Run. A ngủ 6 giây.</td><td></td><td><input class="field" data-store="l07-c3-nofk-a" placeholder="A thấy cua_hang_7_ton_tai = ?"></td></tr>
+      <tr><td>2</td><td></td><td>Trong 6 giây đó: <code>03-fk-race.B.sql</code> region <code>nofk</code> → Run.</td><td><input class="field" data-store="l07-c3-nofk-b" placeholder="hop_dong_cua_7 = ? DELETE mấy dòng?"></td></tr>
+      <tr><td>3</td><td>A chạy xong: đọc kết quả cuối.</td><td></td><td><input class="field" data-store="l07-c3-nofk-orphans" placeholder="orphans = ?"></td></tr>
+      <tr><td>4</td><td>Region <code>fk</code> → Run.</td><td></td><td></td></tr>
+      <tr><td>5</td><td></td><td>Trong 6 giây: region <code>fk</code> → Run.</td><td><input class="field" data-store="l07-c3-fk-b" placeholder="B có phải chờ không? DELETE mấy dòng?"></td></tr>
+      <tr><td>6</td><td>A dừng ở lỗi. Chạy riêng <code>ROLLBACK;</code>, rồi bôi đen 2 câu cuối (A3 + đếm orphans) → Run.</td><td></td><td><input class="field" data-store="l07-c3-fk-a" placeholder="mã lỗi? orphans = ?"></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-fk-race A + B #nofk (gộp theo giờ)</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-fk-race.nofk.timeline">── A · bước A1 · 15:14:10.115 ──
+SELECT count(*) AS cua_hang_7_ton_tai FROM race_stores WHERE id = 7;
+ cua_hang_7_ton_tai
+--------------------
+                  1
+── B · bước B1 · 15:14:11.136 ──
+SELECT count(*) AS hop_dong_cua_7 FROM race_contracts WHERE store_id = 7;   -- 0: A mới kiểm tra, chưa ghi hợp đồng nào
+ hop_dong_cua_7
+----------------
+              0
+DELETE FROM race_stores WHERE id = 7;
+DELETE 1
+── A · bước A2 · 15:14:16.138 ──
+INSERT INTO race_contracts (store_id) VALUES (7);
+INSERT 0 1
+COMMIT;
+COMMIT
+SELECT count(*) AS orphans FROM race_contracts c WHERE NOT EXISTS (SELECT 1 FROM race_stores s WHERE s.id = c.store_id);
+ orphans
+---------
+       1</pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-fk-race A + B #fk (gộp theo giờ)</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-fk-race.fk.timeline">── A · bước A1 · 14:09:52.078 ──
+── B · bước B1 · 14:09:53.090 ──
+DELETE FROM race_stores_fk WHERE id = 7;
+DELETE 1
+── A · bước A2 · 14:09:58.127 ──
+INSERT INTO race_contracts_fk (store_id) VALUES (7);
+psql:&lt;stdin&gt;:15: ERROR:  23503: insert or update on table "race_contracts_fk" violates foreign key constraint "race_contracts_fk_store_id_fkey"
+DETAIL:  Key (store_id)=(7) is not present in table "race_stores_fk".
+…
+SELECT count(*) AS orphans FROM race_contracts_fk c WHERE NOT EXISTS (SELECT 1 FROM race_stores_fk s WHERE s.id = c.store_id);
+ orphans
+---------
+       0</pre></div>
+
+  <div class="widget" id="w3">
+    <div class="widget-head"><h4>W3 · Hai làn A / B</h4><span class="eyebrow">run-w3 · 03-fk-race</span></div>
+    <div class="widget-body">
+      <label class="toggle"><input type="checkbox" id="w3-fk"><span>Có FK (<code>REFERENCES race_stores_fk</code>)</span></label>
+      <div class="btns"><button type="button" class="btn primary" id="w3-next">Bước tiếp</button><button type="button" class="btn" id="w3-reset">Từ đầu</button></div>
+      <div class="lanes" id="w3-lanes" aria-live="polite"></div>
+      <div class="out" id="w3-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <p><b>Vì sao FK an toàn ở cả hai thứ tự?</b> Thứ tự đã đo: B xóa trước, nên không phải chờ ai; INSERT của A tìm cha bằng <code>FOR KEY SHARE</code>, không thấy → <b class="m" data-run="03-fk-race.fk.timeline">23503</b>. Thứ tự ngược lại: INSERT của A (chưa commit) đã giữ <code>FOR KEY SHARE</code> trên cửa hàng 7; DELETE của B cần khóa <code>FOR UPDATE</code> trên cùng dòng nên phải chờ A commit, rồi trigger RI của B thấy hợp đồng và B nhận 23503. Ma trận xung đột của hai khóa này đã đo ở <a href="lesson_14_locking_teacher_guide.html#chang-2">Bài 14 chặng 2</a>. DB từ chối người đến sau, dù đó là ai.</p>
+
+  <div class="callout key">
+    <span class="tag">Slide 12 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Đơn hàng và giao dịch thanh toán quan hệ 1–1; donate tạo giao dịch không có đơn. Đặt <code>order_id</code> ở bảng giao dịch: entity sinh sau giữ tham chiếu tới entity gốc (sinh trước) → dễ mở rộng.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Đúng. Với <a href="#c1-erd">bảng ở chặng 1</a>, khoản donate lưu được với <code>order_id</code> NULL (<code>so_khoan</code> = <b class="m" data-run="01-design-erd#refcol">1</b>), <code>erd_orders</code> không cần sửa gì. Nếu đặt <code>payment_id</code> ở <code>erd_orders</code>, donate không có chỗ, và mỗi loại giao dịch mới lại phải <code>ALTER</code> bảng đơn.</p></div>
+    </div>
+  </div>
+  <div class="code"><pre data-sql="01-design-erd#refcol"><code>-- #region refcol · Đơn hàng → thanh toán, và một khoản donate không có đơn (slide 12)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+TRUNCATE erd_payment_transactions, erd_orders RESTART IDENTITY;
+INSERT INTO erd_orders (code, total) VALUES ('DH001', 120000.00);                  -- entity gốc sinh trước
+INSERT INTO erd_payment_transactions (kind, order_id, amount)                      -- entity sinh sau giữ tham chiếu
+VALUES ('ORDER', 1, 120000.00), ('DONATE', NULL, 50000.00);
+SELECT p.id, p.kind, p.order_id, o.code AS ma_don, p.amount
+FROM erd_payment_transactions p LEFT JOIN erd_orders o ON o.id = p.order_id ORDER BY p.id;
+-- Đếm khoản thanh toán không gắn đơn hàng: chính là khoản donate.
+SELECT count(*) AS so_khoan FROM erd_payment_transactions WHERE order_id IS NULL;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>01-design-erd.sql #refcol</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="01-design-erd#refcol"> id |  kind  | order_id | ma_don |  amount
+----+--------+----------+--------+-----------
+  1 | ORDER  |        1 | DH001  | 120000.00
+  2 | DONATE |          |        |  50000.00
+ so_khoan
+----------
+        1
+(1 row)</pre></div>
+  <p>Schema này cho phép một đơn có nhiều giao dịch (thanh toán lỗi rồi thử lại). Muốn ép đúng 1–1 như slide: thêm <code>UNIQUE (order_id)</code>; nhiều dòng donate NULL vẫn hợp lệ vì UNIQUE mặc định coi các NULL là khác nhau (đo ở <a href="#chang-5">chặng 5</a>).</p>
+
+  <h3>Kiểm chứng chặng 3</h3>
+  <p>Chạy sau khi đã chạy <code>cost</code>, <code>index</code> và cả hai race (K3.4, K3.5 cần chúng).</p>
+  <div class="code"><pre data-sql="03-foreign-keys#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 3
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K3.1' AS ma, CASE WHEN (SELECT count(*) FROM fk_child) = 200000 AND (SELECT count(*) FROM fk_child_nofk) = 200000 THEN '✔' ELSE '✘' END AS ket_qua,
+       'đã ghi 200.000 dòng vào cả hai bảng con' AS chi_tiet
+UNION ALL
+SELECT 'K3.2', CASE WHEN EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = 'fk_child'::regclass
+                                  AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = 'fk_child'::regclass AND attname = 'parent_id'))
+               THEN '✔' ELSE '✘' END, 'cột FK parent_id đã có index'
+UNION ALL
+SELECT 'K3.3', CASE WHEN (SELECT count(*) FROM fk_child c WHERE NOT EXISTS (SELECT 1 FROM fk_parent p WHERE p.id = c.parent_id)) = 0
+               THEN '✔' ELSE '✘' END, 'fk_child không có dòng mồ côi'
+UNION ALL
+SELECT 'K3.4', CASE WHEN to_regclass('lab07_modeling.race_contracts') IS NULL THEN '–'
+                    WHEN (SELECT count(*) FROM race_contracts c WHERE NOT EXISTS (SELECT 1 FROM race_stores s WHERE s.id = c.store_id)) = 1 THEN '✔' ELSE '✘' END,
+       'race không FK để lại đúng 1 hợp đồng mồ côi (chạy 03-fk-race #nofk trước)'
+UNION ALL
+SELECT 'K3.5', CASE WHEN to_regclass('lab07_modeling.race_contracts_fk') IS NULL THEN '–'
+                    WHEN (SELECT count(*) FROM race_contracts_fk c WHERE NOT EXISTS (SELECT 1 FROM race_stores_fk s WHERE s.id = c.store_id)) = 0 THEN '✔' ELSE '✘' END,
+       'race có FK: 0 hợp đồng mồ côi (chạy 03-fk-race #fk trước)';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>03-foreign-keys.sql #kiem-chung</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-foreign-keys#kiem-chung">  ma  | ket_qua |                                 chi_tiet
+------+---------+---------------------------------------------------------------------------
+ K3.1 | ✔       | đã ghi 200.000 dòng vào cả hai bảng con
+ K3.2 | ✔       | cột FK parent_id đã có index
+ K3.3 | ✔       | fk_child không có dòng mồ côi
+ K3.4 | ✔       | race không FK để lại đúng 1 hợp đồng mồ côi (chạy 03-fk-race #nofk trước)
+ K3.5 | ✔       | race có FK: 0 hợp đồng mồ côi (chạy 03-fk-race #fk trước)
+(5 rows)</pre></div>
+
+  <div class="callout challenge" id="chang-3-tu-lam">
+    <span class="tag">Tự làm · chặng 3</span>
+    <p><b>Đề:</b> giữ bảng <b>không có FK</b>, nhưng sửa code hai phiên sao cho race không còn để lại mồ côi. Dùng <code>SELECT … FOR KEY SHARE</code> ở A. Tự tìm B cần làm gì trước khi đếm hợp đồng. Làm trên bảng riêng để không phá K3.4:</p>
+    <div class="code"><pre><code>SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+DROP TABLE IF EXISTS my_contracts, my_stores;
+CREATE TABLE my_stores (id int PRIMARY KEY, name text NOT NULL);
+CREATE TABLE my_contracts (id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, store_id int NOT NULL);  -- vẫn không FK
+INSERT INTO my_stores VALUES (7, 'MayCha Quận 7');</code></pre></div>
+    <p><b>PASS khi:</b> (1) bước kiểm tra của B treo cho tới khi A <code>COMMIT</code>; (2) B thấy 1 hợp đồng và không xóa; (3) câu tự kiểm ra <code>orphans = 0</code>; (4) chạy B trước A cũng ra 0; (5) bạn viết 3–5 câu: vì sao cách này là "tự viết lại FK".</p>
+    <div class="code"><pre><code>SELECT count(*) AS orphans FROM lab07_modeling.my_contracts c
+WHERE NOT EXISTS (SELECT 1 FROM lab07_modeling.my_stores s WHERE s.id = c.store_id);</code></pre></div>
+    <details class="fold"><summary>Đáp án</summary><div class="fold-body">
+      <div class="code"><pre><code>-- Tab A (ADVANCE_BE_LAB)
+SET search_path = lab07_modeling; SET lock_timeout = '15s';   -- A ngủ 6 giây: B phải chờ được lâu hơn thế
+BEGIN;
+SELECT id FROM my_stores WHERE id = 7 FOR KEY SHARE;           -- khóa dòng cha (nếu còn): B không xóa được nữa
+SELECT pg_sleep(6);
+INSERT INTO my_contracts (store_id)
+SELECT 7 WHERE EXISTS (SELECT 1 FROM my_stores WHERE id = 7);  -- cha đã mất (B chạy trước) thì INSERT 0 dòng
+COMMIT;
+-- Tab B (ADVANCE_BE_LAB_B, trong 6 giây A đang ngủ)
+SET search_path = lab07_modeling; SET lock_timeout = '15s';
+BEGIN;
+SELECT id FROM my_stores WHERE id = 7 FOR UPDATE;              -- chờ A: FOR UPDATE xung đột với FOR KEY SHARE
+DELETE FROM my_stores WHERE id = 7
+  AND NOT EXISTS (SELECT 1 FROM my_contracts WHERE store_id = 7);  -- READ COMMITTED: thấy hợp đồng A vừa commit → DELETE 0
+COMMIT;</code></pre></div>
+      <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · đáp án, cả hai thứ tự</div>
+      <div class="code terminal"><pre class="code terminal" data-run="03-challenge-answer">== Thứ tự 1: A trước, B sau 1 giây ==
+…
+INSERT 0 1
+…
+DELETE 0
+…
+ orphans | hop_dong | cua_hang
+---------+----------+----------
+       0 |        1 |        1
+…
+== Thứ tự 2: B trước, A sau 1 giây ==
+…
+DELETE 1
+…
+INSERT 0 0
+…
+ orphans | hop_dong | cua_hang
+---------+----------+----------
+       0 |        0 |        0</pre></div>
+      <p>Chỉ thêm <code>FOR KEY SHARE</code> ở A là chưa đủ: nếu B vẫn "đếm trước rồi DELETE", DELETE của B chờ A, nhưng A chỉ khóa chứ không sửa dòng cha, nên khi A commit DELETE vẫn chạy và mồ côi quay lại. Hãy bỏ câu <code>FOR UPDATE</code> của B và đo lại để tự thấy.</p>
+      <p>Đây chính là hai việc RI trigger của FK làm sẵn: INSERT con thì khóa cha bằng <code>FOR KEY SHARE</code>; xóa cha thì khóa cha rồi tìm con. Khác biệt: FK chạy ở <b>mọi</b> đường ghi (app, script, psql, service khác) và không ai quên được; quy ước tự viết chỉ đúng ở chỗ code nhớ viết nó. Còn cái giá ghi mà slide muốn tiết kiệm thì bạn vừa trả lại bằng hai câu khóa.</p>
+    </div></details>
+  </div>
+
+  <div class="quiz" data-quiz="3"></div>
+</section>

@@ -1,0 +1,70 @@
+-- chạy lúc 27/10/2026 21:12 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region time · timestamptz lưu một thời điểm; timestamp chỉ lưu "chữ số trên đồng hồ" (slide 24)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.168 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.132 ms
+SET
+Time: 0.141 ms
+SELECT pg_column_size(now()) AS timestamptz_byte, pg_column_size(now()::timestamp) AS timestamp_byte, pg_column_size(current_date) AS date_byte;
+ timestamptz_byte | timestamp_byte | date_byte 
+------------------+----------------+-----------
+                8 |              8 |         4
+(1 row)
+
+Time: 0.740 ms
+DROP TABLE IF EXISTS ty_times;
+psql:<stdin>:5: NOTICE:  00000: table "ty_times" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.222 ms
+CREATE TEMP TABLE ty_times (co_mui_gio timestamptz, khong_mui_gio timestamp);
+CREATE TABLE
+Time: 5.097 ms
+SET TimeZone = 'Asia/Ho_Chi_Minh';                       -- app ở Việt Nam ghi lúc 9 giờ sáng
+SET
+Time: 2.553 ms
+INSERT INTO ty_times VALUES ('2026-10-28 09:00', '2026-10-28 09:00');
+INSERT 0 1
+Time: 0.371 ms
+SELECT co_mui_gio, khong_mui_gio FROM ty_times;
+       co_mui_gio       |    khong_mui_gio    
+------------------------+---------------------
+ 2026-10-28 09:00:00+07 | 2026-10-28 09:00:00
+(1 row)
+
+Time: 0.345 ms
+SET TimeZone = 'UTC';                                    -- server/worker khác đọc lại
+SET
+Time: 0.079 ms
+SELECT co_mui_gio, khong_mui_gio FROM ty_times;
+       co_mui_gio       |    khong_mui_gio    
+------------------------+---------------------
+ 2026-10-28 02:00:00+00 | 2026-10-28 09:00:00
+(1 row)
+
+Time: 0.117 ms
+-- Ép chuỗi có múi giờ vào timestamp: phần +07 bị BỎ, không báo lỗi.
+SELECT '2026-10-28 09:00+07'::timestamp AS mat_mui_gio, '2026-10-28 09:00+07'::timestamptz AS giu_thoi_diem;
+     mat_mui_gio     |     giu_thoi_diem      
+---------------------+------------------------
+ 2026-10-28 09:00:00 | 2026-10-28 02:00:00+00
+(1 row)
+
+Time: 0.176 ms
+-- Không có giới hạn năm 2038 như TIMESTAMP của MySQL:
+SELECT '2100-01-01 00:00+07'::timestamptz AS nam_2100;
+        nam_2100        
+------------------------
+ 2099-12-31 17:00:00+00
+(1 row)
+
+Time: 0.151 ms
+RESET TimeZone;
+RESET
+Time: 0.087 ms
+-- #endregion

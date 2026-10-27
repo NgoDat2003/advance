@@ -1,0 +1,57 @@
+{
+ "sources": [
+  "02-normal-forms.0nf",
+  "02-normal-forms.1nf",
+  "02-normal-forms.2nf",
+  "02-normal-forms.3nf",
+  "02-normal-forms.lossless",
+  "02-normal-forms.denorm"
+ ],
+ "rawOrders": 830,
+ "lineRows": 2155,
+ "dupProductName": 38,
+ "dupCityRows": 116,
+ "updateFlat": 38,
+ "updateNormalized": 1,
+ "lostCities": 1,
+ "customersNorthwind": 91,
+ "customersWithOrders": 89,
+ "insertCode": "23502",
+ "losslessDiff": 0,
+ "denormDrift": 1,
+ "steps": [
+  {
+   "key": "0nf",
+   "label": "0NF",
+   "tables": [
+    "order_sheet_raw (830 dòng, ô items chứa nhiều món)"
+   ]
+  },
+  {
+   "key": "1nf",
+   "label": "1NF",
+   "tables": [
+    "order_sheet (2155 dòng, mỗi dòng một món)"
+   ]
+  },
+  {
+   "key": "2nf",
+   "label": "2NF",
+   "tables": [
+    "nf_products",
+    "nf_orders (còn tên, thành phố khách)",
+    "nf_order_lines"
+   ]
+  },
+  {
+   "key": "3nf",
+   "label": "3NF",
+   "tables": [
+    "nf_customers",
+    "nf_products",
+    "nf_orders",
+    "nf_order_lines"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region catalog · Đọc ERD ngược từ catalog: bảng, cột, khóa ngoại (slide 7)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.149 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.129 ms
+SET
+Time: 0.052 ms
+SELECT c.relname AS bang, a.attname AS cot, format_type(a.atttypid, a.atttypmod) AS kieu, NOT a.attnotnull AS cho_phep_null
+FROM pg_class c JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+WHERE c.relnamespace = 'lab07_modeling'::regnamespace AND c.relname IN ('erd_orders', 'erd_payment_transactions')
+ORDER BY c.relname DESC, a.attnum;
+           bang           |    cot     |           kieu           | cho_phep_null 
+--------------------------+------------+--------------------------+---------------
+ erd_payment_transactions | id         | bigint                   | f
+ erd_payment_transactions | kind       | text                     | f
+ erd_payment_transactions | order_id   | bigint                   | t
+ erd_payment_transactions | amount     | numeric(14,2)            | f
+ erd_payment_transactions | status     | text                     | f
+ erd_payment_transactions | version    | integer                  | f
+ erd_payment_transactions | created_at | timestamp with time zone | f
+ erd_payment_transactions | updated_at | timestamp with time zone | f
+ erd_orders               | id         | bigint                   | f
+ erd_orders               | code       | text                     | f
+ erd_orders               | status     | text                     | f
+ erd_orders               | total      | numeric(14,2)            | f
+ erd_orders               | version    | integer                  | f
+ erd_orders               | created_at | timestamp with time zone | f
+ erd_orders               | updated_at | timestamp with time zone | f
+(15 rows)
+
+Time: 3.342 ms
+SELECT conrelid::regclass AS bang_con, confrelid::regclass AS bang_cha, pg_get_constraintdef(oid) AS dinh_nghia
+FROM pg_constraint
+WHERE contype = 'f' AND connamespace = 'lab07_modeling'::regnamespace AND conrelid::regclass::text LIKE 'erd_%';
+         bang_con         |  bang_cha  |                    dinh_nghia                    
+--------------------------+------------+--------------------------------------------------
+ erd_payment_transactions | erd_orders | FOREIGN KEY (order_id) REFERENCES erd_orders(id)
+(1 row)
+
+Time: 1.321 ms
+-- #endregion

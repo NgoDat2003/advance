@@ -1,0 +1,31 @@
+-- chạy lúc 27/10/2026 22:16 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- Fixture SAI cố ý (chỉ controller dùng): hw-check phải báo ✘ đúng ở H2, H3, H4, H5, H9.
+SET search_path = lab07_modeling;
+SET
+Time: 0.153 ms
+DROP TABLE IF EXISTS hw_bookings, hw_seats, hw_flights, hw_airports;
+DROP TABLE
+Time: 18.806 ms
+CREATE TABLE hw_flights (
+  id         bigint PRIMARY KEY,
+  code       text NOT NULL,
+  departs_at timestamp NOT NULL,          -- sai: không có múi giờ
+  fare       double precision NOT NULL,   -- sai: tiền dùng float
+  status     text NOT NULL CHECK (status IN ('SCHEDULED', 'CANCELLED')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+Time: 9.603 ms
+CREATE TABLE hw_bookings (
+  id         bigint PRIMARY KEY,
+  flight_id  bigint NOT NULL REFERENCES hw_flights (id),  -- sai: không có index
+  seat_no    text NOT NULL,
+  status     text NOT NULL CHECK (status IN ('HELD', 'PAID', 'CANCELLED')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (seat_no, flight_id)   -- index bắt đầu bằng seat_no nên không phục vụ được flight_id
+);
+CREATE TABLE
+Time: 13.041 ms

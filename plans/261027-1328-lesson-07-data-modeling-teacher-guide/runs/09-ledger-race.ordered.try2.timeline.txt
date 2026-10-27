@@ -1,0 +1,61 @@
+── A · bước A1 · 15:25:54.966 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'post_transfer 3 → 2 (khóa ví 2 rồi ví 3)' AS viec;
+ buoc |     luc      |                   viec                   
+------+--------------+------------------------------------------
+ A1   | 15:25:54.966 | post_transfer 3 → 2 (khóa ví 2 rồi ví 3)
+(1 row)
+
+Time: 0.583 ms
+SELECT post_transfer(3, 2, 1000, 'race-ord-A-' || txid_current()) AS transfer_id;
+ transfer_id 
+-------------
+          12
+(1 row)
+
+Time: 4.603 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B (trong 5 giây đầu)
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6013.366 ms (00:06.013)
+── B · bước B1 · 15:25:56.039 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'post_transfer 2 → 3 (khóa ví 2 trước: chờ A)' AS viec;
+ buoc |     luc      |                     viec                     
+------+--------------+----------------------------------------------
+ B1   | 15:25:56.039 | post_transfer 2 → 3 (khóa ví 2 trước: chờ A)
+(1 row)
+
+Time: 0.634 ms
+SELECT post_transfer(2, 3, 500, 'race-ord-B-' || txid_current()) AS transfer_id;
+ transfer_id 
+-------------
+          13
+(1 row)
+
+Time: 4956.167 ms (00:04.956)
+── A · bước A2 · 15:26:00.984 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A commit' AS viec;
+ buoc |     luc      |   viec   
+------+--------------+----------
+ A2   | 15:26:00.984 | A commit
+(1 row)
+
+Time: 0.327 ms
+COMMIT;
+COMMIT
+Time: 7.252 ms
+-- #endregion
+── B · bước B2 · 15:26:00.996 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'hết chờ, B commit' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B2   | 15:26:00.996 | hết chờ, B commit
+(1 row)
+
+Time: 0.519 ms
+COMMIT;
+COMMIT
+Time: 5.982 ms
+-- #endregion

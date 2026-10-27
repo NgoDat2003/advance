@@ -1,0 +1,33 @@
+{
+ "sources": [
+  "08-polymorphic.typeid",
+  "08-polymorphic.arc",
+  "08-polymorphic.join"
+ ],
+ "designs": [
+  {
+   "key": "typeid",
+   "name": "type + id",
+   "orphans": 4,
+   "fk": "không khai báo được",
+   "bad": "\"Psot\" và id 99 đều lưu được",
+   "code": null
+  },
+  {
+   "key": "arc",
+   "name": "exclusive arc",
+   "orphans": 0,
+   "fk": "mỗi loại cha một cột FK",
+   "bad": "không thuộc về ai → 23514",
+   "code": "23514"
+  },
+  {
+   "key": "join",
+   "name": "bảng riêng cho từng loại cha",
+   "orphans": 0,
+   "fk": "mỗi bảng một FK",
+   "bad": "không thể ghi sai loại",
+   "code": null
+  }
+ ]
+}

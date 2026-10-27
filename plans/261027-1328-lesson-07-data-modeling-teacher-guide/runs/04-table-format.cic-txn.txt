@@ -1,0 +1,23 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region cic-txn · CREATE INDEX CONCURRENTLY không chạy được trong transaction (slide 18)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.152 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.071 ms
+SET
+Time: 0.081 ms
+BEGIN;
+BEGIN
+Time: 0.059 ms
+CREATE INDEX CONCURRENTLY ddl_contracts_total_idx ON ddl_contracts (total);
+psql:<stdin>:5: ERROR:  25001: CREATE INDEX CONCURRENTLY cannot run inside a transaction block
+LOCATION:  PreventInTransactionBlock, xact.c:3497
+Time: 0.249 ms
+ROLLBACK;   -- nếu DBX dừng ở dòng lỗi phía trên, hãy chạy riêng ROLLBACK;
+ROLLBACK
+Time: 0.151 ms
+-- #endregion

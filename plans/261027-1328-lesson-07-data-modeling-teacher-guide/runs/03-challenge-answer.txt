@@ -1,0 +1,120 @@
+-- chạy lúc 27/10/2026 22:21 +0700 · đáp án Tự làm chặng 3 (bảng my_*, xóa sau khi đo)
+== Thứ tự 1: A trước, B sau 1 giây ==
+── A · bước A1 · 15:22:01.004 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A khóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ A1   | 15:22:01.004 | A khóa cửa hàng 7
+(1 row)
+
+SELECT id FROM my_stores WHERE id = 7 FOR KEY SHARE;
+ id 
+----
+  7
+(1 row)
+
+SELECT pg_sleep(6);
+ pg_sleep 
+----------
+ 
+(1 row)
+── B · bước B1 · 15:22:02.072 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B khóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B1   | 15:22:02.072 | B khóa cửa hàng 7
+(1 row)
+
+SELECT id FROM my_stores WHERE id = 7 FOR UPDATE;
+ id 
+----
+  7
+(1 row)
+── A · bước A2 · 15:22:07.039 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A ghi hợp đồng nếu cha còn' AS viec;
+ buoc |     luc      |            viec            
+------+--------------+----------------------------
+ A2   | 15:22:07.039 | A ghi hợp đồng nếu cha còn
+(1 row)
+
+INSERT INTO my_contracts (store_id)
+SELECT 7 WHERE EXISTS (SELECT 1 FROM my_stores WHERE id = 7);
+INSERT 0 1
+COMMIT;
+COMMIT
+── B · bước B2 · 15:22:07.052 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B xóa nếu không còn hợp đồng' AS viec;
+ buoc |     luc      |             viec             
+------+--------------+------------------------------
+ B2   | 15:22:07.052 | B xóa nếu không còn hợp đồng
+(1 row)
+
+DELETE FROM my_stores WHERE id = 7
+  AND NOT EXISTS (SELECT 1 FROM my_contracts WHERE store_id = 7);
+DELETE 0
+COMMIT;
+COMMIT
+ orphans | hop_dong | cua_hang 
+---------+----------+----------
+       0 |        1 |        1
+(1 row)
+
+== Thứ tự 2: B trước, A sau 1 giây ==
+── B · bước B1 · 15:22:14.220 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B khóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B1   | 15:22:14.220 | B khóa cửa hàng 7
+(1 row)
+
+SELECT id FROM my_stores WHERE id = 7 FOR UPDATE;
+ id 
+----
+  7
+(1 row)
+── B · bước B2 · 15:22:14.222 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B xóa nếu không còn hợp đồng' AS viec;
+ buoc |     luc      |             viec             
+------+--------------+------------------------------
+ B2   | 15:22:14.222 | B xóa nếu không còn hợp đồng
+(1 row)
+
+DELETE FROM my_stores WHERE id = 7
+  AND NOT EXISTS (SELECT 1 FROM my_contracts WHERE store_id = 7);
+DELETE 1
+COMMIT;
+COMMIT
+── A · bước A1 · 15:22:15.310 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A khóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ A1   | 15:22:15.310 | A khóa cửa hàng 7
+(1 row)
+
+SELECT id FROM my_stores WHERE id = 7 FOR KEY SHARE;
+ id 
+----
+(0 rows)
+
+SELECT pg_sleep(6);
+ pg_sleep 
+----------
+ 
+(1 row)
+── A · bước A2 · 15:22:21.330 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A ghi hợp đồng nếu cha còn' AS viec;
+ buoc |     luc      |            viec            
+------+--------------+----------------------------
+ A2   | 15:22:21.330 | A ghi hợp đồng nếu cha còn
+(1 row)
+
+INSERT INTO my_contracts (store_id)
+SELECT 7 WHERE EXISTS (SELECT 1 FROM my_stores WHERE id = 7);
+INSERT 0 0
+COMMIT;
+COMMIT
+ orphans | hop_dong | cua_hang 
+---------+----------+----------
+       0 |        0 |        0
+(1 row)
+

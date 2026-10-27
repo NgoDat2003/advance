@@ -1,0 +1,116 @@
+-- chạy lúc 27/10/2026 22:13 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- Bài 07 · Kiểm tra trạng thái lab (chạy được nhiều lần, chỉ ĐỌC dữ liệu).
+-- Cách chạy trong DBX: mở file, Ctrl+A → Run. Kết quả: mỗi dòng một kiểm tra, cột ket_qua là ✔ / ✘ / – (chưa tới chặng đó).
+-- Không cần SET search_path: mọi tên bảng đều ghi đủ schema.
+WITH registry(name) AS (
+  VALUES ('order_sheet'), ('order_sheet_raw'), ('erd_orders'), ('erd_payment_transactions'),
+         ('nf_customers'), ('nf_products'), ('nf_orders'), ('nf_order_lines'), ('dn_orders'),
+         ('fk_parent'), ('fk_child'), ('fk_child_nofk'), ('race_stores'), ('race_contracts'),
+         ('race_stores_fk'), ('race_contracts_fk'), ('ddl_contracts'), ('ddl_events'), ('tpl_stores'),
+         ('ty_samples'), ('ty_money'), ('ty_nulls'), ('ty_long'), ('ty_stored'), ('cs_posts'), ('cs_tasks'), ('cs_homestays'),
+         ('cs_availability'), ('cs_stays'), ('cs_time_slots'), ('cs_articles'), ('cs_tags'), ('cs_article_tags'),
+         ('cs_clicks'), ('cs_mv_clicks_daily'), ('v_order_lines'), ('v_customer_revenue'), ('v_top_lines'),
+         ('v_cheap_products'), ('poly_posts'), ('poly_products'), ('poly_comments'), ('poly_comments_arc'),
+         ('poly_post_comments'), ('poly_product_comments'), ('wallets'), ('transfers'), ('ledger_entries')
+),
+-- Đếm bằng query_to_xml để bảng chưa tồn tại không gây lỗi (CASE chỉ chạy nhánh THEN khi bảng có thật).
+n AS (
+  SELECT
+    to_regnamespace('lab07_modeling') IS NOT NULL AS has_schema,
+    to_regclass('lab07_modeling.order_sheet') IS NOT NULL AND to_regclass('lab07_modeling.order_sheet_raw') IS NOT NULL AS has_base,
+    to_regclass('lab07_modeling.ledger_entries') IS NOT NULL AND to_regclass('lab07_modeling.wallets') IS NOT NULL AS has_ledger
+),
+v AS (
+  SELECT n.*,
+    CASE WHEN has_base THEN (xpath('/row/c/text()', query_to_xml('SELECT count(*) AS c FROM lab07_modeling.order_sheet', false, true, '')))[1]::text::int END AS sheet_rows,
+    CASE WHEN has_base THEN (xpath('/row/c/text()', query_to_xml('SELECT count(*) AS c FROM lab07_modeling.order_sheet_raw', false, true, '')))[1]::text::int END AS raw_rows,
+    CASE WHEN has_base THEN (xpath('/row/c/text()', query_to_xml('SELECT sum(quantity) AS c FROM lab07_modeling.order_sheet', false, true, '')))[1]::text::bigint END AS sheet_qty,
+    CASE WHEN has_ledger THEN (xpath('/row/c/text()', query_to_xml(
+      'SELECT count(*) AS c FROM (SELECT transfer_id FROM lab07_modeling.ledger_entries GROUP BY transfer_id HAVING sum(amount) <> 0) x', false, true, '')))[1]::text::int END AS unbalanced,
+    CASE WHEN has_ledger THEN (xpath('/row/c/text()', query_to_xml(
+      'SELECT coalesce(sum(amount), 0) AS c FROM lab07_modeling.ledger_entries', false, true, '')))[1]::text::numeric END AS ledger_sum,
+    CASE WHEN has_ledger THEN (xpath('/row/c/text()', query_to_xml(
+      'SELECT count(*) AS c FROM lab07_modeling.wallets w
+         WHERE w.balance <> (SELECT coalesce(sum(e.amount), 0) FROM lab07_modeling.ledger_entries e WHERE e.wallet_id = w.id)', false, true, '')))[1]::text::int END AS mismatched,
+    CASE WHEN has_ledger THEN (xpath('/row/c/text()', query_to_xml(
+      'SELECT count(*) AS c FROM lab07_modeling.wallets WHERE balance < 0 AND NOT allow_negative', false, true, '')))[1]::text::int END AS negative
+  FROM n
+)
+SELECT 'C01' AS ma, CASE WHEN has_schema THEN '✔' ELSE '✘' END AS ket_qua, 'schema lab07_modeling tồn tại (chưa có: chạy 00-setup.sql)' AS chi_tiet FROM v
+UNION ALL
+SELECT 'C02', CASE WHEN EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'btree_gist' AND extnamespace = to_regnamespace('lab07_modeling')) THEN '✔' ELSE '✘' END,
+       'extension btree_gist cài trong lab07_modeling (dùng cho EXCLUDE ở chặng 6)' FROM v
+UNION ALL
+SELECT 'C03', CASE WHEN sheet_rows = 2155 AND raw_rows = 830 THEN '✔' ELSE '✘' END,
+       format('order_sheet = %s dòng (cần 2155), order_sheet_raw = %s dòng (cần 830)', coalesce(sheet_rows::text, 'chưa có'), coalesce(raw_rows::text, 'chưa có')) FROM v
+UNION ALL
+SELECT 'C04', CASE WHEN sheet_qty = (SELECT sum(quantity) FROM northwind.order_details) THEN '✔' ELSE '✘' END,
+       format('tổng quantity order_sheet = %s, northwind = %s', coalesce(sheet_qty::text, 'chưa có'), (SELECT sum(quantity) FROM northwind.order_details)) FROM v
+UNION ALL
+SELECT 'C05', CASE WHEN (SELECT count(*) FROM northwind.customers) = 91 AND (SELECT count(*) FROM northwind.orders) = 830
+                    AND (SELECT count(*) FROM northwind.order_details) = 2155 AND (SELECT count(*) FROM northwind.products) = 77
+                    AND (SELECT count(*) FROM northwind.categories) = 8 AND (SELECT count(*) FROM northwind.suppliers) = 29
+                    AND (SELECT count(*) FROM northwind.employees) = 9 AND (SELECT count(*) FROM northwind.shippers) = 6
+                    AND (SELECT md5(string_agg(order_id||':'||product_id||':'||quantity||':'||unit_price, ',' ORDER BY order_id, product_id)) FROM northwind.order_details)
+                        = '49ecaa361444dc616ad401b1c9e2d4f7'
+                  THEN '✔' ELSE '✘' END,
+       'northwind (nguồn chỉ đọc) giữ nguyên: số dòng 8 bảng + md5 order_details' FROM v
+UNION ALL
+SELECT 'C06', CASE WHEN (SELECT count(*) = 500000 AND sum(total) = 247233281893.33 AND max(id) = 500000 FROM lab03_indexing.hw_contracts) THEN '✔' ELSE '✘' END,
+       'lab03_indexing.hw_contracts (Bài 3, chỉ đọc) giữ nguyên: 500.000 dòng, tổng total, id lớn nhất' FROM v
+UNION ALL
+SELECT 'C07', CASE WHEN count(c.oid) = 0 THEN '✔' ELSE '✘' END,
+       CASE WHEN count(c.oid) = 0 THEN 'không có bảng/view của Bài 07 nằm lạc ở schema khác'
+            ELSE 'bảng lạc chỗ: ' || string_agg(c.relnamespace::regnamespace || '.' || c.relname, ', ') END
+FROM registry r LEFT JOIN pg_class c ON c.relname = r.name AND c.relnamespace <> coalesce(to_regnamespace('lab07_modeling'), 0)
+     AND c.relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname LIKE 'pg\_%' OR nspname = 'information_schema')
+UNION ALL
+SELECT 'C08', CASE WHEN (SELECT array_to_string(s.setconfig, ',') FROM pg_db_role_setting s JOIN pg_database d ON d.oid = s.setdatabase
+                          WHERE d.datname = current_database() AND s.setrole = 0) = 'search_path=lab03_indexing, public' THEN '✔' ELSE '✘' END,
+       'cài đặt mức DB giữ nguyên: search_path = lab03_indexing, public (vì vậy mỗi region phải SET search_path)' FROM v
+UNION ALL
+SELECT 'C09', CASE WHEN NOT has_ledger THEN '–' WHEN unbalanced = 0 THEN '✔' ELSE '✘' END,
+       CASE WHEN NOT has_ledger THEN 'sổ cái chưa dựng (chặng 9)' ELSE format('giao dịch lệch (tổng bút toán ≠ 0): %s', unbalanced) END FROM v
+UNION ALL
+SELECT 'C10', CASE WHEN NOT has_ledger THEN '–' WHEN ledger_sum = 0 THEN '✔' ELSE '✘' END,
+       CASE WHEN NOT has_ledger THEN 'sổ cái chưa dựng (chặng 9)' ELSE format('tổng mọi bút toán = %s (phải bằng 0)', ledger_sum) END FROM v
+UNION ALL
+SELECT 'C11', CASE WHEN NOT has_ledger THEN '–' WHEN mismatched = 0 THEN '✔' ELSE '✘' END,
+       CASE WHEN NOT has_ledger THEN 'sổ cái chưa dựng (chặng 9)' ELSE format('ví có số dư cache ≠ tổng bút toán: %s', mismatched) END FROM v
+UNION ALL
+SELECT 'C12', CASE WHEN NOT has_ledger THEN '–' WHEN negative = 0 THEN '✔' ELSE '✘' END,
+       CASE WHEN NOT has_ledger THEN 'sổ cái chưa dựng (chặng 9)' ELSE format('ví khách bị âm: %s', negative) END FROM v
+UNION ALL
+SELECT 'C13', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END,
+       format('phiên "idle in transaction" đang giữ khóa trong lab07_modeling: %s (có thì COMMIT/ROLLBACK tab đó)', count(*))
+FROM pg_stat_activity a
+WHERE a.datname = current_database() AND a.state LIKE 'idle in transaction%' AND a.pid <> pg_backend_pid()
+  AND EXISTS (SELECT 1 FROM pg_locks l JOIN pg_class c ON c.oid = l.relation
+              WHERE l.pid = a.pid AND c.relnamespace = to_regnamespace('lab07_modeling'))
+UNION ALL
+SELECT 'C14', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END,
+       format('index hỏng (indisvalid = false, thường do CREATE INDEX CONCURRENTLY bị hủy): %s', count(*))
+FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+WHERE c.relnamespace = to_regnamespace('lab07_modeling') AND NOT i.indisvalid
+ORDER BY 1;
+ ma  | ket_qua |                                                 chi_tiet                                                 
+-----+---------+----------------------------------------------------------------------------------------------------------
+ C01 | ✔       | schema lab07_modeling tồn tại (chưa có: chạy 00-setup.sql)
+ C02 | ✔       | extension btree_gist cài trong lab07_modeling (dùng cho EXCLUDE ở chặng 6)
+ C03 | ✔       | order_sheet = 2155 dòng (cần 2155), order_sheet_raw = 830 dòng (cần 830)
+ C04 | ✔       | tổng quantity order_sheet = 51317, northwind = 51317
+ C05 | ✔       | northwind (nguồn chỉ đọc) giữ nguyên: số dòng 8 bảng + md5 order_details
+ C06 | ✔       | lab03_indexing.hw_contracts (Bài 3, chỉ đọc) giữ nguyên: 500.000 dòng, tổng total, id lớn nhất
+ C07 | ✔       | không có bảng/view của Bài 07 nằm lạc ở schema khác
+ C08 | ✔       | cài đặt mức DB giữ nguyên: search_path = lab03_indexing, public (vì vậy mỗi region phải SET search_path)
+ C09 | ✔       | giao dịch lệch (tổng bút toán ≠ 0): 0
+ C10 | ✔       | tổng mọi bút toán = 0.00 (phải bằng 0)
+ C11 | ✔       | ví có số dư cache ≠ tổng bút toán: 0
+ C12 | ✔       | ví khách bị âm: 0
+ C13 | ✔       | phiên "idle in transaction" đang giữ khóa trong lab07_modeling: 0 (có thì COMMIT/ROLLBACK tab đó)
+ C14 | ✔       | index hỏng (indisvalid = false, thường do CREATE INDEX CONCURRENTLY bị hủy): 0
+(14 rows)
+
+Time: 228.756 ms

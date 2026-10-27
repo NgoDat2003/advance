@@ -1,0 +1,52 @@
+{
+ "sources": [
+  "04-table-format.add-column",
+  "04-table-format.lock",
+  "04-index-online.plain.B",
+  "04-index-online.cic.timeline",
+  "04-index-online.cic.B"
+ ],
+ "rows": 500000,
+ "lockMode": "AccessExclusiveLock",
+ "alters": [
+  {
+   "sql": "ADD COLUMN note text",
+   "ms": 1.14,
+   "rewrite": false
+  },
+  {
+   "sql": "ADD COLUMN version int NOT NULL DEFAULT 0",
+   "ms": 1.422,
+   "rewrite": false
+  },
+  {
+   "sql": "ADD COLUMN created_at timestamptz DEFAULT now()",
+   "ms": 1.279,
+   "rewrite": false
+  },
+  {
+   "sql": "ADD COLUMN rnd float8 DEFAULT random()",
+   "ms": 527.308,
+   "rewrite": true
+  },
+  {
+   "sql": "ALTER COLUMN customer_id TYPE bigint",
+   "ms": 518.812,
+   "rewrite": true
+  }
+ ],
+ "plain": {
+  "lockMode": "ShareLock",
+  "bSelectRows": 2440,
+  "bSelectMs": 24.254,
+  "bUpdateCode": "55P03",
+  "bUpdateMs": 2000.334
+ },
+ "cic": {
+  "lockMode": "ShareUpdateExclusiveLock",
+  "phase": "waiting for writers before build",
+  "aUpdate": "UPDATE 1",
+  "cicMs": 5587.924,
+  "valid": "t"
+ }
+}

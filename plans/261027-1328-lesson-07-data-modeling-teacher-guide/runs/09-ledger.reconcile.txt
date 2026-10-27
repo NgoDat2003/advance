@@ -1,0 +1,45 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region reconcile · Số dư cache bị ai đó sửa tay: đối soát phát hiện và sửa lại từ sổ cái
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.153 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.122 ms
+SET
+Time: 0.121 ms
+UPDATE wallets SET balance = balance + 5000 WHERE id = 2;   -- lỗi vận hành: "cộng bù" thẳng vào số dư, không qua sổ
+UPDATE 1
+Time: 6.299 ms
+SELECT w.id, w.code, w.balance AS so_du_cache, coalesce(sum(e.amount), 0) AS so_du_theo_so_cai
+FROM wallets w LEFT JOIN ledger_entries e ON e.wallet_id = w.id GROUP BY w.id ORDER BY w.id;
+ id |    code     | so_du_cache | so_du_theo_so_cai 
+----+-------------+-------------+-------------------
+  1 | SYSTEM_CASH |  -100000.00 |        -100000.00
+  2 | STORE_Q7    |    50000.00 |          45000.00
+  3 | CUS_DAT     |    55000.00 |          55000.00
+(3 rows)
+
+Time: 1.508 ms
+SELECT count(*) AS lech FROM wallets w WHERE balance <> (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+ lech 
+------
+    1
+(1 row)
+
+Time: 0.446 ms
+-- Sửa: sự thật là sổ cái; số dư cache được tính lại từ sổ.
+UPDATE wallets w SET balance = (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id), updated_at = now()
+WHERE balance <> (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+UPDATE 1
+Time: 4.242 ms
+SELECT count(*) AS lech FROM wallets w WHERE balance <> (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+ lech 
+------
+    0
+(1 row)
+
+Time: 0.365 ms
+-- #endregion

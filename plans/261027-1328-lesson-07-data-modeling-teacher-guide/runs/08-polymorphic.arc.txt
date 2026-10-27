@@ -1,0 +1,59 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region arc · Cách 2: exclusive arc — mỗi loại cha một cột FK cho phép NULL, CHECK đúng một cột có giá trị
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.148 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.091 ms
+SET
+Time: 0.099 ms
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7') ON CONFLICT DO NOTHING;
+INSERT 0 1
+Time: 1.808 ms
+DROP TABLE IF EXISTS poly_comments_arc;
+psql:<stdin>:5: NOTICE:  00000: table "poly_comments_arc" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.271 ms
+CREATE TABLE poly_comments_arc (
+  id         int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  post_id    int REFERENCES poly_posts (id) ON DELETE CASCADE,
+  product_id int REFERENCES poly_products (id) ON DELETE CASCADE,
+  body       text NOT NULL,
+  CHECK (num_nonnulls(post_id, product_id) = 1)   -- thuộc về đúng MỘT cha
+);
+CREATE TABLE
+Time: 12.643 ms
+CREATE INDEX ON poly_comments_arc (post_id) WHERE post_id IS NOT NULL;
+CREATE INDEX
+Time: 4.642 ms
+CREATE INDEX ON poly_comments_arc (product_id) WHERE product_id IS NOT NULL;
+CREATE INDEX
+Time: 4.388 ms
+INSERT INTO poly_comments_arc (post_id, product_id, body) VALUES (1, NULL, 'Chúc mừng!'), (NULL, 1, 'Ngon');
+INSERT 0 2
+Time: 2.495 ms
+DELETE FROM poly_posts WHERE id = 1;   -- bình luận của bài 1 bị xóa theo (ON DELETE CASCADE)
+DELETE 1
+Time: 1.424 ms
+SELECT count(*) AS orphans FROM poly_comments_arc c
+WHERE (c.post_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM poly_posts p WHERE p.id = c.post_id))
+   OR (c.product_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.product_id));
+ orphans 
+---------
+       0
+(1 row)
+
+Time: 0.574 ms
+INSERT INTO poly_comments_arc (post_id, product_id, body) VALUES (NULL, NULL, 'Không thuộc về ai');
+psql:<stdin>:20: ERROR:  23514: new row for relation "poly_comments_arc" violates check constraint "poly_comments_arc_check"
+DETAIL:  Failing row contains (3, null, null, Không thuộc về ai).
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  poly_comments_arc
+CONSTRAINT NAME:  poly_comments_arc_check
+LOCATION:  ExecConstraints, execMain.c:2109
+Time: 0.244 ms
+-- #endregion

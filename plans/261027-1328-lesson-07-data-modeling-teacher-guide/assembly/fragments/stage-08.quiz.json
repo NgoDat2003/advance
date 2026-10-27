@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Vì sao cặp commentable_type + commentable_id không khai báo được FK?",
+    "opts": [
+      "Vì PG không cho FK trên cột int",
+      "Vì FK chỉ trỏ tới một bảng cố định, còn commentable_id trỏ bảng nào là do cột commentable_type quyết định",
+      "Vì cột commentable_id không có index",
+      "Vì bảng poly_comments dùng GENERATED ALWAYS AS IDENTITY"
+    ],
+    "ans": 1,
+    "why": "08-polymorphic.sql#typeid: bảng poly_comments không có REFERENCES nào; runs/08-polymorphic.typeid.txt cho thấy cả 5 dòng, kể cả 'Psot' và id 99, đều INSERT 0 5."
+  },
+  {
+    "q": "Sau khi xóa bài viết #1 ở thiết kế type + id, câu đếm mồ côi trả bao nhiêu, và gồm những dòng nào?",
+    "opts": [
+      "4: hai bình luận của bài 1, một dòng gõ sai 'Psot', một dòng trỏ sản phẩm 99",
+      "2: chỉ hai bình luận của bài 1",
+      "0: PG tự xóa bình luận theo bài viết",
+      "5: mọi bình luận đều thành mồ côi"
+    ],
+    "ans": 0,
+    "why": "runs/08-polymorphic.typeid.txt: orphans = 4. Hai dòng mồ côi vì bài 1 bị xóa, hai dòng còn lại sai từ lúc chèn mà DB không kiểm được."
+  },
+  {
+    "q": "Ở exclusive arc, chèn một bình luận có post_id và product_id đều NULL thì sao?",
+    "opts": [
+      "Được nhận, vì cả hai cột cho phép NULL",
+      "Lỗi 23503 vì FK không tìm thấy cha",
+      "Lỗi 23502 vì NOT NULL",
+      "Lỗi 23514 vì CHECK (num_nonnulls(post_id, product_id) = 1)"
+    ],
+    "ans": 3,
+    "why": "runs/08-polymorphic.arc.txt: ERROR 23514 … violates check constraint \"poly_comments_arc_check\". FK bỏ qua giá trị NULL, nên phải có CHECK mới chặn được dòng không thuộc về ai."
+  },
+  {
+    "q": "Trong Prisma 7.9, mô hình exclusive arc viết thế nào?",
+    "opts": [
+      "Dùng attribute @polymorphic có sẵn của Prisma",
+      "Một relation field trỏ tới nhiều model cùng lúc",
+      "Hai relation tùy chọn (postId Int?, productId Int?) trên cùng model; CHECK num_nonnulls viết tay trong migration.sql",
+      "Không làm được, bắt buộc dùng type + id"
+    ],
+    "ans": 2,
+    "why": "runs/prisma-claims.txt P8: Prisma schema không có attribute CHECK hay quan hệ đa hình, nên thêm CHECK bằng prisma migrate dev --create-only rồi sửa migration.sql; bảng đích là thiết kế ở 08-polymorphic.sql#arc."
+  }
+]

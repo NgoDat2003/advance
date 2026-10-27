@@ -1,0 +1,55 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region string · text và varchar(255) tốn đúng như nhau trên PG (slide 22)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.140 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.078 ms
+SET
+Time: 0.084 ms
+SELECT pg_column_size('xin chao'::text) AS text_8_ky_tu, pg_column_size('xin chao'::varchar(255)) AS varchar255_8_ky_tu,
+       pg_column_size(repeat('a', 3000)::text) AS text_3000_ky_tu;
+ text_8_ky_tu | varchar255_8_ky_tu | text_3000_ky_tu 
+--------------+--------------------+-----------------
+           12 |                 12 |            3004
+(1 row)
+
+Time: 2.277 ms
+-- Chuỗi dài lưu trong bảng được nén (TOAST) khi vượt khoảng 2 KB: 10.000 ký tự lặp chỉ còn vài trăm byte.
+DROP TABLE IF EXISTS ty_samples;
+DROP TABLE
+Time: 3.808 ms
+CREATE TABLE ty_samples (id int PRIMARY KEY, note text);
+CREATE TABLE
+Time: 24.734 ms
+INSERT INTO ty_samples VALUES (1, repeat('món ngon ', 1112));
+INSERT 0 1
+Time: 1.411 ms
+SELECT length(note) AS so_ky_tu, octet_length(note) AS so_byte_goc, pg_column_size(note) AS so_byte_luu_that FROM ty_samples;
+ so_ky_tu | so_byte_goc | so_byte_luu_that 
+----------+-------------+------------------
+    10008 |       11120 |              148
+(1 row)
+
+Time: 1.692 ms
+-- Giá trị ngắn khi nằm trong bảng dùng header 1 byte, nên nhỏ hơn con số đo trên literal ở trên.
+DROP TABLE IF EXISTS ty_stored;
+DROP TABLE
+Time: 2.119 ms
+CREATE TABLE ty_stored (t text, v varchar(255), n numeric(12,2));
+CREATE TABLE
+Time: 4.815 ms
+INSERT INTO ty_stored VALUES ('xin chao', 'xin chao', 123456.78);
+INSERT 0 1
+Time: 1.804 ms
+SELECT pg_column_size(t) AS text_trong_bang, pg_column_size(v) AS varchar_trong_bang, pg_column_size(n) AS numeric_trong_bang FROM ty_stored;
+ text_trong_bang | varchar_trong_bang | numeric_trong_bang 
+-----------------+--------------------+--------------------
+               9 |                  9 |                  9
+(1 row)
+
+Time: 0.252 ms
+-- #endregion

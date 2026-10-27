@@ -1,0 +1,23 @@
+-- chạy lúc 27/10/2026 21:19 +0700 · đọc (chỉ đọc) migration Prisma của D:/study/job/quan-ly-hop-dong/apps/api
+so_file_migration: 7
+cot_TIMESTAMP(3): 16
+cot_TIMESTAMPTZ: 0
+cot_DOUBLE_PRECISION: 0
+cot_DECIMAL: 12
+khoa_ngoai_doc_duoc: 17
+-- cột FK và index bắt đầu bằng cột đó:
+co_index    auth_sessions.user_id
+co_index    audit_logs.changed_by_user_id
+co_index    sap_stores.brand_id
+co_index    lease_contracts.parent_contract_id
+co_index    lease_contracts.store_id
+co_index    lease_contracts.vendor_id
+THIEU_INDEX lease_contracts.created_by_user_id
+THIEU_INDEX lease_contracts.approved_by_user_id
+co_index    contract_attachments.lease_contract_id
+THIEU_INDEX contract_attachments.uploaded_by_user_id
+co_index    payment_schedules.lease_contract_id
+co_index    contract_store_allocations.lease_contract_id
+THIEU_INDEX contract_store_allocations.store_id
+co_index    sap_export_logs.lease_contract_id
+THIEU_INDEX sap_export_logs.exported_by_user_id

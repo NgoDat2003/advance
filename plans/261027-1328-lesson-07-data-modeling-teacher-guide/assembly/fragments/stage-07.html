@@ -1,0 +1,231 @@
+<!-- CHẶNG 7 (tùy chọn) -->
+<section id="chang-7" class="stage col">
+<div class="stage-head">
+<span class="stage-no">07</span>
+<div>
+<div class="stage-meta"><span>Slide 38–43</span><span>15 phút (tùy chọn)</span><span>Day 05</span></div>
+<h2>View: PG trải phẳng view, hay phải tính riêng?</h2>
+</div>
+</div>
+<p class="goal"><b>Mục tiêu:</b> đọc EXPLAIN để biết một view được PG "trải phẳng" vào câu lệnh (giống MERGE của MySQL) hay bị tính riêng rồi mới lọc (giống TEMPTABLE). Chặng này <b>tùy chọn</b>: thiếu giờ thì để tối, chặng 8 không cần nó.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>View là một câu SELECT có tên, không lưu dữ liệu. Mỗi lần bạn đọc view, PG chép câu SELECT đó vào câu lệnh của bạn.</dd>
+<dt>TẠI SAO?</dt><dd>Gói JOIN dài thành một tên ngắn, cấp quyền theo cột, giữ tên cũ khi đổi bảng. Với view đơn giản thì gần như không tốn gì: plan giống hệt khi viết JOIN tay.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Khi view có <code>LIMIT</code>, window function hay <code>DISTINCT ON</code> mà bạn lại lọc từ bên ngoài: PG phải tính cả view trước. Lúc đó viết thẳng câu truy vấn, hoặc đưa điều kiện vào trong view.</dd>
+</dl>
+
+<p>Slide 38–39 là trang bìa của phần View. Chạy <code>02-normal-forms.sql</code> trước (view dùng các bảng <code>nf_*</code>). Mở <code>07-views.sql</code> trong DBX, tab <code>ADVANCE_BE_LAB</code>, bôi đen từng region rồi Run Selection.</p>
+
+<div class="callout pg" id="sl-40">
+<span class="tag">Slide 40 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>View là bảng ảo, không chứa dữ liệu. Thường thì view không ghi được; có loại view ghi được nhưng không nên dùng.</p></div>
+<div><h5>PG 16 đo được</h5><p>View đơn giản (một bảng, không GROUP BY/DISTINCT/LIMIT) <b>tự động ghi được</b>: INSERT qua <code>v_cheap_products</code> trả <b class="m" data-run="07-views.updatable">INSERT 0 1</b> và dòng nằm trong <code>nf_products</code>. Thêm <code>WITH CHECK OPTION</code> thì dòng ngoài điều kiện của view bị chặn với <b class="m" data-run="07-views.updatable">44000</b>.</p></div>
+</div>
+<p>Lời khuyên của slide vẫn đúng cho code ứng dụng: ghi vào bảng gốc. View ghi được hữu ích khi bạn đổi tên bảng mà app cũ vẫn ghi vào tên cũ (backward compatibility, slide 43).</p>
+</div>
+
+<div class="code"><pre data-sql="07-views#updatable"><code>-- #region updatable · View đơn giản ghi được; WITH CHECK OPTION chặn ghi ra ngoài phạm vi của view (slide 40)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+CREATE OR REPLACE VIEW v_cheap_products AS
+SELECT product_id, product_name, category_name, supplier_name FROM nf_products WHERE category_name = 'Beverages'
+WITH CHECK OPTION;
+INSERT INTO v_cheap_products VALUES (901, 'Trà đào cam sả', 'Beverages', 'MayCha');   -- nằm trong phạm vi view: được
+SELECT product_id, product_name FROM nf_products WHERE product_id = 901;              -- dòng đã vào bảng gốc
+DELETE FROM v_cheap_products WHERE product_id = 901;
+INSERT INTO v_cheap_products VALUES (902, 'Bánh mì', 'Grains/Cereals', 'MayCha');      -- ngoài phạm vi: bị chặn
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>07-views.sql · region updatable</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="07-views.updatable">INSERT INTO v_cheap_products VALUES (901, 'Trà đào cam sả', 'Beverages', 'MayCha');   -- nằm trong phạm vi view: được
+INSERT 0 1
+…
+        901 | Trà đào cam sả
+…
+DELETE 1
+…
+INSERT INTO v_cheap_products VALUES (902, 'Bánh mì', 'Grains/Cereals', 'MayCha');      -- ngoài phạm vi: bị chặn
+psql:&lt;stdin&gt;:10: ERROR:  44000: new row violates check option for view "v_cheap_products"
+DETAIL:  Failing row contains (902, Bánh mì, Grains/Cereals, MayCha).</pre></div>
+
+<div class="callout pg" id="sl-41">
+<span class="tag">Slide 41 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>MySQL có 2 thuật toán. MERGE (mặc định): gộp SQL của bạn với SQL của view rồi chạy trên bảng gốc, dùng được index. TEMPTABLE: chạy view ra bảng tạm, rồi chạy SQL của bạn trên bảng tạm, có khi mất index.</p></div>
+<div><h5>PG 16 đo được</h5><p>PG không có công tắc <code>ALGORITHM</code>. Nó luôn chép view vào như một subquery, rồi planner tự quyết: trải phẳng được thì trải (giống MERGE); có GROUP BY thì vẫn đẩy được điều kiện trên cột nhóm vào trong; có LIMIT/DISTINCT ON thì phải tính view trước và giữ nút <code>Subquery Scan</code> với Filter ở trên (giống TEMPTABLE, nhưng không ghi bảng tạm ra đĩa). Bạn chỉ biết bằng EXPLAIN.</p></div>
+</div>
+</div>
+
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_41_img_01.png" alt="Slide 41: bên trái thuật toán Merge gộp SQL của view với SQL của người dùng; bên phải thuật toán Temp table chạy view ra bảng tạm rồi mới chạy câu của người dùng" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 41 · MERGE và TEMPTABLE của MySQL</figcaption></figure>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · đọc 3 plan</span>
+<ol>
+<li>Chạy region <code>inline</code>. DBX trả 2 plan: một cho <code>SELECT * FROM v_order_lines WHERE order_id = 10248</code>, một cho JOIN viết tay. So từng dòng: giống hệt nhau, cùng dùng <b class="m" data-run="07-views.inline">Bitmap Index Scan on nf_order_lines_pkey</b>. View đã biến mất khỏi plan.</li>
+<li>Chạy region <code>pushdown</code>. View có <code>GROUP BY customer_id</code> nên không trải phẳng hoàn toàn được. Nhưng điều kiện <code>customer_id = 'SAVEA'</code> vẫn được đẩy xuống tận <b class="m" data-run="07-views.pushdown">Bitmap Index Scan on nf_orders_customer_id_idx</b>, nằm <b>dưới</b> <code>GroupAggregate</code>. PG chỉ gộp các đơn của SAVEA, không gộp cả bảng.</li>
+<li>Chạy region <code>fence</code>. View có <code>ORDER BY quantity DESC LIMIT 100</code>. Plan bắt đầu bằng <b class="m" data-run="07-views.fence">Subquery Scan on v_top_lines</b>, dòng <code>Filter</code> nằm <b>trên</b> <code>Limit</code>. PG phải Seq Scan, sắp xếp cả bảng, lấy 100 dòng, rồi mới lọc <code>product_id = 1</code>.</li>
+</ol>
+<p><b>Vì sao không đẩy được?</b> "Lấy 100 dòng lớn nhất rồi lọc món 1" khác "lọc món 1 rồi lấy 100 dòng lớn nhất". Đẩy điều kiện xuống sẽ đổi kết quả, nên PG không làm. Đây chính là trường hợp TEMPTABLE của slide.</p>
+</div>
+
+<div class="code"><pre data-sql="07-views#inline"><code>-- #region inline · View đơn giản được "trải phẳng" vào câu lệnh: plan giống hệt khi viết JOIN tay (slide 40–41)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+CREATE OR REPLACE VIEW v_order_lines AS
+SELECT l.order_id, l.product_id, p.product_name, l.unit_price, l.quantity
+FROM nf_order_lines l JOIN nf_products p USING (product_id);
+EXPLAIN (COSTS OFF) SELECT * FROM v_order_lines WHERE order_id = 10248;
+EXPLAIN (COSTS OFF)
+SELECT l.order_id, l.product_id, p.product_name, l.unit_price, l.quantity
+FROM nf_order_lines l JOIN nf_products p USING (product_id) WHERE l.order_id = 10248;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>07-views.sql · region inline (2 plan)</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="07-views.inline">EXPLAIN (COSTS OFF) SELECT * FROM v_order_lines WHERE order_id = 10248;
+ Hash Join
+   Hash Cond: (p.product_id = l.product_id)
+   -&gt;  Seq Scan on nf_products p
+   -&gt;  Hash
+         -&gt;  Bitmap Heap Scan on nf_order_lines l
+               Recheck Cond: (order_id = 10248)
+               -&gt;  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)
+(8 rows)
+…
+FROM nf_order_lines l JOIN nf_products p USING (product_id) WHERE l.order_id = 10248;
+ Hash Join
+   Hash Cond: (p.product_id = l.product_id)
+   -&gt;  Seq Scan on nf_products p
+   -&gt;  Hash
+         -&gt;  Bitmap Heap Scan on nf_order_lines l
+               Recheck Cond: (order_id = 10248)
+               -&gt;  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)
+(8 rows)</pre></div>
+
+<details class="fold"><summary>SQL và kết quả của region pushdown và fence</summary><div class="fold-body">
+<div class="code"><pre data-sql="07-views#pushdown"><code>-- #region pushdown · View có GROUP BY: điều kiện trên cột nhóm vẫn được đẩy xuống dưới bước gộp (slide 41)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+CREATE OR REPLACE VIEW v_customer_revenue AS
+SELECT o.customer_id, count(*) AS so_dong_mon, sum(l.unit_price::numeric * l.quantity) AS doanh_thu
+FROM nf_orders o JOIN nf_order_lines l USING (order_id) GROUP BY o.customer_id;
+EXPLAIN (COSTS OFF) SELECT * FROM v_customer_revenue WHERE customer_id = 'SAVEA';
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>07-views.sql · region pushdown</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="07-views.pushdown"> GroupAggregate
+   -&gt;  Hash Join
+         Hash Cond: (l.order_id = o.order_id)
+         -&gt;  Seq Scan on nf_order_lines l
+         -&gt;  Hash
+               -&gt;  Bitmap Heap Scan on nf_orders o
+                     Recheck Cond: ((customer_id)::text = 'SAVEA'::text)
+                     -&gt;  Bitmap Index Scan on nf_orders_customer_id_idx
+                           Index Cond: ((customer_id)::text = 'SAVEA'::text)</pre></div>
+<div class="code"><pre data-sql="07-views#fence"><code>-- #region fence · View có LIMIT: PG không thể trải phẳng, phải tính view trước rồi mới lọc (giống TEMPTABLE, slide 41–42)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+CREATE OR REPLACE VIEW v_top_lines AS
+SELECT order_id, product_id, quantity FROM nf_order_lines ORDER BY quantity DESC LIMIT 100;
+EXPLAIN (COSTS OFF) SELECT * FROM v_top_lines WHERE product_id = 1;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>07-views.sql · region fence</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="07-views.fence"> Subquery Scan on v_top_lines
+   Filter: (v_top_lines.product_id = 1)
+   -&gt;  Limit
+         -&gt;  Sort
+               Sort Key: nf_order_lines.quantity DESC
+               -&gt;  Seq Scan on nf_order_lines
+(6 rows)</pre></div>
+</div></details>
+
+<div class="widget" id="w10">
+<div class="widget-head"><h4>W10 · View được trải phẳng hay bị rào lại?</h4><span class="eyebrow">run-w10 · 07-views</span></div>
+<div class="widget-body">
+<p>Chọn một view. Plan là bản đã đo trên máy bạn; nút <mark>Subquery Scan</mark> được tô đậm nếu có.</p>
+<div class="btns tabs" id="w10-tabs" role="group" aria-label="Chọn view"></div>
+<pre class="plan-text" id="w10-plan" aria-live="polite"></pre>
+<div class="out" id="w10-out" aria-live="polite"></div>
+</div>
+</div>
+
+<div class="callout pg" id="sl-42">
+<span class="tag">Slide 42 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>View làm dev tưởng câu lệnh đơn giản trong khi bên dưới rất phức tạp; có trường hợp không dùng index; MySQL không có materialized view.</p></div>
+<div><h5>PG 16 đo được</h5><p>Hai ý đầu đúng trên PG: view <code>v_top_lines</code> chỉ là một dòng <code>SELECT *</code> nhưng chạy Seq Scan + Sort cả bảng. Ý thứ ba thì khác: PG <b>có</b> <code>CREATE MATERIALIZED VIEW</code>, lưu kết quả thật xuống đĩa, muốn số mới phải <code>REFRESH</code>. Bạn đã dựng <code>cs_mv_clicks_daily</code> ở <a href="#chang-6">chặng 6</a>; <code>REFRESH … CONCURRENTLY</code> khi chưa có unique index trả <b class="m" data-run="06-case-studies.report">55000</b>.</p></div>
+</div>
+</div>
+
+<div class="callout key">
+<span class="tag">Slide 43 · <span class="vchip ok">Đúng trên PG16</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Dùng view để gọn câu JOIN, thêm lớp bảo mật (HR chỉ xem hồ sơ, kế toán chỉ xem số dư), giữ tương thích ngược. Dùng merge view để đọc, và luôn xem execution plan.</p></div>
+<div><h5>PG 16 đo được</h5><p>"Merge view" trên PG nghĩa là view đơn giản như <code>v_order_lines</code>: plan đã đo giống JOIN tay. "Xem plan" là đúng cách bạn vừa làm ở W10.</p></div>
+</div>
+<p><b>Lớp bảo mật (chỉ giải thích, chưa chạy trên máy):</b> tạo role <code>hr</code>, rồi <code>GRANT USAGE ON SCHEMA lab07_modeling TO hr</code> (thiếu dòng này role sẽ nhận "permission denied for schema") và <code>GRANT SELECT ON v_staff_profile TO hr</code> mà không cấp quyền trên bảng gốc. Mặc định PG kiểm quyền đọc bảng gốc theo <b>chủ của view</b>, nên HR đọc được view nhưng <code>SELECT</code> thẳng bảng gốc thì bị từ chối. Nếu view lọc theo dòng (ví dụ chỉ chi nhánh của mình), tạo view với <code>WITH (security_barrier)</code> để hàm do người dùng viết không "nhìn trộm" được dòng bị lọc.</p>
+</div>
+
+<div class="callout challenge" id="chang-7-tu-lam">
+<span class="tag">Tự làm · chặng 7</span>
+<p><b>Đề:</b> viết một view tên <code>my_v_…</code> trên <code>nf_order_lines</code> mà planner <b>không</b> trải phẳng được, rồi chạy <code>EXPLAIN (COSTS OFF)</code> một câu lọc từ bên ngoài. Gợi ý: <code>LIMIT</code>, <code>DISTINCT ON</code>, hoặc window function như <code>row_number() OVER (PARTITION BY order_id …)</code>.</p>
+<p><b>PASS khi:</b></p>
+<ul>
+<li>Plan có <code>Subquery Scan</code> và dòng <code>Filter</code> nằm trên nút <code>Limit</code>/<code>WindowAgg</code>/<code>Unique</code>.</li>
+<li>Bạn viết được 1 câu: vì sao đẩy điều kiện xuống sẽ đổi kết quả.</li>
+<li>Thêm điểm: tìm một điều kiện mà PG <b>vẫn</b> đẩy xuống được qua chính view đó (plan không còn Filter ở trên).</li>
+</ul>
+<div class="code"><pre><code>-- Tự kiểm tra: view của bạn có trong schema chưa, và plan ra sao
+SET search_path = lab07_modeling;
+SELECT viewname, definition FROM pg_views
+WHERE schemaname = 'lab07_modeling' AND viewname LIKE 'my\_v\_%';
+EXPLAIN (COSTS OFF) SELECT * FROM my_v_top_line_per_order WHERE product_id = 1;</code></pre></div>
+<label class="fields"><span class="muted">Dán plan của bạn và câu giải thích</span>
+<textarea class="field" data-store="l07-c7-plan" placeholder="Subquery Scan on my_v_… / Filter: … vì …"></textarea>
+</label>
+<details class="fold"><summary>Đáp án (đã chạy trên máy bạn)</summary><div class="fold-body">
+<div class="code"><pre><code>SET search_path = lab07_modeling;
+DROP VIEW IF EXISTS my_v_top_line_per_order;
+-- Mỗi đơn chỉ giữ dòng món có số lượng lớn nhất
+CREATE VIEW my_v_top_line_per_order AS
+SELECT DISTINCT ON (order_id) order_id, product_id, quantity
+FROM nf_order_lines
+ORDER BY order_id, quantity DESC, product_id;
+-- Lọc theo cột KHÔNG nằm trong DISTINCT ON: PG phải tính view trước rồi mới lọc
+EXPLAIN (COSTS OFF) SELECT * FROM my_v_top_line_per_order WHERE product_id = 1;
+-- Lọc theo cột trong DISTINCT ON: PG đẩy xuống được (cả nhóm order_id giữ nguyên)
+EXPLAIN (COSTS OFF) SELECT * FROM my_v_top_line_per_order WHERE order_id = 10248;</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · đáp án chặng 7</div>
+<div class="code terminal"><pre class="code terminal" data-run="07-challenge-answer"> Subquery Scan on my_v_top_line_per_order
+   Filter: (my_v_top_line_per_order.product_id = 1)
+   -&gt;  Unique
+…
+ Limit
+   -&gt;  Sort
+         Sort Key: nf_order_lines.quantity DESC, nf_order_lines.product_id
+         -&gt;  Bitmap Heap Scan on nf_order_lines
+               Recheck Cond: (order_id = 10248)
+               -&gt;  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)</pre></div>
+<p>Lý do: "món lớn nhất của đơn, rồi lọc món 1" chỉ giữ các đơn mà món 1 đứng đầu. "Lọc món 1 trước" thì món 1 luôn đứng đầu, kết quả khác hẳn, nên PG không được đẩy điều kiện xuống và dòng <code>Filter</code> nằm trên <code>Unique</code>. Còn lọc <code>order_id</code> không đổi thứ hạng trong từng đơn: PG đẩy xuống thành <code>Index Cond</code>, phía trên không còn <code>Filter</code>. (Bản dùng <code>row_number() … WHERE rn = 1</code> cũng thành Subquery Scan, nhưng dòng <code>Filter: (rn = 1)</code> luôn nằm trên cùng nên không đạt ý thêm điểm.)</p>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 7</h3>
+<div class="code"><pre data-sql="07-views#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 7
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K7.1' AS ma, CASE WHEN count(*) = 4 THEN '✔' ELSE '✘' END AS ket_qua, 'có 4 view v_order_lines, v_customer_revenue, v_top_lines, v_cheap_products' AS chi_tiet
+FROM pg_views WHERE schemaname = 'lab07_modeling' AND viewname IN ('v_order_lines', 'v_customer_revenue', 'v_top_lines', 'v_cheap_products')
+UNION ALL
+SELECT 'K7.2', CASE WHEN NOT EXISTS (SELECT 1 FROM nf_products WHERE product_id IN (901, 902)) THEN '✔' ELSE '✘' END,
+       'bảng gốc nf_products không giữ dòng thử 901, 902';
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>07-views.sql · region kiem-chung</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="07-views.kiem-chung">  ma  | ket_qua |                                  chi_tiet
+------+---------+----------------------------------------------------------------------------
+ K7.1 | ✔       | có 4 view v_order_lines, v_customer_revenue, v_top_lines, v_cheap_products
+ K7.2 | ✔       | bảng gốc nf_products không giữ dòng thử 901, 902
+(2 rows)</pre></div>
+
+<div class="quiz" data-quiz="7"></div>
+</section>

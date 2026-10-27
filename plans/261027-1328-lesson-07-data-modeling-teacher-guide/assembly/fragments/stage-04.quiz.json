@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Trên bảng ddl_contracts 500.000 dòng, câu ALTER nào làm PG 16 viết lại cả bảng?",
+    "opts": [
+      "ADD COLUMN note text",
+      "ADD COLUMN version int NOT NULL DEFAULT 0",
+      "ADD COLUMN rnd float8 DEFAULT random()",
+      "ADD COLUMN created_at timestamptz NOT NULL DEFAULT now()"
+    ],
+    "ans": 2,
+    "why": "04-table-format #add-column: ở bước random() filenode đổi từ 34014 sang 34030 và mất 527.308 ms, vì mỗi dòng cần một giá trị riêng. Ba câu kia giữ nguyên 34014 và mất khoảng 1 ms; now() chỉ được tính một lần cho cả bảng."
+  },
+  {
+    "q": "ADD COLUMN tam int chỉ mất khoảng 1 ms. Trong lúc chạy, nó giữ khóa gì trên bảng?",
+    "opts": [
+      "Không khóa gì vì không viết lại bảng",
+      "RowExclusiveLock như một câu UPDATE",
+      "ShareLock như CREATE INDEX",
+      "AccessExclusiveLock, chặn cả SELECT"
+    ],
+    "ans": 3,
+    "why": "04-table-format #lock: pg_locks ghi AccessExclusiveLock cho ADD COLUMN (còn SET (fillfactor) chỉ lấy ShareUpdateExclusiveLock). Câu chạy nhanh nhưng nếu phải chờ sau một transaction đang mở thì mọi SELECT xếp hàng sau nó (Bài 14 chặng 3). Vì vậy migration nên mở đầu bằng SET lock_timeout."
+  },
+  {
+    "q": "Phiên A đang CREATE INDEX thường và chưa commit. Phiên B (lock_timeout 2s) đọc rồi UPDATE bảng đó. Kết quả là gì?",
+    "opts": [
+      "Cả SELECT và UPDATE đều chạy ngay",
+      "SELECT chạy được; UPDATE chờ rồi báo 55P03 sau khoảng 2 giây",
+      "SELECT cũng bị chặn vì bảng đang tạo index",
+      "UPDATE gây deadlock 40P01"
+    ],
+    "ans": 1,
+    "why": "04-index-online #plain: A giữ ShareLock. B đọc được 2440 dòng, nhưng UPDATE nhận 55P03 sau 2000.334 ms. ShareLock cho người đọc đi qua và chặn người ghi."
+  },
+  {
+    "q": "Bạn chạy CREATE INDEX CONCURRENTLY trong tab DBX ở chế độ Manual Commit (Tx: [M]) và nhận lỗi. Lý do là gì?",
+    "opts": [
+      "Tài khoản thiếu quyền tạo index",
+      "DBX bọc lệnh trong transaction, mà CONCURRENTLY không chạy được trong transaction (25001)",
+      "Bảng đang có người ghi nên CONCURRENTLY bị từ chối",
+      "Index đã tồn tại"
+    ],
+    "ans": 1,
+    "why": "04-table-format #cic-txn: BEGIN rồi CREATE INDEX CONCURRENTLY báo 25001. Người ghi vẫn chạy trong lúc CIC tạo index (A UPDATE 1 ở 04-index-online #cic), nhưng CIC phải chờ mọi transaction mở từ trước kể cả transaction chỉ đọc; nếu lock_timeout hết trong lúc chờ thì CIC báo 55P03 và để lại index hỏng (indisvalid = false). Vì vậy tab B đặt lock_timeout 15s."
+  }
+]

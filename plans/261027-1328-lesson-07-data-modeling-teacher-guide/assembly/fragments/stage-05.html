@@ -1,0 +1,266 @@
+<!-- CHẶNG 5 -->
+<section id="chang-5" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">05</span>
+    <div>
+      <div class="stage-meta"><span>Slide 21–25</span><span>25 phút</span><span>Day 05</span></div>
+      <h2>Kiểu dữ liệu: chuỗi, số, tiền, thời gian, NULL</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> chọn kiểu cho mỗi cột bằng một con số đo được (byte, độ lệch, mã lỗi), không theo thói quen MySQL.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Kiểu cột quyết định số byte, phép so sánh, và lỗi nào DB chặn hộ bạn.</dd>
+    <dt>TẠI SAO?</dt><dd>Sai kiểu không báo lỗi ngay. Nó lệch tiền, lệch giờ, hoặc làm query trả 0 dòng một cách im lặng.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng tiết kiệm byte bằng <code>float</code> cho tiền hay <code>timestamp</code> cho thời điểm. 4 byte không đáng một lần lệch sổ.</dd>
+  </dl>
+  <p>Slide 21 chỉ là tiêu đề phần. Mở <code>05-data-types.sql</code>, chạy từng region theo thứ tự.</p>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_22_img_01.png" alt="Slide 22: so sánh VARCHAR và TEXT trong MySQL" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 22 · VARCHAR và TEXT/BLOB</figcaption></figure>
+  <div class="callout pg" id="sl-22">
+    <span class="tag">Slide 22 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>VARCHAR cho chuỗi ngắn; TEXT nằm ở vùng lưu riêng, MySQL không index được cả chuỗi TEXT.</p></div>
+      <div><h5>PG 16 đo được</h5><p><code>text</code> và <code>varchar(255)</code> tốn như nhau: <b class="m" data-run="05-data-types.string">12</b> byte cho "xin chao". Chuỗi dài được nén (TOAST): <b class="m" data-run="05-data-types.string">11120</b> byte còn <b class="m" data-run="05-data-types.string">148</b>. Giới hạn index là của B-tree, không phải của kiểu: giá trị quá 2704 byte báo <b class="m" data-run="05-data-types.string-index">54000</b>, dù cột là <code>text</code> hay <code>varchar</code>.</p></div>
+    </div>
+  </div>
+  <div class="code"><pre data-sql="05-data-types#string"><code>-- #region string · text và varchar(255) tốn đúng như nhau trên PG (slide 22)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT pg_column_size('xin chao'::text) AS text_8_ky_tu, pg_column_size('xin chao'::varchar(255)) AS varchar255_8_ky_tu,
+       pg_column_size(repeat('a', 3000)::text) AS text_3000_ky_tu;
+-- Chuỗi dài lưu trong bảng được nén (TOAST) khi vượt khoảng 2 KB: 10.000 ký tự lặp chỉ còn vài trăm byte.
+DROP TABLE IF EXISTS ty_samples;
+CREATE TABLE ty_samples (id int PRIMARY KEY, note text);
+INSERT INTO ty_samples VALUES (1, repeat('món ngon ', 1112));
+SELECT length(note) AS so_ky_tu, octet_length(note) AS so_byte_goc, pg_column_size(note) AS so_byte_luu_that FROM ty_samples;
+-- Giá trị ngắn khi nằm trong bảng dùng header 1 byte, nên nhỏ hơn con số đo trên literal ở trên.
+DROP TABLE IF EXISTS ty_stored;
+CREATE TABLE ty_stored (t text, v varchar(255), n numeric(12,2));
+INSERT INTO ty_stored VALUES ('xin chao', 'xin chao', 123456.78);
+SELECT pg_column_size(t) AS text_trong_bang, pg_column_size(v) AS varchar_trong_bang, pg_column_size(n) AS numeric_trong_bang FROM ty_stored;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #string</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.string"> text_8_ky_tu | varchar255_8_ky_tu | text_3000_ky_tu
+--------------+--------------------+-----------------
+           12 |                 12 |            3004
+…
+ so_ky_tu | so_byte_goc | so_byte_luu_that
+----------+-------------+------------------
+    10008 |       11120 |              148
+…
+ text_trong_bang | varchar_trong_bang | numeric_trong_bang
+-----------------+--------------------+--------------------
+               9 |                  9 |                  9</pre></div>
+  <p>Hai bảng kết quả đo hai thứ khác nhau. <code>pg_column_size</code> trên một literal (<b class="m" data-run="05-data-types.string">12</b> byte) tính header 4 byte của giá trị trong bộ nhớ; còn khi đã nằm trong bảng, chuỗi ngắn chỉ cần header 1 byte nên <code>'xin chao'</code> tốn <b class="m" data-run="05-data-types.string">9</b> byte. Ở cả hai cách đo, <code>text</code> và <code>varchar(255)</code> luôn bằng nhau.</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #string-limit</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.string-limit">SELECT 'Trà sữa trân châu đường đen'::varchar(10) AS ep_kieu_thi_cat;   -- ép kiểu tường minh: PG cắt bớt, không báo lỗi
+ ep_kieu_thi_cat
+-----------------
+ Trà sữa tr
+…
+INSERT INTO ty_short VALUES ('Trà sữa trân châu đường đen');                  -- ghi vào cột: PG báo lỗi
+psql:&lt;stdin&gt;:7: ERROR:  22001: value too long for type character varying(10)</pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #string-index</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.string-index">psql:&lt;stdin&gt;:8: ERROR:  54000: index row size 3216 exceeds btree version 4 maximum 2704 for index "ty_long_body_idx"
+HINT:  Values larger than 1/3 of a buffer page cannot be indexed.
+Consider a function index of an MD5 hash of the value, or use full text indexing.</pre></div>
+  <p>Hai bẫy của <code>varchar(n)</code>: ghi vào cột thì báo <b class="m" data-run="05-data-types.string-limit">22001</b>, nhưng ép kiểu <code>::varchar(10)</code> thì PG cắt im lặng còn <b class="m" data-run="05-data-types.string-limit">Trà sữa tr</b>. Cần giới hạn độ dài thì dùng <code>text</code> + <code>CHECK (length(name) &lt;= 120)</code>: đổi giới hạn sau này chỉ là đổi CHECK.</p>
+
+  <div class="callout pg" id="sl-23">
+    <span class="tag">Slide 23 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Số nguyên dùng loại nhỏ nếu đủ; INT(1) giống INT(9). Tiền không dùng FLOAT/DOUBLE, dùng DECIMAL.</p></div>
+      <div><h5>PG 16 đo được</h5><p><code>smallint</code>/<code>int</code>/<code>bigint</code> = <b class="m" data-run="05-data-types.number">2</b>/<b class="m" data-run="05-data-types.number">4</b>/<b class="m" data-run="05-data-types.number">8</b> byte; <code>numeric(12,2)</code> cho 123456.78 đo trên literal là <b class="m" data-run="05-data-types.number">12</b> byte, nằm trong bảng còn <b class="m" data-run="05-data-types.string">9</b> byte. "Nhỏ" phải còn chỗ: <code>2147483647 + 1</code> báo <b class="m" data-run="05-data-types.number">22003</b>. PG không có cú pháp <code>INT(1)</code>: <code>SELECT 1::int(1)</code> báo <b class="m" data-run="05-data-types.int-width">42601</b>, vì đó là độ rộng hiển thị riêng của MySQL. Phần lời khuyên (số nhỏ đủ dùng, tiền không dùng float) thì đúng nguyên trên PG.</p></div>
+    </div>
+  </div>
+
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · vì sao tiền không bao giờ là float</span>
+    <ol>
+      <li>Chạy region <code>money</code> bên dưới. Dòng đầu: <code>0.1 + 0.2</code> bằng float ra <b class="m" data-run="05-data-types.money">0.30000000000000004</b>, và phép so sánh với 0.3 ra <code>f</code>. Lý do: 0,1 không biểu diễn đúng được trong hệ nhị phân, máy lưu số gần nhất.</li>
+      <li>Sai số nhỏ cộng dồn: cộng 0,1 một triệu lần ra <b class="m" data-run="05-data-types.money">100000.00000133288</b>, còn <code>numeric</code> ra đúng <b class="m" data-run="05-data-types.money">100000.0</b>.</li>
+      <li>Dữ liệu thật: northwind lưu đơn giá và chiết khấu bằng <code>real</code>. So <b>cùng một cách tính</b> mới công bằng. Không làm tròn: float ra <b class="m" data-run="05-data-types.money">1265793.038653364</b>, numeric ra <b class="m" data-run="05-data-types.money">1265793.0395</b>, lệch chưa tới 0,001. Làm tròn từng dòng về 2 số lẻ như in hóa đơn: float ra <b class="m" data-run="05-data-types.money">1265792.95</b>, numeric ra <b class="m" data-run="05-data-types.money">1265793.29</b>. Float cho ra những giá trị kiểu 0,0749999 nên làm tròn sai ở các dòng "x,xx5", cộng lại lệch hẳn 34 xu so với sổ sách.</li>
+      <li>Kết luận cho quán: giá món là <code>numeric(12,2)</code> (hoặc <code>bigint</code> đếm đồng, vì VND không có xu). Prisma: <code>Decimal @db.Decimal(12,2)</code>, ở Node đọc ra là <code>Decimal</code>, đừng ép sang <code>number</code> trước khi cộng.</li>
+    </ol>
+  </div>
+  <div class="code"><pre data-sql="05-data-types#money"><code>-- #region money · Tiền không bao giờ dùng float (slide 23)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 0.1::float8 + 0.2::float8 AS float_cong, (0.1::float8 + 0.2::float8) = 0.3 AS float_bang_0_3,
+       0.1::numeric + 0.2::numeric AS numeric_cong;
+-- Cộng 0,1 một triệu lần:
+SELECT sum(0.1::float8) AS tong_float, sum(0.1::numeric) AS tong_numeric FROM generate_series(1, 1000000);
+-- Dữ liệu thật: northwind lưu đơn giá, chiết khấu bằng real (float 4 byte). So cùng một cách tính:
+-- (1) không làm tròn: float lệch rất nhỏ; (2) làm tròn từng dòng về 2 số lẻ như hóa đơn: float lệch hẳn.
+SELECT sum(unit_price * quantity * (1 - discount)) AS real_khong_lam_tron,
+       sum(unit_price::numeric * quantity * (1 - discount::numeric)) AS numeric_khong_lam_tron,
+       sum(round((unit_price * quantity * (1 - discount))::numeric, 2)) AS real_lam_tron_tung_dong,
+       sum(round(unit_price::numeric * quantity * (1 - discount::numeric), 2)) AS numeric_lam_tron_tung_dong
+FROM order_sheet;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #money</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.money">     float_cong      | float_bang_0_3 | numeric_cong
+---------------------+----------------+--------------
+ 0.30000000000000004 | f              |          0.3
+…
+     tong_float     | tong_numeric
+--------------------+--------------
+ 100000.00000133288 |     100000.0
+…
+ real_khong_lam_tron | numeric_khong_lam_tron | real_lam_tron_tung_dong | numeric_lam_tron_tung_dong
+---------------------+------------------------+-------------------------+----------------------------
+   1265793.038653364 |           1265793.0395 |              1265792.95 |                 1265793.29</pre></div>
+
+  <div class="widget" id="w5">
+    <div class="widget-head"><h4>W5 · Chọn kiểu cho từng trường</h4><span class="eyebrow">run-w5 · 05-data-types</span></div>
+    <div class="widget-body">
+      <p>Bấm một trường của bảng món ăn để xem kiểu PG, kiểu Prisma, số byte đo được và cái bẫy.</p>
+      <div class="btns" id="w5-fields" role="group" aria-label="Chọn trường"></div>
+      <div class="out" id="w5-out" aria-live="polite"></div>
+      <div class="panel" id="w5-money"></div>
+    </div>
+  </div>
+
+  <div class="callout pg" id="sl-24">
+    <span class="tag">Slide 24 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>TIMESTAMP ít byte nhưng giới hạn năm; DATETIME dễ đọc, không giới hạn, phụ thuộc múi giờ. Nên lưu kèm múi giờ, mọi nơi đặt múi giờ 0.</p></div>
+      <div><h5>PG 16 đo được</h5><p><code>timestamptz</code> và <code>timestamp</code> đều <b class="m" data-run="05-data-types.time">8</b> byte. <code>timestamptz</code> lưu một thời điểm: 9 giờ sáng Việt Nam đọc ở phiên UTC thành <b class="m" data-run="05-data-types.time">2026-10-28 02:00:00+00</b>. <code>timestamp</code> chỉ lưu chữ số trên đồng hồ, đọc ở đâu cũng <b class="m" data-run="05-data-types.time">2026-10-28 09:00:00</b>, không ai biết đó là giờ nào. Năm 2100 lưu bình thường.</p></div>
+    </div>
+  </div>
+  <div class="code"><pre data-sql="05-data-types#time"><code>-- #region time · timestamptz lưu một thời điểm; timestamp chỉ lưu "chữ số trên đồng hồ" (slide 24)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT pg_column_size(now()) AS timestamptz_byte, pg_column_size(now()::timestamp) AS timestamp_byte, pg_column_size(current_date) AS date_byte;
+DROP TABLE IF EXISTS ty_times;
+CREATE TEMP TABLE ty_times (co_mui_gio timestamptz, khong_mui_gio timestamp);
+SET TimeZone = 'Asia/Ho_Chi_Minh';                       -- app ở Việt Nam ghi lúc 9 giờ sáng
+INSERT INTO ty_times VALUES ('2026-10-28 09:00', '2026-10-28 09:00');
+SELECT co_mui_gio, khong_mui_gio FROM ty_times;
+SET TimeZone = 'UTC';                                    -- server/worker khác đọc lại
+SELECT co_mui_gio, khong_mui_gio FROM ty_times;
+-- Ép chuỗi có múi giờ vào timestamp: phần +07 bị BỎ, không báo lỗi.
+SELECT '2026-10-28 09:00+07'::timestamp AS mat_mui_gio, '2026-10-28 09:00+07'::timestamptz AS giu_thoi_diem;
+-- Không có giới hạn năm 2038 như TIMESTAMP của MySQL:
+SELECT '2100-01-01 00:00+07'::timestamptz AS nam_2100;
+RESET TimeZone;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #time</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.time"> timestamptz_byte | timestamp_byte | date_byte
+------------------+----------------+-----------
+                8 |              8 |         4
+…
+SET TimeZone = 'Asia/Ho_Chi_Minh';                       -- app ở Việt Nam ghi lúc 9 giờ sáng
+…
+ 2026-10-28 09:00:00+07 | 2026-10-28 09:00:00
+…
+SET TimeZone = 'UTC';                                    -- server/worker khác đọc lại
+…
+ 2026-10-28 02:00:00+00 | 2026-10-28 09:00:00
+…
+     mat_mui_gio     |     giu_thoi_diem
+---------------------+------------------------
+ 2026-10-28 09:00:00 | 2026-10-28 02:00:00+00
+…
+ 2099-12-31 17:00:00+00</pre></div>
+  <p>Bẫy khó thấy nhất: <code>'2026-10-28 09:00+07'::timestamp</code> bỏ mất phần <code>+07</code> mà không báo lỗi. Prisma mặc định map <code>DateTime</code> sang <code>timestamp(3)</code>, nên cột thời điểm cần <code>@db.Timestamptz(3)</code>. Giờ hẹn giao hàng thì lưu <code>timestamptz</code> kèm tên múi giờ của cửa hàng (chặng 6, lịch).</p>
+
+  <div class="callout pg" id="sl-25">
+    <span class="tag">Slide 25 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Nhỏ là tốt, đơn giản là tốt. Tránh NULL vì MySQL khó tối ưu cột nullable.</p></div>
+      <div><h5>PG 16 đo được</h5><p>NULL rất rẻ: dòng có 3 cột NULL (chỉ <code>id</code> có giá trị) <b class="m" data-run="05-data-types.null">28</b> byte, dòng có giá trị <b class="m" data-run="05-data-types.null">63</b> byte (PG chỉ bật 1 bit). Lý do tránh NULL trên PG là ngữ nghĩa: <code>NOT IN</code> gặp một NULL trả <b class="m" data-run="05-data-types.null">0</b> dòng, <code>NOT EXISTS</code> trả <b class="m" data-run="05-data-types.null">76</b>. UNIQUE cho phép nhiều NULL; muốn chặn thì <code>NULLS NOT DISTINCT</code> (<b class="m" data-run="05-data-types.null-unique">23505</b>).</p></div>
+    </div>
+  </div>
+  <div class="code"><pre data-sql="05-data-types#null"><code>-- #region null · NULL rẻ khi lưu nhưng có bẫy khi so sánh (slide 25)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS ty_nulls;
+CREATE TABLE ty_nulls (id int, a bigint, b bigint, c text);
+INSERT INTO ty_nulls VALUES (1, 100, 200, 'có giá trị'), (2, NULL, NULL, NULL);
+SELECT id, pg_column_size(t.*) AS byte_ca_dong FROM ty_nulls t ORDER BY id;
+-- Bẫy NOT IN: danh sách loại trừ có một NULL → không dòng nào thỏa.
+SELECT count(*) AS so_dong FROM nf_products WHERE product_id NOT IN (SELECT x FROM (VALUES (1), (NULL)) v(x));
+SELECT count(*) AS so_dong FROM nf_products p WHERE NOT EXISTS (SELECT 1 FROM (VALUES (1), (NULL)) v(x) WHERE v.x = p.product_id);
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #null</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.null"> id | byte_ca_dong
+----+--------------
+  1 |           63
+  2 |           28
+…
+SELECT count(*) AS so_dong FROM nf_products WHERE product_id NOT IN (SELECT x FROM (VALUES (1), (NULL)) v(x));
+ so_dong
+---------
+       0
+…
+SELECT count(*) AS so_dong FROM nf_products p WHERE NOT EXISTS (SELECT 1 FROM (VALUES (1), (NULL)) v(x) WHERE v.x = p.product_id);
+ so_dong
+---------
+      76</pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #null-unique</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.null-unique"> so_khach_chua_co_sdt
+----------------------
+                    2
+…
+INSERT INTO ty_phone_strict VALUES (1, NULL), (2, NULL);   -- NULL thứ hai bị coi là trùng
+psql:&lt;stdin&gt;:9: ERROR:  23505: duplicate key value violates unique constraint "ty_phone_strict_phone_key"
+DETAIL:  Key (phone)=(null) already exists.</pre></div>
+  <p>Vì sao <code>NOT IN</code> ra 0? <code>5 NOT IN (1, NULL)</code> nghĩa là <code>5 &lt;&gt; 1 AND 5 &lt;&gt; NULL</code>. Vế sau là "không biết", nên cả biểu thức không bao giờ đúng. Viết <code>NOT EXISTS</code> thay cho <code>NOT IN (subquery)</code>.</p>
+
+  <div class="callout challenge" id="chang-5-tu-lam">
+    <span class="tag">Tự làm · chặng 5</span>
+    <p><b>Đề:</b> tạo bảng <code>my_menu_items</code> cho chuỗi trà sữa, đúng 10 cột: id, cửa hàng, tên món, giá, tồn kho, ghi chú, trạng thái, tùy chọn (size, topping), created_at, updated_at. Mỗi cột ghi một dòng lý do, và lý do phải dẫn một con số đo được ở chặng này.</p>
+    <p><b>PASS khi:</b> <code>so_cot = 10</code>, <code>cot_float = 0</code>, <code>cot_timestamp_khong_mui_gio = 0</code>, <code>cot_varchar255 = 0</code>.</p>
+    <div class="code"><pre><code>SET search_path = lab07_modeling;
+SELECT count(*) AS so_cot,
+       count(*) FILTER (WHERE data_type IN ('real', 'double precision')) AS cot_float,
+       count(*) FILTER (WHERE data_type = 'timestamp without time zone') AS cot_timestamp_khong_mui_gio,
+       count(*) FILTER (WHERE character_maximum_length = 255) AS cot_varchar255
+FROM information_schema.columns
+WHERE table_schema = 'lab07_modeling' AND table_name = 'my_menu_items';</code></pre></div>
+    <label class="fields"><span class="muted">Lý do chọn kiểu cho từng cột</span><textarea class="field" data-store="l07-c5-reasons" placeholder="price numeric(12,2): float cộng 0,1 một triệu lần lệch …"></textarea></label>
+    <details class="fold"><summary>Lời giải mẫu</summary><div class="fold-body">
+      <div class="code"><pre><code>SET search_path = lab07_modeling;  -- thiếu dòng này thì bảng bị tạo nhầm sang lab03_indexing
+DROP TABLE IF EXISTS my_menu_items;
+CREATE TABLE my_menu_items (
+  id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  store_id   bigint NOT NULL,                              -- khóa ngoại: nhớ index (chặng 3)
+  name       text NOT NULL CHECK (length(name) &lt;= 120),    -- text = varchar(255): tốn như nhau
+  price      numeric(12,2) NOT NULL CHECK (price &gt;= 0),    -- float lệch 0.30000000000000004
+  stock_qty  int NOT NULL DEFAULT 0,                       -- 4 byte, trần 2147483647
+  note       text,                                         -- NULL được: dòng NULL chỉ 28 byte
+  status     text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SOLD_OUT', 'HIDDEN')),
+  options    jsonb NOT NULL DEFAULT '{}',                  -- size, topping: thêm khóa không cần ALTER
+  created_at timestamptz NOT NULL DEFAULT now(),           -- thời điểm: 09:00+07 = 02:00+00
+  updated_at timestamptz NOT NULL DEFAULT now()
+);</code></pre></div>
+      <p>Prisma tương ứng: <code>price Decimal @db.Decimal(12,2)</code>, <code>createdAt DateTime @db.Timestamptz(3) @default(now())</code>, <code>options Json @default("{}")</code>. CHECK không khai báo được trong schema Prisma: thêm tay vào <code>migration.sql</code>.</p>
+    </div></details>
+  </div>
+
+  <h3>Kiểm chứng chặng 5</h3>
+  <div class="code"><pre data-sql="05-data-types#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 5
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K5.1' AS ma, CASE WHEN pg_column_size('abc'::text) = pg_column_size('abc'::varchar(255)) THEN '✔' ELSE '✘' END AS ket_qua,
+       'text và varchar(255) tốn bằng nhau' AS chi_tiet
+UNION ALL
+SELECT 'K5.2', CASE WHEN (0.1::numeric + 0.2::numeric) = 0.3 AND (0.1::float8 + 0.2::float8) &lt;&gt; 0.3 THEN '✔' ELSE '✘' END, 'numeric cộng đúng, float lệch'
+UNION ALL
+SELECT 'K5.3', CASE WHEN (SELECT count(*) FROM ty_long) = 0 THEN '✔' ELSE '✘' END, 'ty_long không nhận chuỗi 3.200 byte vào B-tree'
+UNION ALL
+SELECT 'K5.4', CASE WHEN (SELECT pg_column_size(t.*) FROM ty_nulls t WHERE id = 2) &lt; (SELECT pg_column_size(t.*) FROM ty_nulls t WHERE id = 1)
+               THEN '✔' ELSE '✘' END, 'dòng toàn NULL nhỏ hơn dòng có giá trị';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>05-data-types.sql #kiem-chung</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="05-data-types.kiem-chung">  ma  | ket_qua |                    chi_tiet
+------+---------+------------------------------------------------
+ K5.1 | ✔       | text và varchar(255) tốn bằng nhau
+ K5.2 | ✔       | numeric cộng đúng, float lệch
+ K5.3 | ✔       | ty_long không nhận chuỗi 3.200 byte vào B-tree
+ K5.4 | ✔       | dòng toàn NULL nhỏ hơn dòng có giá trị
+(4 rows)</pre></div>
+
+  <div class="quiz" data-quiz="5"></div>
+</section>

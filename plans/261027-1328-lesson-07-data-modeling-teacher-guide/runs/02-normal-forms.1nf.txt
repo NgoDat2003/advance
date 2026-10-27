@@ -1,0 +1,35 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region 1nf · 1NF: mỗi ô một giá trị, mỗi dòng một món — nhưng thông tin bị lặp
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.189 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.130 ms
+SET
+Time: 0.077 ms
+SELECT order_id, product_id, customer_name, customer_city, product_name, category_name, quantity
+FROM order_sheet ORDER BY order_id, product_id LIMIT 5;
+ order_id | product_id |       customer_name       | customer_city |         product_name          | category_name  | quantity 
+----------+------------+---------------------------+---------------+-------------------------------+----------------+----------
+    10248 |         11 | Vins et alcools Chevalier | Reims         | Queso Cabrales                | Dairy Products |       12
+    10248 |         42 | Vins et alcools Chevalier | Reims         | Singaporean Hokkien Fried Mee | Grains/Cereals |       10
+    10248 |         72 | Vins et alcools Chevalier | Reims         | Mozzarella di Giovanni        | Dairy Products |        5
+    10249 |         14 | Toms Spezialitäten        | Münster       | Tofu                          | Produce        |        9
+    10249 |         51 | Toms Spezialitäten        | Münster       | Manjimup Dried Apples         | Produce        |       40
+(5 rows)
+
+Time: 1.402 ms
+-- Cùng một sự thật bị chép lại bao nhiêu lần?
+SELECT 'tên món product_id = 1' AS su_that, count(*) AS so_lan_lap FROM order_sheet WHERE product_id = 1
+UNION ALL SELECT 'thành phố của khách SAVEA', count(*) FROM order_sheet WHERE customer_id = 'SAVEA';
+          su_that          | so_lan_lap 
+---------------------------+------------
+ tên món product_id = 1    |         38
+ thành phố của khách SAVEA |        116
+(2 rows)
+
+Time: 2.209 ms
+-- #endregion

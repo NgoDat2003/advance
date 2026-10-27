@@ -1,0 +1,92 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region report · Đếm click hôm qua: chính xác, xấp xỉ, hay tính sẵn bằng materialized view? (slide 33)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.131 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.055 ms
+SET
+Time: 0.083 ms
+DROP MATERIALIZED VIEW IF EXISTS cs_mv_clicks_daily;
+DROP MATERIALIZED VIEW
+Time: 4.661 ms
+DROP TABLE IF EXISTS cs_clicks;
+DROP TABLE
+Time: 2.970 ms
+CREATE TABLE cs_clicks (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, post_id int NOT NULL, click_at timestamptz NOT NULL);
+CREATE TABLE
+Time: 8.047 ms
+-- 1.000.000 click trong 10 ngày 26/10 → 04/11/2026 (864.000 giây). Số click nhiều hơn số giây nên ~1,6 ngày đầu có 2 click/giây.
+INSERT INTO cs_clicks (post_id, click_at)
+SELECT 1 + g % 500, timestamptz '2026-10-26 00:00+07' + (g % 864000) * interval '1 second' FROM generate_series(1, 1000000) g;
+INSERT 0 1000000
+Time: 1574.849 ms (00:01.575)
+ANALYZE cs_clicks;
+ANALYZE
+Time: 61.278 ms
+-- Chính xác: quét bảng.
+SELECT count(*) AS click_ngay_27 FROM cs_clicks WHERE click_at >= '2026-10-27 00:00+07' AND click_at < '2026-10-28 00:00+07';
+ click_ngay_27 
+---------------
+        136001
+(1 row)
+
+Time: 25.121 ms
+-- Xấp xỉ: con số thống kê có sẵn, gần như miễn phí.
+SELECT reltuples::bigint AS uoc_luong_tong_click FROM pg_class WHERE oid = 'cs_clicks'::regclass;
+ uoc_luong_tong_click 
+----------------------
+              1000000
+(1 row)
+
+Time: 2.655 ms
+-- HyperLogLog cần extension hll; máy này không có.
+SELECT count(*) AS co_extension_hll FROM pg_available_extensions WHERE name = 'hll';
+ co_extension_hll 
+------------------
+                0
+(1 row)
+
+Time: 5.067 ms
+-- Tính sẵn: materialized view lưu kết quả thật vào đĩa; muốn số mới phải REFRESH.
+CREATE MATERIALIZED VIEW cs_mv_clicks_daily AS
+SELECT (click_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS ngay, count(*) AS so_click FROM cs_clicks GROUP BY 1;
+SELECT 10
+Time: 268.705 ms
+SELECT ngay, so_click FROM cs_mv_clicks_daily WHERE ngay = '2026-10-27';
+    ngay    | so_click 
+------------+----------
+ 2026-10-27 |   136001
+(1 row)
+
+Time: 0.491 ms
+INSERT INTO cs_clicks (post_id, click_at) VALUES (1, '2026-10-27 12:00+07');
+INSERT 0 1
+Time: 1.356 ms
+SELECT ngay, so_click FROM cs_mv_clicks_daily WHERE ngay = '2026-10-27';   -- chưa đổi
+    ngay    | so_click 
+------------+----------
+ 2026-10-27 |   136001
+(1 row)
+
+Time: 0.156 ms
+REFRESH MATERIALIZED VIEW cs_mv_clicks_daily;
+REFRESH MATERIALIZED VIEW
+Time: 283.816 ms
+SELECT ngay, so_click FROM cs_mv_clicks_daily WHERE ngay = '2026-10-27';   -- tăng 1
+    ngay    | so_click 
+------------+----------
+ 2026-10-27 |   136002
+(1 row)
+
+Time: 0.392 ms
+-- REFRESH thường khóa view (người đọc phải chờ). CONCURRENTLY thì không khóa người đọc, nhưng cần một unique index:
+REFRESH MATERIALIZED VIEW CONCURRENTLY cs_mv_clicks_daily;
+psql:<stdin>:26: ERROR:  55000: cannot refresh materialized view "lab07_modeling.cs_mv_clicks_daily" concurrently
+HINT:  Create a unique index with no WHERE clause on one or more columns of the materialized view.
+LOCATION:  ExecRefreshMatView, matview.c:254
+Time: 0.231 ms
+-- #endregion

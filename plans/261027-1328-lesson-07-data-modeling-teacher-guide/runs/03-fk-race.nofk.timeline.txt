@@ -1,0 +1,79 @@
+── A · bước A1 · 15:14:10.115 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn tồn tại?' AS viec;
+ buoc |     luc      |                 viec                  
+------+--------------+---------------------------------------
+ A1   | 15:14:10.115 | app kiểm tra: cửa hàng 7 còn tồn tại?
+(1 row)
+
+Time: 2.420 ms
+SELECT count(*) AS cua_hang_7_ton_tai FROM race_stores WHERE id = 7;
+ cua_hang_7_ton_tai 
+--------------------
+                  1
+(1 row)
+
+Time: 1.422 ms
+SELECT pg_sleep(6);   -- giả lập app gọi API khác / tính toán. Lúc này hãy chạy phiên B.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6019.199 ms (00:06.019)
+── B · bước B1 · 15:14:11.136 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn hợp đồng?' AS viec;
+ buoc |     luc      |                  viec                  
+------+--------------+----------------------------------------
+ B1   | 15:14:11.136 | app kiểm tra: cửa hàng 7 còn hợp đồng?
+(1 row)
+
+Time: 0.848 ms
+SELECT count(*) AS hop_dong_cua_7 FROM race_contracts WHERE store_id = 7;   -- 0: A mới kiểm tra, chưa ghi hợp đồng nào
+ hop_dong_cua_7 
+----------------
+              0
+(1 row)
+
+Time: 0.991 ms
+DELETE FROM race_stores WHERE id = 7;
+DELETE 1
+Time: 1.901 ms
+── B · bước B2 · 15:14:11.140 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đã xóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B2   | 15:14:11.140 | đã xóa cửa hàng 7
+(1 row)
+
+Time: 0.321 ms
+-- #endregion
+── A · bước A2 · 15:14:16.138 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'kiểm tra đã qua → tạo hợp đồng' AS viec;
+ buoc |     luc      |              viec              
+------+--------------+--------------------------------
+ A2   | 15:14:16.138 | kiểm tra đã qua → tạo hợp đồng
+(1 row)
+
+Time: 0.318 ms
+INSERT INTO race_contracts (store_id) VALUES (7);
+INSERT 0 1
+Time: 0.881 ms
+COMMIT;
+COMMIT
+Time: 1.560 ms
+── A · bước A3 · 15:14:16.141 ──
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đếm hợp đồng mồ côi' AS viec;
+ buoc |     luc      |        viec         
+------+--------------+---------------------
+ A3   | 15:14:16.141 | đếm hợp đồng mồ côi
+(1 row)
+
+Time: 0.327 ms
+SELECT count(*) AS orphans FROM race_contracts c WHERE NOT EXISTS (SELECT 1 FROM race_stores s WHERE s.id = c.store_id);
+ orphans 
+---------
+       1
+(1 row)
+
+Time: 0.773 ms
+-- #endregion

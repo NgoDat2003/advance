@@ -1,0 +1,65 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region join · Cách 3: mỗi loại cha một bảng bình luận riêng, FK đầy đủ; gộp lại bằng UNION ALL khi cần
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.127 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.107 ms
+SET
+Time: 0.082 ms
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7') ON CONFLICT DO NOTHING;
+INSERT 0 1
+Time: 2.444 ms
+DROP TABLE IF EXISTS poly_post_comments, poly_product_comments;
+psql:<stdin>:5: NOTICE:  00000: table "poly_post_comments" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:5: NOTICE:  00000: table "poly_product_comments" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.236 ms
+CREATE TABLE poly_post_comments (
+  id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, post_id int NOT NULL REFERENCES poly_posts (id) ON DELETE CASCADE, body text NOT NULL);
+CREATE TABLE
+Time: 14.604 ms
+CREATE TABLE poly_product_comments (
+  id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, product_id int NOT NULL REFERENCES poly_products (id) ON DELETE CASCADE, body text NOT NULL);
+CREATE TABLE
+Time: 10.320 ms
+CREATE INDEX ON poly_post_comments (post_id);
+CREATE INDEX
+Time: 4.408 ms
+CREATE INDEX ON poly_product_comments (product_id);
+CREATE INDEX
+Time: 5.646 ms
+INSERT INTO poly_post_comments (post_id, body) VALUES (1, 'Chúc mừng!');
+INSERT 0 1
+Time: 2.810 ms
+INSERT INTO poly_product_comments (product_id, body) VALUES (1, 'Ngon'), (2, 'Mặn mà');
+INSERT 0 2
+Time: 1.897 ms
+SELECT 'Post' AS loai, post_id AS cha_id, body FROM poly_post_comments
+UNION ALL
+SELECT 'Product', product_id, body FROM poly_product_comments ORDER BY 1, 2;
+  loai   | cha_id |    body    
+---------+--------+------------
+ Post    |      1 | Chúc mừng!
+ Product |      1 | Ngon
+ Product |      2 | Mặn mà
+(3 rows)
+
+Time: 0.936 ms
+DELETE FROM poly_posts WHERE id = 1;
+DELETE 1
+Time: 2.204 ms
+SELECT (SELECT count(*) FROM poly_post_comments c WHERE NOT EXISTS (SELECT 1 FROM poly_posts p WHERE p.id = c.post_id))
+     + (SELECT count(*) FROM poly_product_comments c WHERE NOT EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.product_id)) AS orphans;
+ orphans 
+---------
+       0
+(1 row)
+
+Time: 0.676 ms
+-- #endregion

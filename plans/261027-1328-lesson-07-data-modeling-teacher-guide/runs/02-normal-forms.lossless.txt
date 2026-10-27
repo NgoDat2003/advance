@@ -1,0 +1,33 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region lossless · Ghép lại các bảng 3NF phải ra đúng bảng phẳng ban đầu (tách không mất dữ liệu)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.269 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.105 ms
+SET
+Time: 0.087 ms
+CREATE OR REPLACE TEMP VIEW rejoin AS
+SELECT l.order_id, l.product_id, o.order_date, o.customer_id, c.customer_name, c.customer_city, o.employee_name,
+       p.product_name, p.category_name, p.supplier_name, l.unit_price, l.quantity, l.discount
+FROM nf_order_lines l JOIN nf_orders o USING (order_id) JOIN nf_customers c USING (customer_id) JOIN nf_products p USING (product_id);
+CREATE VIEW
+Time: 8.747 ms
+SELECT count(*) AS so_dong_lech FROM (SELECT * FROM rejoin EXCEPT SELECT * FROM order_sheet) x;
+ so_dong_lech 
+--------------
+            0
+(1 row)
+
+Time: 8.480 ms
+SELECT count(*) AS so_dong_lech FROM (SELECT * FROM order_sheet EXCEPT SELECT * FROM rejoin) x;
+ so_dong_lech 
+--------------
+            0
+(1 row)
+
+Time: 4.042 ms
+-- #endregion

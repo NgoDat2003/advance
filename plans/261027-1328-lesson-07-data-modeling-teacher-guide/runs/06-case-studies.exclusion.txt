@@ -1,0 +1,41 @@
+-- chạy lúc 27/10/2026 21:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region exclusion · Cách thứ hai: lưu khoảng ngày và để DB cấm chồng lấn bằng EXCLUDE (slide 29–31)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.147 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.091 ms
+SET
+Time: 0.106 ms
+DROP TABLE IF EXISTS cs_stays;
+psql:<stdin>:4: NOTICE:  00000: table "cs_stays" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.243 ms
+CREATE TABLE cs_stays (
+  id          int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  homestay_id int NOT NULL REFERENCES cs_homestays (id),
+  guest       text NOT NULL,
+  during      daterange NOT NULL,
+  EXCLUDE USING gist (homestay_id WITH =, during WITH &&)   -- cùng căn (=) và khoảng ngày chồng nhau (&&) thì cấm
+);
+CREATE TABLE
+Time: 19.103 ms
+INSERT INTO cs_stays (homestay_id, guest, during) VALUES (1, 'Đạt', daterange('2026-11-20', '2026-11-23'));
+INSERT 0 1
+Time: 2.935 ms
+INSERT INTO cs_stays (homestay_id, guest, during) VALUES (2, 'Lan', daterange('2026-11-22', '2026-11-24'));   -- căn khác: được
+INSERT 0 1
+Time: 1.188 ms
+INSERT INTO cs_stays (homestay_id, guest, during) VALUES (1, 'Minh', daterange('2026-11-22', '2026-11-24')); -- trùng đêm 22
+psql:<stdin>:14: ERROR:  23P01: conflicting key value violates exclusion constraint "cs_stays_homestay_id_during_excl"
+DETAIL:  Key (homestay_id, during)=(1, [2026-11-22,2026-11-24)) conflicts with existing key (homestay_id, during)=(1, [2026-11-20,2026-11-23)).
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  cs_stays
+CONSTRAINT NAME:  cs_stays_homestay_id_during_excl
+LOCATION:  check_exclusion_or_unique_constraint, execIndexing.c:874
+Time: 0.928 ms
+-- #endregion

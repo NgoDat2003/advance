@@ -1,0 +1,46 @@
+-- chạy lúc 27/10/2026 22:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region lock · Thêm cột "nhanh" vẫn cần khóa mạnh nhất; vài ALTER nhẹ thì không (nối với Bài 14 chặng 3)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.119 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.078 ms
+SET
+Time: 0.084 ms
+BEGIN;
+BEGIN
+Time: 0.132 ms
+ALTER TABLE ddl_contracts ADD COLUMN tam int;
+ALTER TABLE
+Time: 0.955 ms
+SELECT mode, granted FROM pg_locks WHERE relation = 'ddl_contracts'::regclass AND pid = pg_backend_pid();
+        mode         | granted 
+---------------------+---------
+ AccessExclusiveLock | t
+(1 row)
+
+Time: 2.936 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.106 ms
+-- Đổi tham số lưu trữ (fillfactor) không đụng cấu trúc dòng nên lấy khóa nhẹ hơn: SELECT, INSERT, UPDATE vẫn chạy.
+BEGIN;
+BEGIN
+Time: 0.143 ms
+ALTER TABLE ddl_contracts SET (fillfactor = 90);
+ALTER TABLE
+Time: 0.509 ms
+SELECT mode, granted FROM pg_locks WHERE relation = 'ddl_contracts'::regclass AND pid = pg_backend_pid();
+           mode           | granted 
+--------------------------+---------
+ ShareUpdateExclusiveLock | t
+(1 row)
+
+Time: 0.315 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.112 ms
+-- #endregion

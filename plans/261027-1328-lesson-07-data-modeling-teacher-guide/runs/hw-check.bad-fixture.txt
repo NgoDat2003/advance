@@ -1,0 +1,93 @@
+-- chạy lúc 27/10/2026 22:16 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- Bài 07 · Tự chấm bài tập slide 35: thiết kế schema đặt vé máy bay theo "table template".
+-- Bạn tạo các bảng tên bắt đầu bằng hw_ trong schema lab07_modeling (ví dụ hw_flights, hw_seats, hw_bookings).
+-- Cách chạy trong DBX: Ctrl+A → Run. Mỗi dòng là một luật (H0–H9), ket_qua ✔ hoặc ✘ kèm tên bảng/cột vi phạm.
+WITH t AS (
+  SELECT c.oid, c.relname FROM pg_class c
+  WHERE c.relnamespace = to_regnamespace('lab07_modeling') AND c.relkind = 'r' AND c.relname LIKE 'hw\_%'
+),
+cols AS (
+  SELECT t.relname, a.attname, format_type(a.atttypid, a.atttypmod) AS typ, a.atttypid, a.attnum, t.oid
+  FROM t JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum > 0 AND NOT a.attisdropped
+),
+fk AS (  -- cột đầu tiên của mỗi khóa ngoại và có index nào bắt đầu bằng cột đó không
+  SELECT t.relname, con.conname, a.attname,
+         EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = t.oid AND i.indkey[0] = con.conkey[1]) AS has_index
+  FROM t JOIN pg_constraint con ON con.conrelid = t.oid AND con.contype = 'f'
+  JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = con.conkey[1]
+),
+rules(ma, ket_qua, chi_tiet) AS (
+  SELECT 'H0', CASE WHEN count(*) > 0 THEN '✔' ELSE '✘' END,
+         CASE WHEN count(*) > 0 THEN format('%s bảng hw_*: %s', count(*), string_agg(relname, ', ' ORDER BY relname))
+              ELSE 'chưa có bảng hw_* nào trong lab07_modeling' END
+  FROM t
+  UNION ALL
+  SELECT 'H1', CASE WHEN count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM pg_constraint p WHERE p.conrelid = t.oid AND p.contype = 'p')) = 0
+                     AND count(*) > 0 THEN '✔' ELSE '✘' END,
+         'mỗi bảng có khóa chính. Thiếu: ' || coalesce(string_agg(relname, ', ') FILTER (WHERE NOT EXISTS (SELECT 1 FROM pg_constraint p WHERE p.conrelid = t.oid AND p.contype = 'p')), '—')
+  FROM t
+  UNION ALL
+  SELECT 'H2', CASE WHEN count(*) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         'mỗi bảng có created_at, updated_at kiểu timestamptz và KHÔNG cột nào dùng timestamp không múi giờ (slide 20, 24). Sai: ' || coalesce(string_agg(x, ', '), '—')
+  FROM (SELECT t.relname || '.' || need AS x FROM t CROSS JOIN (VALUES ('created_at'), ('updated_at')) v(need)
+        WHERE NOT EXISTS (SELECT 1 FROM cols WHERE cols.oid = t.oid AND cols.attname = need AND cols.atttypid = 'timestamptz'::regtype)
+        UNION ALL
+        SELECT relname || '.' || attname || ' timestamp' FROM cols WHERE atttypid = 'timestamp'::regtype) m
+  UNION ALL
+  SELECT 'H3', CASE WHEN count(*) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         'mỗi bảng có cột version kiểu số nguyên (slide 20, optimistic lock Bài 14). Thiếu: ' || coalesce(string_agg(relname, ', '), '—')
+  FROM t WHERE NOT EXISTS (SELECT 1 FROM cols WHERE cols.oid = t.oid AND cols.attname = 'version' AND cols.atttypid IN ('int2'::regtype, 'int4'::regtype, 'int8'::regtype))
+  UNION ALL
+  SELECT 'H4', CASE WHEN count(*) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         'cột tiền không dùng float/real/double (slide 23). Vi phạm: ' || coalesce(string_agg(relname || '.' || attname || ' ' || typ, ', '), '—')
+  FROM cols WHERE attname ~ '(price|amount|fare|total|fee)' AND atttypid IN ('float4'::regtype, 'float8'::regtype, 'money'::regtype)
+  UNION ALL
+  SELECT 'H5', CASE WHEN count(*) FILTER (WHERE NOT has_index) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         format('mỗi khóa ngoại có index bắt đầu bằng cột FK (PG không tự tạo, slide 11). %s FK, thiếu index: %s',
+                count(*), coalesce(string_agg(relname || '.' || attname, ', ') FILTER (WHERE NOT has_index), '—'))
+  FROM fk
+  UNION ALL
+  SELECT 'H6', CASE WHEN count(*) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         'cột status có CHECK hoặc kiểu enum (slide 19-20: status là vòng đời của entity). Thiếu: ' || coalesce(string_agg(relname || '.' || attname, ', '), '—')
+  FROM cols
+  WHERE attname LIKE '%status%'
+    AND NOT EXISTS (SELECT 1 FROM pg_type ty WHERE ty.oid = cols.atttypid AND ty.typtype = 'e')
+    AND NOT EXISTS (SELECT 1 FROM pg_constraint ck WHERE ck.conrelid = cols.oid AND ck.contype = 'c' AND cols.attnum = ANY (ck.conkey))
+  UNION ALL
+  SELECT 'H7', CASE WHEN count(*) = 0 AND (SELECT count(*) FROM t) > 0 THEN '✔' ELSE '✘' END,
+         'dữ liệu linh hoạt dùng jsonb, không dùng json (slide 15-16: jsonb mới có GIN). Vi phạm: ' || coalesce(string_agg(relname || '.' || attname, ', '), '—')
+  FROM cols WHERE atttypid = 'json'::regtype
+  UNION ALL
+  SELECT 'H8', CASE WHEN count(*) > 0 THEN '✔' ELSE '✘' END,
+         'bảng vé (tên chứa booking hoặc ticket) có UNIQUE index (kể cả partial) hoặc EXCLUDE trên cột chuyến bay + cột ghế: chặn bán trùng một ghế (Bài 14). Tìm thấy: '
+         || coalesce(string_agg(DISTINCT i.indexrelid::regclass::text, ', '), '—')
+  FROM t JOIN pg_index i ON i.indrelid = t.oid AND (i.indisunique OR i.indisexclusion)
+  WHERE (t.relname LIKE '%booking%' OR t.relname LIKE '%ticket%')
+    AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = t.oid AND a.attnum = ANY (i.indkey) AND a.attname LIKE '%seat%')
+    AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = t.oid AND a.attnum = ANY (i.indkey) AND a.attname LIKE '%flight%')
+  UNION ALL
+  SELECT 'H9', CASE WHEN count(*) > 0 THEN '✔' ELSE '✘' END,
+         'bảng vé có cột idempotency key với UNIQUE: gửi lại cùng request không tạo vé thứ hai (chặng 9). Tìm thấy: '
+         || coalesce(string_agg(DISTINCT t.relname || '.' || a.attname, ', '), '—')
+  FROM t JOIN pg_index i ON i.indrelid = t.oid AND i.indisunique AND i.indnkeyatts = 1
+  JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = i.indkey[0]
+  WHERE (t.relname LIKE '%booking%' OR t.relname LIKE '%ticket%') AND (a.attname LIKE '%idempotency%' OR a.attname LIKE '%request_key%')
+)
+SELECT * FROM rules ORDER BY ma;
+ ma | ket_qua |                                                                                                    chi_tiet                                                                                                    
+----+---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ H0 | ✔       | 2 bảng hw_*: hw_bookings, hw_flights
+ H1 | ✔       | mỗi bảng có khóa chính. Thiếu: —
+ H2 | ✘       | mỗi bảng có created_at, updated_at kiểu timestamptz và KHÔNG cột nào dùng timestamp không múi giờ (slide 20, 24). Sai: hw_flights.updated_at, hw_flights.departs_at timestamp
+ H3 | ✘       | mỗi bảng có cột version kiểu số nguyên (slide 20, optimistic lock Bài 14). Thiếu: hw_bookings, hw_flights
+ H4 | ✘       | cột tiền không dùng float/real/double (slide 23). Vi phạm: hw_flights.fare double precision
+ H5 | ✘       | mỗi khóa ngoại có index bắt đầu bằng cột FK (PG không tự tạo, slide 11). 1 FK, thiếu index: hw_bookings.flight_id
+ H6 | ✔       | cột status có CHECK hoặc kiểu enum (slide 19-20: status là vòng đời của entity). Thiếu: —
+ H7 | ✔       | dữ liệu linh hoạt dùng jsonb, không dùng json (slide 15-16: jsonb mới có GIN). Vi phạm: —
+ H8 | ✔       | bảng vé (tên chứa booking hoặc ticket) có UNIQUE index (kể cả partial) hoặc EXCLUDE trên cột chuyến bay + cột ghế: chặn bán trùng một ghế (Bài 14). Tìm thấy: lab07_modeling.hw_bookings_seat_no_flight_id_key
+ H9 | ✘       | bảng vé có cột idempotency key với UNIQUE: gửi lại cùng request không tạo vé thứ hai (chặng 9). Tìm thấy: —
+(10 rows)
+
+Time: 10.635 ms

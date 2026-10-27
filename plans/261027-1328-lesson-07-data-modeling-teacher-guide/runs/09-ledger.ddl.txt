@@ -1,0 +1,93 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region ddl · Ba bảng, một ràng buộc "mỗi giao dịch tổng bằng 0", một hàm ghi sổ
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.137 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.098 ms
+SET
+Time: 0.077 ms
+DROP TABLE IF EXISTS ledger_entries, transfers, wallets;
+DROP TABLE
+Time: 12.784 ms
+CREATE TABLE wallets (
+  id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code           text NOT NULL UNIQUE,
+  owner          text NOT NULL,
+  balance        numeric(18,2) NOT NULL DEFAULT 0,     -- số dư CACHE (phi chuẩn hóa); sự thật nằm ở ledger_entries
+  allow_negative boolean NOT NULL DEFAULT false,       -- chỉ ví hệ thống (tiền mặt nạp vào) được âm
+  version        int NOT NULL DEFAULT 0,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  CHECK (allow_negative OR balance >= 0)               -- lưới an toàn cuối của Bài 14 (23514)
+);
+CREATE TABLE
+Time: 13.962 ms
+CREATE TABLE transfers (
+  id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  idempotency_key text NOT NULL UNIQUE,                -- gọi lại cùng request không ghi sổ hai lần
+  order_ref       text,                                -- tham chiếu tới đơn hàng (slide 12), NULL nếu là nạp tiền
+  amount          numeric(18,2) NOT NULL CHECK (amount > 0),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+Time: 12.507 ms
+CREATE TABLE ledger_entries (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  transfer_id bigint NOT NULL REFERENCES transfers (id),
+  wallet_id   bigint NOT NULL REFERENCES wallets (id),
+  amount      numeric(18,2) NOT NULL CHECK (amount <> 0),   -- âm = ghi nợ (tiền ra), dương = ghi có (tiền vào)
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+Time: 7.881 ms
+CREATE INDEX ON ledger_entries (wallet_id);
+CREATE INDEX
+Time: 3.859 ms
+CREATE INDEX ON ledger_entries (transfer_id);
+CREATE INDEX
+Time: 4.889 ms
+-- Kiểm tra "tổng các bút toán của một giao dịch = 0" lúc COMMIT (DEFERRED): code có thể ghi hai bút toán bằng hai câu lệnh riêng,
+-- sau câu đầu tổng tạm thời khác 0. (post_transfer ghi cả hai trong MỘT câu INSERT nên kiểm tức thì cũng qua.)
+CREATE OR REPLACE FUNCTION ledger_check_balanced() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF (SELECT sum(amount) FROM lab07_modeling.ledger_entries WHERE transfer_id = NEW.transfer_id) <> 0 THEN
+    RAISE EXCEPTION 'giao dịch % lệch: tổng bút toán khác 0', NEW.transfer_id USING ERRCODE = '23514';
+  END IF;
+  RETURN NULL;
+END $$;
+CREATE FUNCTION
+Time: 1.812 ms
+CREATE CONSTRAINT TRIGGER ledger_balanced AFTER INSERT ON ledger_entries
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION ledger_check_balanced();
+CREATE TRIGGER
+Time: 1.258 ms
+-- Sổ cái chỉ được THÊM: sửa sai bằng bút toán đảo (refund), không UPDATE/DELETE bút toán cũ.
+CREATE OR REPLACE FUNCTION ledger_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'ledger_entries chỉ được thêm, không được %', TG_OP USING ERRCODE = '23001';
+END $$;
+CREATE FUNCTION
+Time: 1.811 ms
+CREATE TRIGGER ledger_no_update_delete BEFORE UPDATE OR DELETE ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_append_only();
+CREATE TRIGGER
+Time: 1.243 ms
+-- Ghi một giao dịch chuyển tiền: khóa 2 ví theo thứ tự id (Bài 14), ghi 2 bút toán, cập nhật số dư cache.
+CREATE OR REPLACE FUNCTION post_transfer(p_from bigint, p_to bigint, p_amount numeric, p_key text, p_order_ref text DEFAULT NULL)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE v_id bigint;
+BEGIN
+  PERFORM 1 FROM lab07_modeling.wallets WHERE id IN (p_from, p_to) ORDER BY id FOR UPDATE;
+  INSERT INTO lab07_modeling.transfers (idempotency_key, order_ref, amount) VALUES (p_key, p_order_ref, p_amount) RETURNING id INTO v_id;
+  INSERT INTO lab07_modeling.ledger_entries (transfer_id, wallet_id, amount) VALUES (v_id, p_from, -p_amount), (v_id, p_to, p_amount);
+  UPDATE lab07_modeling.wallets SET balance = balance - p_amount, version = version + 1, updated_at = now() WHERE id = p_from;  -- trừ trước
+  UPDATE lab07_modeling.wallets SET balance = balance + p_amount, version = version + 1, updated_at = now() WHERE id = p_to;    -- cộng sau
+  RETURN v_id;
+END $$;
+CREATE FUNCTION
+Time: 1.565 ms
+-- #endregion

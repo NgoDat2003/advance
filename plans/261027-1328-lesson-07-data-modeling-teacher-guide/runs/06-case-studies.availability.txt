@@ -1,0 +1,73 @@
+-- chạy lúc 27/10/2026 22:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region availability · Homestay: sinh trước 365 dòng/căn, mỗi ngày một giá và một trạng thái (slide 29–30)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.143 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.082 ms
+SET
+Time: 0.074 ms
+DROP TABLE IF EXISTS cs_stays, cs_availability, cs_homestays;   -- cs_stays (region exclusion) tham chiếu cs_homestays
+DROP TABLE
+Time: 11.868 ms
+CREATE TABLE cs_homestays (id int PRIMARY KEY, name text NOT NULL, base_price numeric(12,2) NOT NULL);
+CREATE TABLE
+Time: 9.269 ms
+INSERT INTO cs_homestays VALUES (1, 'Đà Lạt Pine House', 800000), (2, 'Hội An Riverside', 650000), (3, 'Sapa Cloud', 500000);
+INSERT 0 3
+Time: 1.437 ms
+CREATE TABLE cs_availability (
+  homestay_id int NOT NULL REFERENCES cs_homestays (id),
+  day         date NOT NULL,
+  price       numeric(12,2) NOT NULL,
+  status      text NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'BOOKED', 'BLOCKED')),
+  PRIMARY KEY (homestay_id, day)
+);
+CREATE TABLE
+Time: 11.611 ms
+INSERT INTO cs_availability (homestay_id, day, price)
+SELECT h.id, d::date, h.base_price FROM cs_homestays h, generate_series(date '2026-11-01', date '2027-10-31', interval '1 day') d;
+INSERT 0 1095
+Time: 23.881 ms
+-- Đổi giá một ngày lễ: sửa đúng 1 dòng.
+UPDATE cs_availability SET price = 1200000 WHERE homestay_id = 1 AND day = '2026-12-24';
+UPDATE 1
+Time: 1.538 ms
+-- Đặt 3 đêm 20→23/11: một câu UPDATE có điều kiện. App kiểm tra số dòng = 3, khác 3 thì ROLLBACK.
+BEGIN;
+BEGIN
+Time: 0.069 ms
+UPDATE cs_availability SET status = 'BOOKED'
+WHERE homestay_id = 1 AND day >= '2026-11-20' AND day < '2026-11-23' AND status = 'OPEN';
+UPDATE 3
+Time: 0.413 ms
+COMMIT;
+COMMIT
+Time: 1.071 ms
+-- Khách khác muốn 22→24/11 (trùng đêm 22): chỉ sửa được 1/2 dòng → app ROLLBACK, không ai bị bán trùng.
+BEGIN;
+BEGIN
+Time: 0.055 ms
+UPDATE cs_availability SET status = 'BOOKED'
+WHERE homestay_id = 1 AND day >= '2026-11-22' AND day < '2026-11-24' AND status = 'OPEN';
+UPDATE 1
+Time: 0.228 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.086 ms
+SELECT day, price, status FROM cs_availability WHERE homestay_id = 1 AND day BETWEEN '2026-11-19' AND '2026-11-24' ORDER BY day;
+    day     |   price   | status 
+------------+-----------+--------
+ 2026-11-19 | 800000.00 | OPEN
+ 2026-11-20 | 800000.00 | BOOKED
+ 2026-11-21 | 800000.00 | BOOKED
+ 2026-11-22 | 800000.00 | BOOKED
+ 2026-11-23 | 800000.00 | OPEN
+ 2026-11-24 | 800000.00 | OPEN
+(6 rows)
+
+Time: 0.428 ms
+-- #endregion

@@ -1,0 +1,40 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region plain · B đọc rồi ghi trong lúc A đang tạo index thường
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.125 ms
+SET statement_timeout = '60s'; SET lock_timeout = '2s';   -- chờ tối đa 2 giây rồi bỏ
+SET
+Time: 0.091 ms
+SET
+Time: 0.107 ms
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đọc bảng' AS viec;
+ buoc |     luc      |   viec   
+------+--------------+----------
+ B1   | 14:11:44.857 | đọc bảng
+(1 row)
+
+Time: 0.971 ms
+SELECT count(*) AS hop_dong_cua_44 FROM ddl_contracts WHERE store_id = 44;
+ hop_dong_cua_44 
+-----------------
+            2440
+(1 row)
+
+Time: 24.254 ms
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'ghi bảng' AS viec;
+ buoc |     luc      |   viec   
+------+--------------+----------
+ B2   | 14:11:44.881 | ghi bảng
+(1 row)
+
+Time: 0.195 ms
+UPDATE ddl_contracts SET note = 'ghi trong lúc tạo index' WHERE id = 1;
+psql:<stdin>:7: ERROR:  55P03: canceling statement due to lock timeout
+LINE 1: UPDATE ddl_contracts SET note = 'ghi trong lúc tạo index' WH...
+               ^
+LOCATION:  ProcessInterrupts, postgres.c:3387
+Time: 2000.334 ms (00:02.000)
+-- #endregion

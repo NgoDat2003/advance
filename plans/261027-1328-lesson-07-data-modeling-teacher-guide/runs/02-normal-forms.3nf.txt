@@ -1,0 +1,83 @@
+-- chạy lúc 27/10/2026 22:13 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region 3nf · 3NF: tách phụ thuộc bắc cầu customer_id → tên, thành phố; thêm khóa ngoại
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.134 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.083 ms
+SET
+Time: 0.073 ms
+-- Chạy lại được: lấy khách từ order_sheet (nf_orders có thể đã bỏ cột ở lần chạy trước), khóa ngoại có tên cố định.
+DROP TABLE IF EXISTS nf_customers CASCADE;
+psql:<stdin>:5: NOTICE:  00000: table "nf_customers" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.346 ms
+CREATE TABLE nf_customers AS
+  SELECT DISTINCT customer_id, customer_name, customer_city FROM order_sheet;
+SELECT 89
+Time: 143.938 ms
+ALTER TABLE nf_customers ADD PRIMARY KEY (customer_id);
+ALTER TABLE
+Time: 16.307 ms
+ALTER TABLE nf_orders DROP COLUMN IF EXISTS customer_name, DROP COLUMN IF EXISTS customer_city;
+ALTER TABLE
+Time: 10.236 ms
+ALTER TABLE nf_orders ADD CONSTRAINT nf_orders_customer_fk FOREIGN KEY (customer_id) REFERENCES nf_customers (customer_id);
+ALTER TABLE
+Time: 4.047 ms
+ALTER TABLE nf_order_lines DROP CONSTRAINT IF EXISTS nf_order_lines_order_fk, DROP CONSTRAINT IF EXISTS nf_order_lines_product_fk,
+  ADD CONSTRAINT nf_order_lines_order_fk FOREIGN KEY (order_id) REFERENCES nf_orders (order_id),
+  ADD CONSTRAINT nf_order_lines_product_fk FOREIGN KEY (product_id) REFERENCES nf_products (product_id);
+psql:<stdin>:13: NOTICE:  00000: constraint "nf_order_lines_order_fk" of relation "nf_order_lines" does not exist, skipping
+LOCATION:  ATExecDropConstraint, tablecmds.c:12298
+psql:<stdin>:13: NOTICE:  00000: constraint "nf_order_lines_product_fk" of relation "nf_order_lines" does not exist, skipping
+LOCATION:  ATExecDropConstraint, tablecmds.c:12298
+ALTER TABLE
+Time: 6.355 ms
+CREATE INDEX IF NOT EXISTS nf_orders_customer_id_idx ON nf_orders (customer_id);
+CREATE INDEX
+Time: 4.729 ms
+CREATE INDEX IF NOT EXISTS nf_order_lines_product_id_idx ON nf_order_lines (product_id);
+CREATE INDEX
+Time: 6.204 ms
+-- Delete anomaly: xóa các đơn của khách chỉ có 1 đơn ở bảng phẳng → mất luôn thành phố của khách đó.
+BEGIN;
+BEGIN
+Time: 0.083 ms
+DELETE FROM order_sheet WHERE customer_id IN (
+  SELECT customer_id FROM order_sheet GROUP BY customer_id HAVING count(DISTINCT order_id) = 1);
+DELETE 2
+Time: 2.798 ms
+SELECT count(*) AS khach_mat_thanh_pho
+FROM nf_customers c WHERE NOT EXISTS (SELECT 1 FROM order_sheet s WHERE s.customer_id = c.customer_id);
+ khach_mat_thanh_pho 
+---------------------
+                   1
+(1 row)
+
+Time: 0.731 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.090 ms
+-- Ở 3NF thành phố nằm trong nf_customers nên vẫn còn dù khách không còn đơn nào.
+SELECT count(*) AS khach_trong_northwind, (SELECT count(*) FROM nf_customers) AS khach_trong_nf_customers FROM northwind.customers;
+ khach_trong_northwind | khach_trong_nf_customers 
+-----------------------+--------------------------
+                    91 |                       89
+(1 row)
+
+Time: 0.779 ms
+-- Insert anomaly: bảng phẳng không lưu được món mới chưa ai đặt, vì order_id là một phần khóa chính.
+INSERT INTO order_sheet (order_id, product_id, product_name) VALUES (NULL, 999, 'Cà phê muối');
+psql:<stdin>:26: ERROR:  23502: null value in column "order_id" of relation "order_sheet" violates not-null constraint
+DETAIL:  Failing row contains (null, 999, null, null, null, null, null, Cà phê muối, null, null, null, null, null).
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  order_sheet
+COLUMN NAME:  order_id
+LOCATION:  ExecConstraints, execMain.c:2057
+Time: 0.282 ms
+-- #endregion

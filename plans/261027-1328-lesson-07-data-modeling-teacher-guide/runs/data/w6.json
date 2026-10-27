@@ -1,0 +1,9 @@
+{
+ "sources": [
+  "06-case-studies.ordering"
+ ],
+ "intSteps": 9,
+ "f8Steps": 53,
+ "f4Steps": 24,
+ "rebalanceRows": 5
+}

@@ -1,0 +1,48 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region inline · View đơn giản được "trải phẳng" vào câu lệnh: plan giống hệt khi viết JOIN tay (slide 40–41)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.143 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.100 ms
+SET
+Time: 0.069 ms
+CREATE OR REPLACE VIEW v_order_lines AS
+SELECT l.order_id, l.product_id, p.product_name, l.unit_price, l.quantity
+FROM nf_order_lines l JOIN nf_products p USING (product_id);
+CREATE VIEW
+Time: 6.683 ms
+EXPLAIN (COSTS OFF) SELECT * FROM v_order_lines WHERE order_id = 10248;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Hash Join
+   Hash Cond: (p.product_id = l.product_id)
+   ->  Seq Scan on nf_products p
+   ->  Hash
+         ->  Bitmap Heap Scan on nf_order_lines l
+               Recheck Cond: (order_id = 10248)
+               ->  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)
+(8 rows)
+
+Time: 4.120 ms
+EXPLAIN (COSTS OFF)
+SELECT l.order_id, l.product_id, p.product_name, l.unit_price, l.quantity
+FROM nf_order_lines l JOIN nf_products p USING (product_id) WHERE l.order_id = 10248;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Hash Join
+   Hash Cond: (p.product_id = l.product_id)
+   ->  Seq Scan on nf_products p
+   ->  Hash
+         ->  Bitmap Heap Scan on nf_order_lines l
+               Recheck Cond: (order_id = 10248)
+               ->  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)
+(8 rows)
+
+Time: 0.311 ms
+-- #endregion

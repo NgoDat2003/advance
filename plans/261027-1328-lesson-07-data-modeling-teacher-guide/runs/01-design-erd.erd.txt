@@ -1,0 +1,50 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region erd · Hai entity Order và Payment theo table template (slide 7, 12, 20)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.128 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.082 ms
+SET
+Time: 0.066 ms
+DROP TABLE IF EXISTS erd_payment_transactions, erd_orders;
+psql:<stdin>:4: NOTICE:  00000: table "erd_payment_transactions" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "erd_orders" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.318 ms
+-- Entity "đơn hàng": có id, trạng thái (vòng đời) và cột kỹ thuật.
+CREATE TABLE erd_orders (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code        text NOT NULL UNIQUE,
+  status      text NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW', 'PAID', 'CANCELLED')),
+  total       numeric(14,2) NOT NULL CHECK (total >= 0),
+  version     int NOT NULL DEFAULT 0,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+Time: 34.924 ms
+-- Entity "giao dịch thanh toán": sinh ra SAU đơn hàng nên giữ cột tham chiếu order_id (slide 12).
+-- order_id được phép NULL vì giao dịch ủng hộ (donate) không có đơn hàng.
+CREATE TABLE erd_payment_transactions (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  kind        text NOT NULL CHECK (kind IN ('ORDER', 'DONATE')),
+  order_id    bigint REFERENCES erd_orders (id),
+  amount      numeric(14,2) NOT NULL CHECK (amount > 0),
+  status      text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
+  version     int NOT NULL DEFAULT 0,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  CHECK ((kind = 'ORDER') = (order_id IS NOT NULL))   -- thanh toán đơn thì phải có order_id, donate thì không
+);
+CREATE TABLE
+Time: 10.141 ms
+CREATE INDEX ON erd_payment_transactions (order_id);  -- PG không tự tạo index cho cột FK (chặng 3)
+CREATE INDEX
+Time: 4.528 ms
+-- #endregion

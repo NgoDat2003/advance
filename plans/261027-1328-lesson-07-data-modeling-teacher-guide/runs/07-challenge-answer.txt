@@ -1,0 +1,49 @@
+-- chạy lúc 27/10/2026 22:20 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+SET search_path = lab07_modeling;
+SET
+Time: 0.184 ms
+DROP VIEW IF EXISTS my_v_top_line_per_order;
+psql:<stdin>:2: NOTICE:  00000: view "my_v_top_line_per_order" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP VIEW
+Time: 0.414 ms
+-- Mỗi đơn chỉ giữ dòng món có số lượng lớn nhất
+CREATE VIEW my_v_top_line_per_order AS
+SELECT DISTINCT ON (order_id) order_id, product_id, quantity
+FROM nf_order_lines
+ORDER BY order_id, quantity DESC, product_id;
+CREATE VIEW
+Time: 5.968 ms
+-- Lọc theo cột KHÔNG nằm trong DISTINCT ON: PG phải tính view trước rồi mới lọc
+EXPLAIN (COSTS OFF) SELECT * FROM my_v_top_line_per_order WHERE product_id = 1;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Subquery Scan on my_v_top_line_per_order
+   Filter: (my_v_top_line_per_order.product_id = 1)
+   ->  Unique
+         ->  Incremental Sort
+               Sort Key: nf_order_lines.order_id, nf_order_lines.quantity DESC, nf_order_lines.product_id
+               Presorted Key: nf_order_lines.order_id
+               ->  Index Scan using nf_order_lines_pkey on nf_order_lines
+(7 rows)
+
+Time: 1.752 ms
+-- Lọc theo cột trong DISTINCT ON: PG đẩy xuống được (cả nhóm order_id giữ nguyên)
+EXPLAIN (COSTS OFF) SELECT * FROM my_v_top_line_per_order WHERE order_id = 10248;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Limit
+   ->  Sort
+         Sort Key: nf_order_lines.quantity DESC, nf_order_lines.product_id
+         ->  Bitmap Heap Scan on nf_order_lines
+               Recheck Cond: (order_id = 10248)
+               ->  Bitmap Index Scan on nf_order_lines_pkey
+                     Index Cond: (order_id = 10248)
+(7 rows)
+
+Time: 0.227 ms
+DROP VIEW my_v_top_line_per_order;
+DROP VIEW
+Time: 4.739 ms

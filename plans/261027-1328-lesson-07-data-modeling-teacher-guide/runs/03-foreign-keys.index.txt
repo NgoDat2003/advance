@@ -1,0 +1,63 @@
+-- chạy lúc 27/10/2026 21:09 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region index · Xóa một cha: PG phải tìm con trong fk_child. Không có index thì quét cả bảng
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.135 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.054 ms
+SET
+Time: 0.076 ms
+DROP INDEX IF EXISTS fk_child_parent_id_idx;
+psql:<stdin>:4: NOTICE:  00000: index "fk_child_parent_id_idx" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP INDEX
+Time: 0.245 ms
+BEGIN;
+BEGIN
+Time: 0.099 ms
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20001;   -- cha không có con
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Delete on fk_parent (actual time=0.067..0.067 rows=0 loops=1)
+   Buffers: shared hit=8
+   ->  Index Scan using fk_parent_pkey on fk_parent (actual time=0.014..0.014 rows=1 loops=1)
+         Index Cond: (id = 20001)
+         Buffers: shared hit=3
+ Planning:
+   Buffers: shared hit=65
+ Planning Time: 0.391 ms
+ Trigger for constraint fk_child_parent_id_fkey: time=7.222 calls=1
+ Execution Time: 7.371 ms
+(10 rows)
+
+Time: 8.359 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.126 ms
+CREATE INDEX fk_child_parent_id_idx ON fk_child (parent_id);
+CREATE INDEX
+Time: 61.267 ms
+BEGIN;
+BEGIN
+Time: 0.100 ms
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) DELETE FROM fk_parent WHERE id = 20002;   -- cha không có con, giờ đã có index
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Delete on fk_parent (actual time=0.064..0.064 rows=0 loops=1)
+   Buffers: shared hit=5
+   ->  Index Scan using fk_parent_pkey on fk_parent (actual time=0.043..0.043 rows=1 loops=1)
+         Index Cond: (id = 20002)
+         Buffers: shared hit=3
+ Planning Time: 0.058 ms
+ Trigger for constraint fk_child_parent_id_fkey: time=0.519 calls=1
+ Execution Time: 0.609 ms
+(8 rows)
+
+Time: 0.853 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.129 ms
+-- #endregion

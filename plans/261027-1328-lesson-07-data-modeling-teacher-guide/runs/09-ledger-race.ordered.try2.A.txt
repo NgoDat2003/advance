@@ -1,0 +1,47 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region ordered · Cùng nghiệp vụ, nhưng qua post_transfer: luôn khóa ví theo id tăng dần
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.174 ms
+SET statement_timeout = '60s'; SET lock_timeout = '10s';
+SET
+Time: 0.086 ms
+SET
+Time: 0.060 ms
+BEGIN;
+BEGIN
+Time: 0.076 ms
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'post_transfer 3 → 2 (khóa ví 2 rồi ví 3)' AS viec;
+ buoc |     luc      |                   viec                   
+------+--------------+------------------------------------------
+ A1   | 15:25:54.966 | post_transfer 3 → 2 (khóa ví 2 rồi ví 3)
+(1 row)
+
+Time: 0.583 ms
+SELECT post_transfer(3, 2, 1000, 'race-ord-A-' || txid_current()) AS transfer_id;
+ transfer_id 
+-------------
+          12
+(1 row)
+
+Time: 4.603 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B (trong 5 giây đầu)
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6013.366 ms (00:06.013)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A commit' AS viec;
+ buoc |     luc      |   viec   
+------+--------------+----------
+ A2   | 15:26:00.984 | A commit
+(1 row)
+
+Time: 0.327 ms
+COMMIT;
+COMMIT
+Time: 7.252 ms
+-- #endregion

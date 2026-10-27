@@ -1,0 +1,31 @@
+# RED baseline 27/10/2026 21:06
+## check.sql before setup
+ ma  | ket_qua |                                                 chi_tiet                                                 
+-----+---------+----------------------------------------------------------------------------------------------------------
+ C01 | ✘       | schema lab07_modeling tồn tại (chưa có: chạy 00-setup.sql)
+ C02 | ✘       | extension btree_gist cài trong lab07_modeling (dùng cho EXCLUDE ở chặng 6)
+ C03 | ✘       | order_sheet = chưa có dòng (cần 2155), order_sheet_raw = chưa có dòng (cần 830)
+ C04 | ✘       | tổng quantity order_sheet = chưa có, northwind = 51317
+ C05 | ✔       | northwind (nguồn chỉ đọc) giữ nguyên: số dòng 8 bảng + md5 order_details
+ C06 | ✔       | lab03_indexing.hw_contracts (Bài 3, chỉ đọc) giữ nguyên: 500.000 dòng, tổng total, id lớn nhất
+ C07 | ✔       | không có bảng/view của Bài 07 nằm lạc ở schema khác
+ C08 | ✔       | cài đặt mức DB giữ nguyên: search_path = lab03_indexing, public (vì vậy mỗi region phải SET search_path)
+ C09 | –       | sổ cái chưa dựng (chặng 9)
+ C10 | –       | sổ cái chưa dựng (chặng 9)
+ C11 | –       | sổ cái chưa dựng (chặng 9)
+ C12 | –       | sổ cái chưa dựng (chặng 9)
+ C13 | ✔       | phiên "idle in transaction" đang giữ khóa trong lab07_modeling: 0 (có thì COMMIT/ROLLBACK tab đó)
+ C14 | ✔       | index hỏng (indisvalid = false, thường do CREATE INDEX CONCURRENTLY bị hủy): 0
+(14 rows)
+
+Time: 83.383 ms
+## --runs
+✘ 42 lỗi
+## guide
+V01 guide missing: D:\study\advance-be\reports\advanced_backend\lesson_07_data_modeling_teacher_guide.html
+✘ 1 lỗi
+## selftest
+selftest good: đúng (không lỗi)
+selftest V05: đúng (V05 x#a: khác file .sql ở dòng 2: "SELECT 2 AS so;" ≠ "SELECT 1 AS so;")
+selftest V07: đúng (V07 x#a: giá trị "9 rows" không có trong run)
+✔ không có lỗi

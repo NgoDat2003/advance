@@ -1,0 +1,60 @@
+// Bài 07 · Prisma drill: schema này do "AI" viết cho module ví + bình luận của OmniPOS.
+// Nhiệm vụ: tìm 6 lỗi thiết kế (và 1 chỗ ĐÚNG cài vào để thử bạn). Đối chiếu với số đo của các chặng.
+// File chỉ để đọc, không chạy.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Store {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique
+  name      String
+  settings  Json      @default("{}")
+  tags      String                                   // "takeaway,24h,delivery"
+  wallets   Wallet[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Wallet {
+  id        Int       @id @default(autoincrement())
+  storeId   Int
+  store     Store     @relation(fields: [storeId], references: [id])
+  balance   Float     @default(0)
+  version   Int       @default(0)
+  entries   LedgerEntry[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Transfer {
+  id             Int       @id @default(autoincrement())
+  idempotencyKey String
+  amount         Float
+  entries        LedgerEntry[]
+  createdAt      DateTime  @default(now())
+}
+
+model LedgerEntry {
+  id         Int       @id @default(autoincrement())
+  transferId Int
+  transfer   Transfer  @relation(fields: [transferId], references: [id])
+  walletId   Int
+  wallet     Wallet    @relation(fields: [walletId], references: [id])
+  amount     Float
+  createdAt  DateTime  @default(now())
+}
+
+model Comment {
+  id              Int      @id @default(autoincrement())
+  commentableType String   // "Store" | "Transfer"
+  commentableId   Int
+  body            String
+  createdAt       DateTime @default(now())
+}

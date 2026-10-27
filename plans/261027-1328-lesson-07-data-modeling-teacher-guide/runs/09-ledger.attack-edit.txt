@@ -1,0 +1,18 @@
+-- chạy lúc 27/10/2026 22:25 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region attack-edit · Tấn công 4: sửa thẳng một bút toán cũ để "chữa cháy"
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.135 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.055 ms
+SET
+Time: 0.049 ms
+UPDATE ledger_entries SET amount = -40000 WHERE id = 3;
+psql:<stdin>:4: ERROR:  23001: ledger_entries chỉ được thêm, không được UPDATE
+CONTEXT:  PL/pgSQL function ledger_append_only() line 3 at RAISE
+LOCATION:  exec_stmt_raise, pl_exec.c:3897
+Time: 2.232 ms
+-- #endregion

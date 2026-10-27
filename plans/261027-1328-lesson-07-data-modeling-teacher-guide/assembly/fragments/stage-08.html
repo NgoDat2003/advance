@@ -1,0 +1,240 @@
+<!-- CHẶNG 8 -->
+<section id="chang-8" class="stage col">
+<div class="stage-head">
+<span class="stage-no">08</span>
+<div>
+<div class="stage-meta"><span>Ngoài slide · nối slide 11–12</span><span>20 phút</span><span>Day 05</span></div>
+<h2>Quan hệ đa hình: một bình luận thuộc về bài viết hoặc món</h2>
+</div>
+</div>
+<p class="muted">Nếu bạn bỏ qua chặng 7 (view) thì không sao: chặng này chỉ dùng FK, CHECK và index từ chặng 3–5.</p>
+<p class="goal"><b>Mục tiêu:</b> so ba cách lưu "bình luận thuộc về bài viết <b>hoặc</b> sản phẩm", đếm bình luận mồ côi của từng cách sau khi xóa bài viết #1, và chọn được cách để dùng với Prisma.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>Quan hệ đa hình (polymorphic): một dòng con có thể trỏ tới một trong nhiều bảng cha. Ví dụ ở chuỗi F&amp;B: bình luận cho bài khuyến mãi hoặc cho một món.</dd>
+<dt>TẠI SAO?</dt><dd>Cách hay gặp nhất (cột <code>commentable_type</code> + <code>commentable_id</code>, kiểu Rails/Laravel) không thể khai báo FK. DB không còn giữ được toàn vẹn, và lỗi chỉ lộ ra khi đếm mồ côi.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Khi chỉ có một loại cha thì dùng một FK thường. Khi số loại cha lớn và đổi liên tục (log, audit) thì type + id chấp nhận được, miễn là bạn có job đếm mồ côi.</dd>
+</dl>
+
+<h3>Cách 1 · type + id: không có FK</h3>
+<p><code>commentable_id</code> trỏ tới bảng nào là do cột <code>commentable_type</code> quyết định. FK chỉ trỏ được tới <b>một</b> bảng cố định, nên không có <code>REFERENCES</code> nào khai báo được.</p>
+<div class="code"><pre data-sql="08-polymorphic#typeid"><code>-- #region typeid · Cách 1: commentable_type + commentable_id — không thể khai báo FK
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS poly_comments, poly_comments_arc, poly_post_comments, poly_product_comments, poly_posts, poly_products;
+CREATE TABLE poly_posts    (id int PRIMARY KEY, title text NOT NULL);
+CREATE TABLE poly_products (id int PRIMARY KEY, name text NOT NULL);
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7'), (2, 'Menu mùa đông');
+INSERT INTO poly_products VALUES (1, 'Trà sữa nướng'), (2, 'Cà phê muối');
+CREATE TABLE poly_comments (
+  id               int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  commentable_type text NOT NULL,      -- 'Post' hoặc 'Product'
+  commentable_id   int NOT NULL,       -- trỏ tới bảng nào thì tùy cột bên trên → không REFERENCES được
+  body             text NOT NULL
+);
+CREATE INDEX ON poly_comments (commentable_type, commentable_id);
+INSERT INTO poly_comments (commentable_type, commentable_id, body) VALUES
+  ('Post', 1, 'Chúc mừng!'), ('Post', 1, 'Có gửi xe không?'), ('Product', 1, 'Ngon'),
+  ('Psot', 2, 'Gõ sai loại vẫn lưu được'), ('Product', 99, 'Sản phẩm 99 không tồn tại vẫn lưu được');
+DELETE FROM poly_posts WHERE id = 1;   -- xóa bài viết: DB không biết có bình luận đang trỏ tới
+SELECT count(*) AS orphans FROM poly_comments c
+WHERE NOT (   (c.commentable_type = 'Post'    AND EXISTS (SELECT 1 FROM poly_posts p    WHERE p.id = c.commentable_id))
+           OR (c.commentable_type = 'Product' AND EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.commentable_id)));
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>08-polymorphic.sql · region typeid</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="08-polymorphic.typeid">INSERT 0 5
+…
+DELETE FROM poly_posts WHERE id = 1;   -- xóa bài viết: DB không biết có bình luận đang trỏ tới
+DELETE 1
+…
+ orphans
+---------
+       4
+(1 row)</pre></div>
+<p>Mồ côi = <b class="m" data-run="08-polymorphic.typeid">4</b>: 2 bình luận của bài 1 (bài đã bị xóa, DB không biết), 1 bình luận gõ sai loại <code>'Psot'</code>, 1 bình luận trỏ tới sản phẩm 99 không tồn tại. Cả 5 dòng đều được nhận: <b class="m" data-run="08-polymorphic.typeid">INSERT 0 5</b>.</p>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · cách 2 exclusive arc</span>
+<ol>
+<li>Mỗi loại cha một cột FK riêng, cho phép NULL: <code>post_id REFERENCES poly_posts</code>, <code>product_id REFERENCES poly_products</code>. Giờ DB kiểm được cả hai.</li>
+<li><code>CHECK (num_nonnulls(post_id, product_id) = 1)</code>: <code>num_nonnulls</code> đếm số tham số khác NULL. Bằng 1 nghĩa là thuộc về <b>đúng một</b> cha: không thể "không thuộc về ai", cũng không thể thuộc về cả hai.</li>
+<li><code>ON DELETE CASCADE</code>: xóa bài 1 thì bình luận của bài 1 đi theo. Muốn giữ bình luận thì đổi thành <code>RESTRICT</code> để DB chặn việc xóa.</li>
+<li>Hai <b>partial index</b> <code>WHERE post_id IS NOT NULL</code>: index chỉ chứa các dòng có cha loại đó, nhỏ hơn index đầy đủ, và vẫn phục vụ kiểm tra FK khi xóa cha (chặng 3).</li>
+<li>Chạy region <code>arc</code>: mồ côi = <b class="m" data-run="08-polymorphic.arc">0</b>, câu cuối chèn bình luận không có cha nhận <b class="m" data-run="08-polymorphic.arc">23514</b>.</li>
+</ol>
+</div>
+<div class="code"><pre data-sql="08-polymorphic#arc"><code>-- #region arc · Cách 2: exclusive arc — mỗi loại cha một cột FK cho phép NULL, CHECK đúng một cột có giá trị
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7') ON CONFLICT DO NOTHING;
+DROP TABLE IF EXISTS poly_comments_arc;
+CREATE TABLE poly_comments_arc (
+  id         int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  post_id    int REFERENCES poly_posts (id) ON DELETE CASCADE,
+  product_id int REFERENCES poly_products (id) ON DELETE CASCADE,
+  body       text NOT NULL,
+  CHECK (num_nonnulls(post_id, product_id) = 1)   -- thuộc về đúng MỘT cha
+);
+CREATE INDEX ON poly_comments_arc (post_id) WHERE post_id IS NOT NULL;
+CREATE INDEX ON poly_comments_arc (product_id) WHERE product_id IS NOT NULL;
+INSERT INTO poly_comments_arc (post_id, product_id, body) VALUES (1, NULL, 'Chúc mừng!'), (NULL, 1, 'Ngon');
+DELETE FROM poly_posts WHERE id = 1;   -- bình luận của bài 1 bị xóa theo (ON DELETE CASCADE)
+SELECT count(*) AS orphans FROM poly_comments_arc c
+WHERE (c.post_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM poly_posts p WHERE p.id = c.post_id))
+   OR (c.product_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.product_id));
+INSERT INTO poly_comments_arc (post_id, product_id, body) VALUES (NULL, NULL, 'Không thuộc về ai');
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>08-polymorphic.sql · region arc</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="08-polymorphic.arc">INSERT 0 2
+…
+DELETE FROM poly_posts WHERE id = 1;   -- bình luận của bài 1 bị xóa theo (ON DELETE CASCADE)
+DELETE 1
+…
+ orphans
+---------
+       0
+(1 row)
+…
+INSERT INTO poly_comments_arc (post_id, product_id, body) VALUES (NULL, NULL, 'Không thuộc về ai');
+psql:&lt;stdin&gt;:20: ERROR:  23514: new row for relation "poly_comments_arc" violates check constraint "poly_comments_arc_check"
+DETAIL:  Failing row contains (3, null, null, Không thuộc về ai).</pre></div>
+
+<h3>Cách 3 · mỗi loại cha một bảng bình luận</h3>
+<p><code>poly_post_comments</code> và <code>poly_product_comments</code>, mỗi bảng một FK <code>NOT NULL</code>. Ghi sai loại là điều không thể xảy ra, vì không có cột loại. Cần "mọi bình luận" thì <code>UNION ALL</code>.</p>
+<div class="code"><pre data-sql="08-polymorphic#join"><code>-- #region join · Cách 3: mỗi loại cha một bảng bình luận riêng, FK đầy đủ; gộp lại bằng UNION ALL khi cần
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7') ON CONFLICT DO NOTHING;
+DROP TABLE IF EXISTS poly_post_comments, poly_product_comments;
+CREATE TABLE poly_post_comments (
+  id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, post_id int NOT NULL REFERENCES poly_posts (id) ON DELETE CASCADE, body text NOT NULL);
+CREATE TABLE poly_product_comments (
+  id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, product_id int NOT NULL REFERENCES poly_products (id) ON DELETE CASCADE, body text NOT NULL);
+CREATE INDEX ON poly_post_comments (post_id);
+CREATE INDEX ON poly_product_comments (product_id);
+INSERT INTO poly_post_comments (post_id, body) VALUES (1, 'Chúc mừng!');
+INSERT INTO poly_product_comments (product_id, body) VALUES (1, 'Ngon'), (2, 'Mặn mà');
+SELECT 'Post' AS loai, post_id AS cha_id, body FROM poly_post_comments
+UNION ALL
+SELECT 'Product', product_id, body FROM poly_product_comments ORDER BY 1, 2;
+DELETE FROM poly_posts WHERE id = 1;
+SELECT (SELECT count(*) FROM poly_post_comments c WHERE NOT EXISTS (SELECT 1 FROM poly_posts p WHERE p.id = c.post_id))
+     + (SELECT count(*) FROM poly_product_comments c WHERE NOT EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.product_id)) AS orphans;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>08-polymorphic.sql · region join</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="08-polymorphic.join">  loai   | cha_id |    body
+---------+--------+------------
+ Post    |      1 | Chúc mừng!
+ Product |      1 | Ngon
+ Product |      2 | Mặn mà
+(3 rows)
+…
+DELETE 1
+…
+ orphans
+---------
+       0
+(1 row)</pre></div>
+
+<div class="widget" id="w8">
+<div class="widget-head"><h4>W8 · Ba thiết kế, một lần xóa</h4><span class="eyebrow">run-w8 · 08-polymorphic</span></div>
+<div class="widget-body">
+<p>Chọn thiết kế, rồi bấm "Xóa post #1" để xem kết quả đã đo: còn bao nhiêu bình luận mồ côi, và lần ghi sai bị chặn bằng mã nào.</p>
+<div class="btns tabs" id="w8-tabs" role="group" aria-label="Chọn thiết kế"></div>
+<div class="btns"><button type="button" class="btn" id="w8-del" aria-pressed="false">Xóa post #1</button></div>
+<div class="out" id="w8-out" aria-live="polite"></div>
+</div>
+</div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Tiêu chí</th><th>1 · type + id</th><th>2 · exclusive arc</th><th>3 · bảng riêng</th></tr></thead>
+<tbody>
+<tr><td>FK</td><td class="badx">không khai báo được</td><td>mỗi loại cha một cột FK</td><td>mỗi bảng một FK</td></tr>
+<tr><td>Ghi sai</td><td class="badx">"Psot", id 99 đều lưu được</td><td>không cha → <b class="m" data-run="08-polymorphic.arc">23514</b></td><td>không có cột loại để gõ sai</td></tr>
+<tr><td>Mồ côi sau khi xóa bài 1</td><td class="badx"><b class="m" data-run="08-polymorphic.typeid">4</b></td><td class="good"><b class="m" data-run="08-polymorphic.arc">0</b></td><td class="good"><b class="m" data-run="08-polymorphic.join">0</b></td></tr>
+<tr><td>Đọc "mọi bình luận"</td><td>1 bảng</td><td>1 bảng</td><td><code>UNION ALL</code></td></tr>
+<tr><td>Thêm loại cha mới</td><td>không cần DDL</td><td>ADD COLUMN + sửa CHECK</td><td>CREATE TABLE mới</td></tr>
+</tbody>
+</table></div>
+<p>Gợi ý chọn: ít loại cha (2–4) và cần đọc chung → <b>arc</b>. Mỗi loại cha có cột riêng (bình luận món có số sao, bình luận bài viết thì không) → <b>bảng riêng</b>. Type + id chỉ khi bạn chấp nhận mồ côi và có job dọn.</p>
+
+<div class="callout pg">
+<span class="tag">Prisma 7.9 · bạn dùng ở qlhd</span>
+<p>Prisma <b>không có quan hệ đa hình</b>: một relation field chỉ trỏ tới một model (danh sách attribute trong Prisma schema reference không có polymorphic, không có CHECK · <code>runs/prisma-claims.txt</code> P8).</p>
+<ul>
+<li><b>Arc</b> = hai relation tùy chọn trên cùng model: <code>postId Int?</code> + <code>post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)</code>, tương tự <code>productId</code>/<code>product</code>. Prisma Client đọc <code>include: { post: true, product: true }</code> bình thường.</li>
+<li>Dòng <code>CHECK (num_nonnulls(post_id, product_id) = 1)</code> không ghi được trong <code>schema.prisma</code>: chạy <code>prisma migrate dev --create-only</code>, thêm CHECK vào <code>migration.sql</code>, rồi mới apply. Hai partial index thì Prisma 7.4+ khai báo được bằng <code>@@index(…, where: …)</code> sau khi bật preview feature <code>partialIndexes</code>; chưa bật preview thì viết tay trong <code>migration.sql</code>.</li>
+<li><b>Bảng riêng</b> = hai model <code>PostComment</code>, <code>ProductComment</code>, mỗi model một relation bắt buộc. Không cần SQL tay.</li>
+<li>Kiểu type + id trong Prisma chỉ là hai cột vô hướng <code>commentableType String</code>, <code>commentableId Int</code>: không relation, không <code>include</code>, app tự JOIN.</li>
+</ul>
+</div>
+
+<div class="callout challenge" id="chang-8-tu-lam">
+<span class="tag">Tự làm · chặng 8</span>
+<p><b>Đề:</b> file đính kèm (ảnh hợp đồng, ảnh mặt tiền cửa hàng) thuộc về một <b>hợp đồng</b> hoặc một <b>cửa hàng</b>. Tạo 2 bảng cha nhỏ <code>my_c8_contracts (id int PK, code text)</code>, <code>my_c8_stores (id int PK, name text)</code>, mỗi bảng 2 dòng, rồi thiết kế <code>my_attachments</code> theo exclusive arc. Dùng tên <code>my_*</code> để file setup không xóa bảng của bạn.</p>
+<p><b>PASS khi</b> (chạy trong DBX, mỗi câu lỗi cố ý chạy riêng):</p>
+<ul>
+<li>Đính kèm không có cha → <code>23514</code>; có cả hai cha → <code>23514</code>.</li>
+<li><code>contract_id = 999</code> (không tồn tại) → <code>23503</code>.</li>
+<li>Xóa hợp đồng 1 → câu đếm mồ côi bên dưới trả 0.</li>
+<li>Có 2 partial index, và câu tự kiểm tra thấy 1 CHECK + 2 FK.</li>
+</ul>
+<div class="code"><pre><code>-- Tự kiểm tra
+SET search_path = lab07_modeling;
+SELECT contype, pg_get_constraintdef(oid) AS dinh_nghia
+FROM pg_constraint WHERE conrelid = 'my_attachments'::regclass ORDER BY contype;
+SELECT indexdef FROM pg_indexes WHERE tablename = 'my_attachments';
+SELECT count(*) AS orphans FROM my_attachments a
+WHERE (a.contract_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM my_c8_contracts c WHERE c.id = a.contract_id))
+   OR (a.store_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM my_c8_stores s WHERE s.id = a.store_id));</code></pre></div>
+<label class="fields"><span class="muted">Ghi lại 3 mã lỗi bạn nhận và số mồ côi</span>
+<input class="field" data-store="l07-c8-codes" placeholder="không cha: … · hai cha: … · id 999: … · mồ côi: …">
+</label>
+<details class="fold"><summary>Đáp án tham khảo (chưa chạy trên máy)</summary><div class="fold-body">
+<div class="code"><pre><code>SET search_path = lab07_modeling;
+CREATE TABLE my_c8_contracts (id int PRIMARY KEY, code text NOT NULL);
+CREATE TABLE my_c8_stores    (id int PRIMARY KEY, name text NOT NULL);
+INSERT INTO my_c8_contracts VALUES (1, 'HD001'), (2, 'HD002');
+INSERT INTO my_c8_stores VALUES (1, 'MayCha Quận 7'), (2, 'MayCha Thủ Đức');
+CREATE TABLE my_attachments (
+  id          int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  contract_id int REFERENCES my_c8_contracts (id) ON DELETE CASCADE,
+  store_id    int REFERENCES my_c8_stores (id) ON DELETE CASCADE,
+  url         text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CHECK (num_nonnulls(contract_id, store_id) = 1)
+);
+CREATE INDEX ON my_attachments (contract_id) WHERE contract_id IS NOT NULL;
+CREATE INDEX ON my_attachments (store_id) WHERE store_id IS NOT NULL;
+INSERT INTO my_attachments (contract_id, url) VALUES (1, 'hd001.pdf');
+INSERT INTO my_attachments (store_id, url) VALUES (1, 'q7-mat-tien.jpg');
+DELETE FROM my_c8_contracts WHERE id = 1;   -- rồi chạy câu đếm mồ côi: dự kiến 0
+-- Ba câu lỗi cố ý, chạy từng câu:
+-- INSERT INTO my_attachments (url) VALUES ('khong-cha.jpg');                          -- dự kiến 23514
+-- INSERT INTO my_attachments (contract_id, store_id, url) VALUES (2, 1, 'hai-cha.jpg'); -- dự kiến 23514
+-- INSERT INTO my_attachments (contract_id, url) VALUES (999, 'ma.pdf');               -- dự kiến 23503</code></pre></div>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 8</h3>
+<div class="code"><pre data-sql="08-polymorphic#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 8
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K8.1' AS ma, CASE WHEN (SELECT count(*) FROM poly_comments WHERE commentable_type NOT IN ('Post', 'Product')) &gt; 0 THEN '✔' ELSE '✘' END AS ket_qua,
+       'cách 1 nhận cả loại gõ sai (Psot): DB không kiểm được' AS chi_tiet
+UNION ALL
+SELECT 'K8.2', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE conrelid = 'poly_comments_arc'::regclass AND contype = 'c') = 1 THEN '✔' ELSE '✘' END,
+       'cách 2 có CHECK num_nonnulls(...) = 1'
+UNION ALL
+SELECT 'K8.3', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE conrelid IN ('poly_post_comments'::regclass, 'poly_product_comments'::regclass) AND contype = 'f') = 2
+               THEN '✔' ELSE '✘' END, 'cách 3: mỗi bảng bình luận có FK tới đúng một cha';
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>08-polymorphic.sql · region kiem-chung</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="08-polymorphic.kiem-chung">  ma  | ket_qua |                       chi_tiet
+------+---------+-------------------------------------------------------
+ K8.1 | ✔       | cách 1 nhận cả loại gõ sai (Psot): DB không kiểm được
+ K8.2 | ✔       | cách 2 có CHECK num_nonnulls(...) = 1
+ K8.3 | ✔       | cách 3: mỗi bảng bình luận có FK tới đúng một cha
+(3 rows)</pre></div>
+
+<div class="quiz" data-quiz="8"></div>
+</section>

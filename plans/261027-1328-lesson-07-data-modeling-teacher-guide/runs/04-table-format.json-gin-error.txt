@@ -1,0 +1,26 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region json-gin-error · Kiểu json (không có "b") không có GIN (slide 16)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.198 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.079 ms
+SET
+Time: 0.089 ms
+DROP TABLE IF EXISTS ddl_events_json;
+psql:<stdin>:4: NOTICE:  00000: table "ddl_events_json" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.942 ms
+CREATE TEMP TABLE ddl_events_json (id int, data json);
+CREATE TABLE
+Time: 222.844 ms
+CREATE INDEX ON ddl_events_json USING gin (data);
+psql:<stdin>:6: ERROR:  42704: data type json has no default operator class for access method "gin"
+HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+LOCATION:  ResolveOpClass, indexcmds.c:2225
+Time: 1.368 ms
+-- #endregion

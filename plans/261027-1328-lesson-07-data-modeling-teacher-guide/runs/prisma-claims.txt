@@ -1,0 +1,21 @@
+-- chạy lúc 27/10/2026 21:20 +0700 · trích tài liệu Prisma chính thức (WebFetch) + unpkg; không đọc node_modules
+phien_ban: prisma@7.9.0 và @prisma/client@7.9.0 tồn tại trên npm (https://unpkg.com/prisma@7.9.0/package.json → "version": "7.9.0"); app qlhd khai báo "^7.9.0".
+
+P1 Float trên PostgreSQL = double precision
+   nguồn: https://www.prisma.io/docs/orm/reference/prisma-schema-reference  · "| PostgreSQL  | `double precision` |"
+P2 Decimal mặc định = decimal(65,30); khai báo độ chính xác bằng @db.Decimal(p, s)
+   nguồn: cùng trang · "| PostgreSQL  | `decimal(65,30)` |" và "| `decimal` | `numeric` | `@db.Decimal(p, s)`† |"
+P3 DateTime mặc định = timestamp(3) (KHÔNG có múi giờ); muốn timestamptz phải ghi @db.Timestamptz(x)
+   nguồn: cùng trang · "| PostgreSQL  | `timestamp(3)`  |" và "| `timestamptz(x)` | `@db.Timestamptz(x)` |"
+P4 Json trên PostgreSQL = jsonb
+   nguồn: cùng trang · "| PostgreSQL  | `jsonb` |"
+P5 Mảng vô hướng (String[]) chỉ hỗ trợ trên PostgreSQL/CockroachDB
+   nguồn: cùng trang · "Currently, scalar lists are therefore only supported when using PostgreSQL or CockroachDB."
+P6 GIN index khai báo bằng @@index([...], type: Gin); GIN dùng cho mảng hoặc jsonb
+   nguồn: https://www.prisma.io/docs/orm/prisma-schema/data-model/indexes · "@@index([value(ops: JsonbPathOps)], type: Gin)" và "The GIN index stores composite values, such as arrays or `JsonB` data."
+P7 Prisma không tự tạo index cho cột quan hệ (relation scalar) — phải tự ghi @@index
+   nguồn: https://www.prisma.io/docs/orm/prisma-schema/data-model/relations/relation-mode · "manually add an index on your relation scalar fields"
+   (trang này nói "the database usually also implicitly creates an index" và lấy MySQL làm ví dụ; PostgreSQL thì KHÔNG — đo ở runs/03-foreign-keys.cost.txt: fk_child chỉ có fk_child_pkey)
+   bằng chứng trên app thật: runs/qlhd-migrations.txt · 5 cột FK thiếu index
+P8 Prisma schema không có cú pháp CHECK, EXCLUDE hay quan hệ đa hình → viết tay trong migration.sql (prisma migrate dev --create-only rồi sửa file)
+   nguồn: suy ra từ prisma-schema-reference (danh sách attribute không có check/exclude); không có trích dẫn trực tiếp → trong guide ghi là "không có attribute", không ghi là trích dẫn

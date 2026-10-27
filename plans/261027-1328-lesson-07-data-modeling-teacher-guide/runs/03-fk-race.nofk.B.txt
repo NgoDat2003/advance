@@ -1,0 +1,37 @@
+-- chạy lúc 27/10/2026 22:14 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region nofk · Không có FK: app kiểm tra "cửa hàng còn hợp đồng không?" rồi xóa
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.133 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.069 ms
+SET
+Time: 0.072 ms
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'app kiểm tra: cửa hàng 7 còn hợp đồng?' AS viec;
+ buoc |     luc      |                  viec                  
+------+--------------+----------------------------------------
+ B1   | 15:14:11.136 | app kiểm tra: cửa hàng 7 còn hợp đồng?
+(1 row)
+
+Time: 0.848 ms
+SELECT count(*) AS hop_dong_cua_7 FROM race_contracts WHERE store_id = 7;   -- 0: A mới kiểm tra, chưa ghi hợp đồng nào
+ hop_dong_cua_7 
+----------------
+              0
+(1 row)
+
+Time: 0.991 ms
+DELETE FROM race_stores WHERE id = 7;
+DELETE 1
+Time: 1.901 ms
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'đã xóa cửa hàng 7' AS viec;
+ buoc |     luc      |       viec        
+------+--------------+-------------------
+ B2   | 15:14:11.140 | đã xóa cửa hàng 7
+(1 row)
+
+Time: 0.321 ms
+-- #endregion

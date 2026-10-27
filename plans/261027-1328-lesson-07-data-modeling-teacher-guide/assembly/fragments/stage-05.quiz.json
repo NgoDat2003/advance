@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Trên PG 16, lưu chuỗi 'xin chao' vào text và vào varchar(255) thì tốn bao nhiêu byte?",
+    "opts": [
+      "varchar(255) ít hơn vì chỉ dùng đúng độ dài",
+      "Như nhau: 9 byte khi nằm trong bảng",
+      "text tốn 255 byte",
+      "text luôn bị đẩy sang TOAST nên tốn hơn"
+    ],
+    "ans": 1,
+    "why": "05-data-types #string: trong bảng ty_stored, text và varchar(255) đều 9 byte (đo trên literal thì cùng là 12 byte). varchar(n) chỉ thêm phép kiểm độ dài: ghi chuỗi quá dài báo 22001 (#string-limit). Chuỗi dài mới được nén TOAST: 11120 byte còn 148."
+  },
+  {
+    "q": "Northwind lưu đơn giá bằng real. Làm tròn từng dòng về 2 số lẻ rồi cộng doanh thu: tính bằng float và bằng numeric ra bao nhiêu?",
+    "opts": [
+      "Bằng nhau tuyệt đối",
+      "1265792.95 so với 1265793.29",
+      "PG báo lỗi khi nhân real với integer",
+      "numeric chậm hơn nên phải dùng float"
+    ],
+    "ans": 1,
+    "why": "05-data-types #money: làm tròn từng dòng thì float ra 1265792.95, numeric ra 1265793.29. Nếu không làm tròn, hai bên chỉ lệch chưa tới 0,001 (1265793.038653364 so với 1265793.0395): float sai ở chỗ làm tròn các giá trị kiểu x,xx5, và hóa đơn thì luôn làm tròn."
+  },
+  {
+    "q": "App ở Việt Nam ghi '2026-10-28 09:00' vào cột timestamptz. Một worker có phiên TimeZone = UTC đọc lại thấy gì?",
+    "opts": [
+      "2026-10-28 09:00:00+07",
+      "2026-10-28 02:00:00+00",
+      "2026-10-28 09:00:00",
+      "Lỗi vì sai múi giờ"
+    ],
+    "ans": 1,
+    "why": "05-data-types #time: timestamptz lưu một thời điểm và hiển thị theo múi giờ của phiên, nên phiên UTC thấy 02:00:00+00. Cột timestamp vẫn hiện 09:00:00 ở mọi phiên, không ai biết đó là giờ nào."
+  },
+  {
+    "q": "nf_products có 77 sản phẩm. Câu WHERE product_id NOT IN (danh sách gồm 1 và NULL) trả bao nhiêu dòng?",
+    "opts": [
+      "76",
+      "77",
+      "0",
+      "Báo lỗi vì danh sách có NULL"
+    ],
+    "ans": 2,
+    "why": "05-data-types #null: NOT IN gặp một NULL thì không dòng nào thỏa, ra 0. Viết bằng NOT EXISTS thì ra 76. Bẫy này mới là lý do tránh NULL trên PG; về dung lượng, dòng toàn NULL chỉ 28 byte so với 63."
+  }
+]

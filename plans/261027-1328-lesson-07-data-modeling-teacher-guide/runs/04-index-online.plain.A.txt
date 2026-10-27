@@ -1,0 +1,55 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region plain · A tạo index thường và giữ transaction mở
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.126 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.109 ms
+SET
+Time: 0.131 ms
+DROP INDEX IF EXISTS ddl_contracts_store_idx;
+psql:<stdin>:4: NOTICE:  00000: index "ddl_contracts_store_idx" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP INDEX
+Time: 0.253 ms
+BEGIN;
+BEGIN
+Time: 0.042 ms
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'CREATE INDEX thường' AS viec;
+ buoc |     luc      |        viec         
+------+--------------+---------------------
+ A1   | 14:11:43.188 | CREATE INDEX thường
+(1 row)
+
+Time: 1.737 ms
+CREATE INDEX ddl_contracts_store_idx ON ddl_contracts (store_id);
+CREATE INDEX
+Time: 151.038 ms
+SELECT mode, granted FROM pg_locks WHERE relation = 'ddl_contracts'::regclass AND pid = pg_backend_pid();
+   mode    | granted 
+-----------+---------
+ ShareLock | t
+(1 row)
+
+Time: 3.194 ms
+SELECT pg_sleep(6);   -- giả lập index lớn tạo lâu. Lúc này hãy chạy phiên B.
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6006.277 ms (00:06.006)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'xong, trả khóa' AS viec;
+ buoc |     luc      |      viec      
+------+--------------+----------------
+ A2   | 14:11:49.349 | xong, trả khóa
+(1 row)
+
+Time: 0.208 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.736 ms
+-- #endregion

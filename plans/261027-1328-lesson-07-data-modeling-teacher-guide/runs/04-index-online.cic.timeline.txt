@@ -1,0 +1,82 @@
+── A · bước A1 · 15:36:08.934 ──
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'request ghi thứ nhất' AS viec;
+ buoc |     luc      |         viec         
+------+--------------+----------------------
+ A1   | 15:36:08.934 | request ghi thứ nhất
+(1 row)
+
+Time: 0.953 ms
+UPDATE ddl_contracts SET note = 'sửa lần 1' WHERE id = 2;
+UPDATE 1
+Time: 2.973 ms
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Time: 6002.513 ms (00:06.003)
+── B · bước B1 · 15:36:09.952 ──
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'CREATE INDEX CONCURRENTLY' AS viec;
+ buoc |     luc      |           viec            
+------+--------------+---------------------------
+ B1   | 15:36:09.952 | CREATE INDEX CONCURRENTLY
+(1 row)
+
+Time: 0.991 ms
+CREATE INDEX CONCURRENTLY ddl_contracts_status_cic ON ddl_contracts (status, store_id);
+CREATE INDEX
+Time: 5587.924 ms (00:05.588)
+── A · bước A2 · 15:36:14.940 ──
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'B đang tạo index: A vẫn ghi được không?' AS viec;
+ buoc |     luc      |                  viec                   
+------+--------------+-----------------------------------------
+ A2   | 15:36:14.940 | B đang tạo index: A vẫn ghi được không?
+(1 row)
+
+Time: 0.199 ms
+UPDATE ddl_contracts SET note = 'sửa lần 2' WHERE id = 3;
+UPDATE 1
+Time: 0.989 ms
+SELECT l.mode, l.granted FROM pg_locks l WHERE l.relation = 'ddl_contracts'::regclass AND l.pid <> pg_backend_pid();
+           mode           | granted 
+--------------------------+---------
+ ShareUpdateExclusiveLock | t
+(1 row)
+
+Time: 6.980 ms
+SELECT phase FROM pg_stat_progress_create_index;
+              phase               
+----------------------------------
+ waiting for writers before build
+(1 row)
+
+Time: 3.110 ms
+COMMIT;
+COMMIT
+Time: 1.272 ms
+── A · bước A3 · 15:36:14.953 ──
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A commit → B được đi tiếp' AS viec;
+ buoc |     luc      |           viec            
+------+--------------+---------------------------
+ A3   | 15:36:14.953 | A commit → B được đi tiếp
+(1 row)
+
+Time: 0.205 ms
+-- #endregion
+── B · bước B2 · 15:36:15.541 ──
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'index xong' AS viec;
+ buoc |     luc      |    viec    
+------+--------------+------------
+ B2   | 15:36:15.541 | index xong
+(1 row)
+
+Time: 0.306 ms
+SELECT indexrelid::regclass AS index_moi, indisvalid AS hop_le FROM pg_index WHERE indexrelid = 'ddl_contracts_status_cic'::regclass;
+        index_moi         | hop_le 
+--------------------------+--------
+ ddl_contracts_status_cic | t
+(1 row)
+
+Time: 1.815 ms
+-- #endregion

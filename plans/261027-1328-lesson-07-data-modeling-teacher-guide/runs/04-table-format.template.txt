@@ -1,0 +1,51 @@
+-- chạy lúc 27/10/2026 21:11 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region template · Table template: cột nghiệp vụ + cột kỹ thuật, version để chống ghi đè (slide 19–20)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.167 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.076 ms
+SET
+Time: 0.078 ms
+DROP TABLE IF EXISTS tpl_stores;
+psql:<stdin>:4: NOTICE:  00000: table "tpl_stores" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.639 ms
+CREATE TABLE tpl_stores (
+  -- nghiệp vụ
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code        text NOT NULL UNIQUE,
+  name        text NOT NULL,
+  status      text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'PAUSED', 'CLOSED')),
+  data        jsonb NOT NULL DEFAULT '{}',          -- thuộc tính mở rộng, không cần ALTER TABLE
+  -- kỹ thuật
+  version     int NOT NULL DEFAULT 0,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  created_by  text NOT NULL DEFAULT current_user,
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  updated_by  text NOT NULL DEFAULT current_user
+);
+CREATE TABLE
+Time: 60.402 ms
+INSERT INTO tpl_stores (code, name) VALUES ('MC-Q7', 'MayCha Quận 7');
+INSERT 0 1
+Time: 51.610 ms
+-- Hai người cùng mở form ở version 0. Người đầu lưu được, người sau sửa 0 dòng → app báo "dữ liệu đã đổi".
+UPDATE tpl_stores SET name = 'MayCha Q7 - Phú Mỹ Hưng', version = version + 1, updated_at = now() WHERE id = 1 AND version = 0;
+UPDATE 1
+Time: 11.982 ms
+UPDATE tpl_stores SET name = 'MayCha Quận Bảy',         version = version + 1, updated_at = now() WHERE id = 1 AND version = 0;
+UPDATE 0
+Time: 0.312 ms
+SELECT id, name, version FROM tpl_stores;
+ id |          name           | version 
+----+-------------------------+---------
+  1 | MayCha Q7 - Phú Mỹ Hưng |       1
+(1 row)
+
+Time: 0.170 ms
+-- #endregion

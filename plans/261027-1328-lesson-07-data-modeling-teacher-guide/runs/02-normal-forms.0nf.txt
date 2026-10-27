@@ -1,0 +1,30 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region 0nf · Ô không nguyên tử: một ô chứa nhiều món (vi phạm 1NF)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.145 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.088 ms
+SET
+Time: 0.089 ms
+SELECT order_id, customer_name, items FROM order_sheet_raw ORDER BY order_id LIMIT 3;
+ order_id |       customer_name       |                                                items                                                 
+----------+---------------------------+------------------------------------------------------------------------------------------------------
+    10248 | Vins et alcools Chevalier | Queso Cabrales x12; Singaporean Hokkien Fried Mee x10; Mozzarella di Giovanni x5
+    10249 | Toms Spezialitäten        | Tofu x9; Manjimup Dried Apples x40
+    10250 | Hanari Carnes             | Jack's New England Clam Chowder x10; Manjimup Dried Apples x35; Louisiana Fiery Hot Pepper Sauce x15
+(3 rows)
+
+Time: 1.798 ms
+-- Muốn hỏi "đơn nào có món Chai?" phải dùng LIKE trên chuỗi; muốn đếm món phải tách chuỗi:
+SELECT count(*) AS so_dong_mon FROM order_sheet_raw, string_to_table(items, '; ') AS mon;
+ so_dong_mon 
+-------------
+        2155
+(1 row)
+
+Time: 1.534 ms
+-- #endregion

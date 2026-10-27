@@ -1,0 +1,35 @@
+-- chạy lúc 27/10/2026 21:12 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region string-index · B-tree không chứa được giá trị quá 2704 byte (slide 22: "không index được cả chuỗi dài")
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.160 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.096 ms
+SET
+Time: 0.073 ms
+DROP TABLE IF EXISTS ty_long;
+psql:<stdin>:4: NOTICE:  00000: table "ty_long" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.241 ms
+CREATE TABLE ty_long (id int PRIMARY KEY, body text);
+CREATE TABLE
+Time: 12.839 ms
+CREATE INDEX ty_long_body_idx ON ty_long (body);
+CREATE INDEX
+Time: 4.169 ms
+-- 100 chuỗi md5 ngẫu nhiên ghép lại = 3.200 ký tự gần như không nén được.
+INSERT INTO ty_long SELECT 1, string_agg(md5(random()::text), '') FROM generate_series(1, 100);
+psql:<stdin>:8: ERROR:  54000: index row size 3216 exceeds btree version 4 maximum 2704 for index "ty_long_body_idx"
+DETAIL:  Index row references tuple (0,1) in relation "ty_long".
+HINT:  Values larger than 1/3 of a buffer page cannot be indexed.
+Consider a function index of an MD5 hash of the value, or use full text indexing.
+SCHEMA NAME:  lab07_modeling
+TABLE NAME:  ty_long
+CONSTRAINT NAME:  ty_long_body_idx
+LOCATION:  _bt_check_third_page, nbtutils.c:2680
+Time: 2.569 ms
+-- #endregion

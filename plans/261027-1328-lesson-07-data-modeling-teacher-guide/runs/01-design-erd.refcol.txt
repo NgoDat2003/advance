@@ -1,0 +1,40 @@
+-- chạy lúc 27/10/2026 21:08 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region refcol · Đơn hàng → thanh toán, và một khoản donate không có đơn (slide 12)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.151 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.084 ms
+SET
+Time: 0.068 ms
+TRUNCATE erd_payment_transactions, erd_orders RESTART IDENTITY;
+TRUNCATE TABLE
+Time: 22.727 ms
+INSERT INTO erd_orders (code, total) VALUES ('DH001', 120000.00);                  -- entity gốc sinh trước
+INSERT 0 1
+Time: 1.999 ms
+INSERT INTO erd_payment_transactions (kind, order_id, amount)                      -- entity sinh sau giữ tham chiếu
+VALUES ('ORDER', 1, 120000.00), ('DONATE', NULL, 50000.00);
+INSERT 0 2
+Time: 1.939 ms
+SELECT p.id, p.kind, p.order_id, o.code AS ma_don, p.amount
+FROM erd_payment_transactions p LEFT JOIN erd_orders o ON o.id = p.order_id ORDER BY p.id;
+ id |  kind  | order_id | ma_don |  amount   
+----+--------+----------+--------+-----------
+  1 | ORDER  |        1 | DH001  | 120000.00
+  2 | DONATE |          |        |  50000.00
+(2 rows)
+
+Time: 0.777 ms
+-- Đếm khoản thanh toán không gắn đơn hàng: chính là khoản donate.
+SELECT count(*) AS so_khoan FROM erd_payment_transactions WHERE order_id IS NULL;
+ so_khoan 
+----------
+        1
+(1 row)
+
+Time: 0.360 ms
+-- #endregion

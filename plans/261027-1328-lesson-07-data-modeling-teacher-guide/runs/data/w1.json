@@ -1,0 +1,110 @@
+{
+ "sources": [
+  "01-design-erd.catalog",
+  "09-ledger.ddl",
+  "02-normal-forms.3nf"
+ ],
+ "tables": [
+  {
+   "name": "erd_orders",
+   "kind": "entity",
+   "note": "đơn hàng: có id, status (vòng đời), cột kỹ thuật",
+   "cols": [
+    "id",
+    "code",
+    "status",
+    "total",
+    "version",
+    "created_at",
+    "updated_at"
+   ]
+  },
+  {
+   "name": "erd_payment_transactions",
+   "kind": "entity",
+   "note": "sinh SAU đơn hàng nên giữ order_id (slide 12)",
+   "cols": [
+    "id",
+    "kind",
+    "order_id → erd_orders",
+    "amount",
+    "status",
+    "version",
+    "created_at",
+    "updated_at"
+   ]
+  },
+  {
+   "name": "nf_order_lines",
+   "kind": "relation",
+   "note": "bảng nối N–M giữa đơn và món, kèm số lượng và giá",
+   "cols": [
+    "order_id → nf_orders",
+    "product_id → nf_products",
+    "unit_price",
+    "quantity",
+    "discount"
+   ]
+  },
+  {
+   "name": "cs_availability",
+   "kind": "support",
+   "note": "bảng phụ của entity homestay: mỗi ngày một dòng",
+   "cols": [
+    "homestay_id → cs_homestays",
+    "day",
+    "price",
+    "status"
+   ]
+  },
+  {
+   "name": "hw_airports",
+   "kind": "config",
+   "note": "danh mục ít đổi, nhiều nơi tham chiếu",
+   "cols": [
+    "code",
+    "name",
+    "timezone"
+   ]
+  },
+  {
+   "name": "wallets",
+   "kind": "entity",
+   "note": "ví: số dư cache + allow_negative",
+   "cols": [
+    "id",
+    "code",
+    "owner",
+    "balance",
+    "allow_negative",
+    "version",
+    "created_at",
+    "updated_at"
+   ]
+  },
+  {
+   "name": "transfers",
+   "kind": "entity",
+   "note": "một lần chuyển tiền, idempotency_key UNIQUE",
+   "cols": [
+    "id",
+    "idempotency_key",
+    "order_ref",
+    "amount",
+    "created_at"
+   ]
+  },
+  {
+   "name": "ledger_entries",
+   "kind": "relation",
+   "note": "bút toán: nối transfer với wallet, amount âm hoặc dương",
+   "cols": [
+    "id",
+    "transfer_id → transfers",
+    "wallet_id → wallets",
+    "amount",
+    "created_at"
+   ]
+  }
+ ]
+}

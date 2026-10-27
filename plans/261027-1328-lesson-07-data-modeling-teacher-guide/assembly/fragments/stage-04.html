@@ -1,0 +1,332 @@
+<!-- CHẶNG 4 -->
+<section id="chang-4" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">04</span>
+    <div>
+      <div class="stage-meta"><span>Slide 13–20</span><span>35 phút + 10 tùy chọn</span><span>Day 05</span></div>
+      <h2>Thêm cột, JSON, thêm index khi bảng đang chạy</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> đo xem câu <code>ALTER TABLE</code> nào làm PG viết lại cả bảng 500.000 dòng, câu nào chỉ mất 1 ms, và tạo index mà không chặn người đang ghi.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Đổi cấu trúc bảng (thêm cột, đổi kiểu, thêm index) trong lúc app vẫn đọc ghi.</dd>
+    <dt>TẠI SAO?</dt><dd>ALTER đổi cấu trúc (thêm/xóa cột, đổi kiểu) lấy khóa mạnh nhất. Nếu nó phải viết lại bảng, khóa giữ lâu và API treo. (Vài ALTER nhẹ như <code>SET (fillfactor)</code> lấy khóa yếu hơn.)</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng tạo sẵn cột dự phòng <code>extra1, extra2</code> "cho sau này". Trên PG 11+ thêm cột chỉ mất vài ms.</dd>
+  </dl>
+  <p>Slide 13 chỉ là tiêu đề phần "Table Format". Bảng thí nghiệm là <code>ddl_contracts</code>: bản sao <b class="m" data-run="04-table-format.add-column">500000</b> hợp đồng của Bài 3. Mở <code>04-table-format.sql</code> trong DBX, bôi đen từng region rồi Run Selection.</p>
+
+  <div class="code"><pre data-sql="04-table-format#add-column"><code>-- #region add-column · Thêm cột trên bảng 500.000 dòng: khi nào PG phải viết lại cả bảng? (slide 14, 17)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS ddl_contracts, ddl_events;
+CREATE TABLE ddl_contracts AS SELECT * FROM lab03_indexing.hw_contracts;
+ALTER TABLE ddl_contracts ADD PRIMARY KEY (id);
+-- ddl_events ghi lại "filenode" (tên file vật lý của bảng) sau mỗi bước. Filenode đổi = PG đã viết lại toàn bộ bảng.
+CREATE TABLE ddl_events (id int GENERATED ALWAYS AS IDENTITY, buoc text, filenode oid);
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ban đầu', pg_relation_filenode('ddl_contracts'));
+ALTER TABLE ddl_contracts ADD COLUMN note text;                                   -- cho phép NULL
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD note text', pg_relation_filenode('ddl_contracts'));
+ALTER TABLE ddl_contracts ADD COLUMN version int NOT NULL DEFAULT 0;              -- default hằng số
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD version DEFAULT 0', pg_relation_filenode('ddl_contracts'));
+ALTER TABLE ddl_contracts ADD COLUMN created_at timestamptz NOT NULL DEFAULT now(); -- now() tính MỘT lần cho cả bảng
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD created_at DEFAULT now()', pg_relation_filenode('ddl_contracts'));
+ALTER TABLE ddl_contracts ADD COLUMN rnd float8 DEFAULT random();                 -- default "volatile": mỗi dòng một giá trị
+INSERT INTO ddl_events (buoc, filenode) VALUES ('ADD rnd DEFAULT random()', pg_relation_filenode('ddl_contracts'));
+ALTER TABLE ddl_contracts ALTER COLUMN customer_id TYPE bigint;                    -- đổi kiểu int → bigint
+INSERT INTO ddl_events (buoc, filenode) VALUES ('customer_id int → bigint', pg_relation_filenode('ddl_contracts'));
+SELECT buoc, filenode, filenode &lt;&gt; lag(filenode) OVER (ORDER BY id) AS rewrite FROM ddl_events ORDER BY id;
+SELECT count(DISTINCT created_at) AS so_gia_tri_created_at, count(DISTINCT rnd) AS so_gia_tri_rnd FROM ddl_contracts;
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #add-column</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.add-column">CREATE TABLE ddl_contracts AS SELECT * FROM lab03_indexing.hw_contracts;
+SELECT 500000
+…
+             buoc             | filenode | rewrite
+------------------------------+----------+---------
+ ban đầu                      |    34014 |
+ ADD note text                |    34014 | f
+ ADD version DEFAULT 0        |    34014 | f
+ ADD created_at DEFAULT now() |    34014 | f
+ ADD rnd DEFAULT random()     |    34030 | t
+ customer_id int → bigint     |    34036 | t
+(6 rows)
+…
+ so_gia_tri_created_at | so_gia_tri_rnd
+-----------------------+----------------
+                     1 |         500000</pre></div>
+
+  <p class="muted">Thời gian từng câu ALTER nằm trong W4 bên dưới.</p>
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc filenode để biết PG có viết lại bảng không</span>
+    <ol>
+      <li><b>Filenode</b> là tên file vật lý của bảng trên đĩa. PG viết lại bảng = tạo file mới = filenode đổi. Bảng <code>ddl_events</code> ghi filenode sau mỗi bước.</li>
+      <li>Ba câu đầu giữ nguyên <b class="m" data-run="04-table-format.add-column">34014</b>. PG chỉ ghi giá trị mặc định vào catalog; dòng cũ đọc ra thì PG tự điền. Vì vậy chỉ mất khoảng <b class="m" data-run="04-table-format.add-column">1.140 ms</b> (psql in dấu chấm là phần thập phân: một phần nghìn giây, không phải một nghìn).</li>
+      <li><code>now()</code> được tính <b>một lần</b> cho cả câu lệnh: cả bảng có đúng <b class="m" data-run="04-table-format.add-column">1</b> giá trị <code>created_at</code>. Nên nó vẫn là "hằng số" với PG.</li>
+      <li><code>random()</code> cho mỗi dòng một giá trị khác nhau (<b class="m" data-run="04-table-format.add-column">500000</b> giá trị). PG phải ghi từng dòng: filenode thành <b class="m" data-run="04-table-format.add-column">34030</b>, mất <b class="m" data-run="04-table-format.add-column">527.308 ms</b>.</li>
+      <li>Đổi <code>int → bigint</code> làm mỗi dòng dài thêm 4 byte, cũng phải viết lại: <b class="m" data-run="04-table-format.add-column">34036</b>, <b class="m" data-run="04-table-format.add-column">518.812 ms</b>.</li>
+    </ol>
+    <p>Quy tắc rút ra: thêm cột cho phép NULL hoặc có default không đổi theo dòng thì rẻ. Default "volatile" (<code>random()</code>, <code>gen_random_uuid()</code>) và đổi kiểu thì đắt, tỉ lệ thuận với số dòng.</p>
+  </div>
+
+  <div class="callout pg" id="sl-14">
+    <span class="tag">Slide 14 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>MySQL bản cũ thêm cột phải khóa cả bảng, gây downtime.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Thêm cột NULL hoặc default hằng số: không viết lại bảng, khoảng 1 ms. Nhưng ADD COLUMN vẫn lấy <b class="m" data-run="04-table-format.lock">AccessExclusiveLock</b>, chặn cả người đọc. Không phải ALTER nào cũng vậy: <code>SET (fillfactor = 90)</code> chỉ lấy <b class="m" data-run="04-table-format.lock">ShareUpdateExclusiveLock</b>, đọc ghi vẫn chạy.</p></div>
+    </div>
+  </div>
+
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #lock</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.lock">ALTER TABLE ddl_contracts ADD COLUMN tam int;
+ALTER TABLE
+Time: 0.955 ms
+SELECT mode, granted FROM pg_locks WHERE relation = 'ddl_contracts'::regclass AND pid = pg_backend_pid();
+        mode         | granted
+---------------------+---------
+ AccessExclusiveLock | t
+…
+ALTER TABLE ddl_contracts SET (fillfactor = 90);
+…
+           mode           | granted
+--------------------------+---------
+ ShareUpdateExclusiveLock | t</pre></div>
+  <div class="callout warn">
+    <span class="tag">Nối với Bài 14</span>
+    <p>Khóa này giữ 1 ms thì vô hại. Nguy hiểm là lúc <b>chờ</b> lấy khóa: một transaction quên đóng đang giữ <code>AccessShareLock</code>, câu ALTER xếp hàng sau nó, và mọi SELECT mới xếp hàng sau ALTER. Xem lại <a href="lesson_14_locking_teacher_guide.html#chang-3">Bài 14 chặng 3</a>. Mỗi migration nên mở đầu bằng <code>SET lock_timeout = '5s';</code> (mọi region ở đây đều có). Với Prisma, thêm dòng đó vào đầu file <code>migration.sql</code> trước khi <code>prisma migrate deploy</code>.</p>
+  </div>
+
+  <div class="widget" id="w4">
+    <div class="widget-head"><h4>W4 · Đồng hồ DDL</h4><span class="eyebrow">run-w4 · 04-table-format · 04-index-online</span></div>
+    <div class="widget-body">
+      <p>Mỗi thanh là thời gian đo được, thang log (0,1 ms → 10 s). Đỏ = PG viết lại cả bảng.</p>
+      <div class="bars" id="w4-bars"></div>
+      <div class="btns" id="w4-mode" role="group" aria-label="Cách tạo index">
+        <button type="button" class="btn" aria-pressed="true" data-k="plain">CREATE INDEX thường</button>
+        <button type="button" class="btn" aria-pressed="false" data-k="cic">CREATE INDEX CONCURRENTLY</button>
+      </div>
+      <div class="out" id="w4-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_15_img_01.png" alt="Slide 15: bảng có cột data kiểu json chứa thuộc tính mở rộng" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 15 · cột data: json để mở rộng</figcaption></figure>
+  <div class="callout key">
+    <span class="tag">Slide 15 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Thêm cột <code>data: json</code> để mở rộng mà không đổi schema.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Đúng. Trên PG dùng <code>jsonb</code> (dạng nhị phân, có toán tử <code>@&gt;</code> và GIN), không dùng <code>json</code>.</p></div>
+    </div>
+  </div>
+
+  <div class="code"><pre data-sql="04-table-format#json"><code>-- #region json · Cột jsonb và hai cách đánh index cho trường bên trong JSON (slide 15–16)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+ALTER TABLE ddl_contracts ADD COLUMN IF NOT EXISTS data jsonb;
+DROP INDEX IF EXISTS ddl_contracts_channel_idx, ddl_contracts_data_gin;
+-- 1% hợp đồng ký qua kênh WEB, 0,1% là khách VIP.
+UPDATE ddl_contracts SET data = jsonb_build_object('channel', CASE WHEN id % 100 = 0 THEN 'WEB' ELSE 'POS' END, 'vip', id % 1000 = 0);
+ANALYZE ddl_contracts;
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data-&gt;&gt;'channel' = 'WEB';
+-- Cách 1: index biểu thức trên đúng một trường.
+CREATE INDEX ddl_contracts_channel_idx ON ddl_contracts ((data-&gt;&gt;'channel'));
+ANALYZE ddl_contracts;
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data-&gt;&gt;'channel' = 'WEB';
+-- Cách 2: GIN trên cả cột, phục vụ toán tử chứa @&gt; cho mọi khóa.
+CREATE INDEX ddl_contracts_data_gin ON ddl_contracts USING gin (data jsonb_path_ops);
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM ddl_contracts WHERE data @&gt; '{"vip": true}';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #json</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.json">               -&gt;  Parallel Seq Scan on ddl_contracts (actual time=22.209..50.885 rows=1667 loops=3)
+                     Filter: ((data -&gt;&gt; 'channel'::text) = 'WEB'::text)
+                     Rows Removed by Filter: 165000
+ Execution Time: 65.506 ms
+…
+   -&gt;  Index Scan using ddl_contracts_channel_idx on ddl_contracts (actual time=0.022..10.046 rows=5000 loops=1)
+         Index Cond: ((data -&gt;&gt; 'channel'::text) = 'WEB'::text)
+ Execution Time: 10.375 ms
+…
+         -&gt;  Bitmap Index Scan on ddl_contracts_data_gin (actual time=0.087..0.088 rows=500 loops=1)
+               Index Cond: (data @&gt; '{"vip": true}'::jsonb)
+ Execution Time: 0.923 ms</pre></div>
+
+  <div class="callout pg" id="sl-16">
+    <span class="tag">Slide 16 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>MySQL bản cũ không đánh index được trên trường trong JSON, nên phải tách ra cột riêng.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Seq Scan <b class="m" data-run="04-table-format.json">65.506 ms</b> → index biểu thức <code>((data-&gt;&gt;'channel'))</code> <b class="m" data-run="04-table-format.json">10.375 ms</b> → GIN <code>jsonb_path_ops</code> cho <code>@&gt;</code> <b class="m" data-run="04-table-format.json">0.923 ms</b>. Kiểu <code>json</code> (không có "b") thì GIN báo <b class="m" data-run="04-table-format.json-gin-error">42704</b>.</p></div>
+    </div>
+  </div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #json-gin-error</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.json-gin-error">CREATE INDEX ON ddl_events_json USING gin (data);
+psql:&lt;stdin&gt;:6: ERROR:  42704: data type json has no default operator class for access method "gin"</pre></div>
+  <p>Chọn index nào? Index biểu thức nhỏ, phục vụ đúng một trường hay lọc (<code>=</code>, <code>ORDER BY</code>). GIN phục vụ <code>@&gt;</code> trên mọi khóa nhưng to hơn và ghi chậm hơn.</p>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_17_img_01.png" alt="Slide 17: bảng tạo sẵn các cột dự phòng chưa dùng" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 17 · cột dự phòng</figcaption></figure>
+  <div class="callout pg" id="sl-17">
+    <span class="tag">Slide 17 · <span class="vchip fix">Cần sửa</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Tạo sẵn cột dự phòng khi tạo bảng, sau này ghi dữ liệu mới vào. Nhược điểm: phải ghi tài liệu nghĩa của cột.</p></div>
+      <div><h5>PG 16 đo được</h5><p>Không cần. Thêm cột thật mất <b class="m" data-run="04-table-format.add-column">1.422 ms</b>, có tên và kiểu đúng. Trường linh hoạt thì để trong <code>jsonb</code> và đánh index biểu thức như trên. Cột <code>extra1 text</code> không có kiểu, không có CHECK, và không ai nhớ nó nghĩa là gì.</p></div>
+    </div>
+  </div>
+
+  <div class="callout pg" id="sl-18">
+    <span class="tag">Slide 18 · <span class="vchip diff">MySQL đúng, PG khác</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Trước MySQL 5.6 thêm index khóa cả bảng; dùng pt-online-schema-change hoặc <code>ALGORITHM=INPLACE, LOCK=NONE</code>.</p></div>
+      <div><h5>PG 16 đo được</h5><p><code>CREATE INDEX</code> giữ <b class="m" data-run="04-index-online.plain.timeline">ShareLock</b>: người đọc vẫn đọc, người ghi bị chặn (<b class="m" data-run="04-index-online.plain.timeline">55P03</b> sau <b class="m" data-run="04-index-online.plain.timeline">2000.334 ms</b>). <code>CONCURRENTLY</code> giữ <b class="m" data-run="04-index-online.cic.timeline">ShareUpdateExclusiveLock</b>: người ghi vẫn ghi. Cái giá: nó chờ mọi transaction ghi đang mở, và không chạy được trong <code>BEGIN</code> (<b class="m" data-run="04-table-format.cic-txn">25001</b>).</p></div>
+    </div>
+  </div>
+
+  <h3>Hai phiên: index thường và CONCURRENTLY (tùy chọn, 10 phút)</h3>
+  <p>Tab A = kết nối <code>ADVANCE_BE_LAB</code>, tab B = <code>ADVANCE_BE_LAB_B</code>. Cả hai tab ở chế độ <b>auto-commit</b>. Nếu tab B đang ở Manual Commit (<code>Tx: [M]</code>), DBX bọc câu lệnh trong transaction và CONCURRENTLY báo 25001. Mỗi lượt A ngủ 6 giây; trong 6 giây đó chạy region cùng tên ở tab B.</p>
+  <div class="code"><pre data-sql="04-index-online.A#plain"><code>-- #region plain · A tạo index thường và giữ transaction mở
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP INDEX IF EXISTS ddl_contracts_store_idx;
+BEGIN;
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'CREATE INDEX thường' AS viec;
+CREATE INDEX ddl_contracts_store_idx ON ddl_contracts (store_id);
+SELECT mode, granted FROM pg_locks WHERE relation = 'ddl_contracts'::regclass AND pid = pg_backend_pid();
+SELECT pg_sleep(6);   -- giả lập index lớn tạo lâu. Lúc này hãy chạy phiên B.
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'xong, trả khóa' AS viec;
+ROLLBACK;
+-- #endregion</code></pre></div>
+  <div class="code"><pre data-sql="04-index-online.B#cic"><code>-- #region cic · B tạo index CONCURRENTLY trong lúc A đang ghi
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '15s';   -- CIC phải chờ A xong (A ngủ 6 giây); hết lock_timeout giữa chừng sẽ để lại index hỏng
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'CREATE INDEX CONCURRENTLY' AS viec;
+CREATE INDEX CONCURRENTLY ddl_contracts_status_cic ON ddl_contracts (status, store_id);
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'index xong' AS viec;
+SELECT indexrelid::regclass AS index_moi, indisvalid AS hop_le FROM pg_index WHERE indexrelid = 'ddl_contracts_status_cic'::regclass;
+-- #endregion</code></pre></div>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>ADVANCE_BE_LAB (A)</th><th>ADVANCE_BE_LAB_B (B)</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>04-index-online.A.sql</code> region <code>plain</code>: tạo index thường rồi ngủ</td><td></td><td><input class="field" data-store="l07-c4-plain-a" placeholder="A giữ khóa mode gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>04-index-online.B.sql</code> region <code>plain</code>: đọc rồi ghi</td><td><input class="field" data-store="l07-c4-plain-b" placeholder="B đọc được mấy dòng? UPDATE ra mã gì, sau bao lâu?"></td></tr>
+      <tr><td>3</td><td>region <code>cic</code>: UPDATE dòng 2, giữ transaction, ngủ</td><td></td><td><input class="field" data-store="l07-c4-cic-a" placeholder="A đang giữ transaction ghi mở"></td></tr>
+      <tr><td>4</td><td></td><td>region <code>cic</code>: <code>CREATE INDEX CONCURRENTLY</code></td><td><input class="field" data-store="l07-c4-cic-b" placeholder="B trả kết quả ngay hay treo?"></td></tr>
+      <tr><td>5</td><td>A thức dậy: UPDATE dòng 3, đọc <code>pg_locks</code> và <code>phase</code>, rồi COMMIT</td><td></td><td><input class="field" data-store="l07-c4-cic-phase" placeholder="UPDATE dòng 3 có bị chặn? phase = ?"></td></tr>
+      <tr><td>6</td><td></td><td>CIC xong, đọc <code>hop_le</code></td><td><input class="field" data-store="l07-c4-cic-valid" placeholder="B xong lúc nào so với A3? hop_le = ?"></td></tr>
+    </tbody>
+  </table></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-index-online #plain</code> (log gộp A + B)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-index-online.plain.timeline">── A · bước A1 · 14:11:43.188 ──
+CREATE INDEX ddl_contracts_store_idx ON ddl_contracts (store_id);
+   mode    | granted
+-----------+---------
+ ShareLock | t
+…
+── B · bước B1 · 14:11:44.857 ──
+ hop_dong_cua_44
+-----------------
+            2440
+…
+── B · bước B2 · 14:11:44.881 ──
+UPDATE ddl_contracts SET note = 'ghi trong lúc tạo index' WHERE id = 1;
+psql:&lt;stdin&gt;:7: ERROR:  55P03: canceling statement due to lock timeout
+Time: 2000.334 ms (00:02.000)
+…
+── A · bước A2 · 14:11:49.349 ──</pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-index-online #cic</code> (log gộp A + B)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-index-online.cic.timeline">── A · bước A1 · 15:36:08.934 ──
+UPDATE ddl_contracts SET note = 'sửa lần 1' WHERE id = 2;
+UPDATE 1
+…
+── B · bước B1 · 15:36:09.952 ──
+CREATE INDEX CONCURRENTLY ddl_contracts_status_cic ON ddl_contracts (status, store_id);
+CREATE INDEX
+Time: 5587.924 ms (00:05.588)
+── A · bước A2 · 15:36:14.940 ──
+UPDATE ddl_contracts SET note = 'sửa lần 2' WHERE id = 3;
+UPDATE 1
+…
+ ShareUpdateExclusiveLock | t
+…
+ waiting for writers before build
+…
+── A · bước A3 · 15:36:14.953 ──
+…
+── B · bước B2 · 15:36:15.541 ──
+…
+ ddl_contracts_status_cic | t</pre></div>
+  <p>Đọc log CIC: B bắt đầu lúc <b class="m" data-run="04-index-online.cic.timeline">15:36:09.952</b> nhưng chỉ xong lúc <b class="m" data-run="04-index-online.cic.timeline">15:36:15.541</b>, ngay sau khi A commit lúc <b class="m" data-run="04-index-online.cic.timeline">15:36:14.953</b>. Trong lúc đó A vẫn ghi được dòng 3 (<b class="m" data-run="04-index-online.cic.timeline">UPDATE 1</b>), còn <code>pg_stat_progress_create_index</code> báo <b class="m" data-run="04-index-online.cic.timeline">waiting for writers before build</b>. Một transaction ghi treo lâu sẽ làm CIC treo theo, nhưng không chặn ai khác.</p>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #cic-txn</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.cic-txn">BEGIN;
+CREATE INDEX CONCURRENTLY ddl_contracts_total_idx ON ddl_contracts (total);
+psql:&lt;stdin&gt;:5: ERROR:  25001: CREATE INDEX CONCURRENTLY cannot run inside a transaction block</pre></div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/7_Data_Modeling/page_20_img_01.png" alt="Slide 20: các cột chung của một bảng, nhóm nghiệp vụ và nhóm kỹ thuật" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 20 · table template: cột nghiệp vụ + cột kỹ thuật</figcaption></figure>
+  <div class="callout key">
+    <span class="tag">Slide 19–20 · <span class="vchip ok">Đúng trên PG16</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Mỗi bảng có nhóm nghiệp vụ (id, status, name, data json) và nhóm kỹ thuật (version, created_at/by, updated_at/by).</p></div>
+      <div><h5>PG 16 đo được</h5><p><code>tpl_stores</code> theo đúng mẫu. Cột <code>version</code> chặn ghi đè: hai người cùng sửa từ version 0, người đầu <b class="m" data-run="04-table-format.template">UPDATE 1</b>, người sau <b class="m" data-run="04-table-format.template">UPDATE 0</b>. App thấy 0 dòng thì báo "dữ liệu đã đổi". Đây là khóa lạc quan của Bài 14.</p></div>
+    </div>
+  </div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #template</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.template">UPDATE tpl_stores SET name = 'MayCha Q7 - Phú Mỹ Hưng', version = version + 1, updated_at = now() WHERE id = 1 AND version = 0;
+UPDATE 1
+…
+UPDATE tpl_stores SET name = 'MayCha Quận Bảy',         version = version + 1, updated_at = now() WHERE id = 1 AND version = 0;
+UPDATE 0
+…
+  1 | MayCha Q7 - Phú Mỹ Hưng |       1</pre></div>
+
+  <div class="callout challenge" id="chang-4-tu-lam">
+    <span class="tag">Tự làm · chặng 4</span>
+    <p><b>Đề:</b> tạo bảng <code>my_c4_stores</code> 100.000 dòng (<code>id</code>, <code>code</code>) không có cột <code>data</code>. Đặt <code>lock_timeout</code> 2 giây, thêm cột <code>data jsonb NOT NULL DEFAULT '{}'</code>, ghi quận vào <code>data</code> (2% là <code>Q7</code>), tạo index biểu thức trên <code>data-&gt;&gt;'district'</code>, rồi dán EXPLAIN vào ô dưới.</p>
+    <p><b>PASS khi:</b> filenode trước và sau ADD COLUMN giống nhau; <code>SHOW lock_timeout</code> ra <code>2s</code>; EXPLAIN có <code>Index Scan</code> hoặc <code>Bitmap Index Scan</code> trên index của bạn.</p>
+    <div class="code"><pre><code>-- Tự kiểm: cả hai cột phải là t
+SET search_path = lab07_modeling;
+SELECT to_regclass('lab07_modeling.my_c4_stores_district_idx') IS NOT NULL AS co_index,
+       (SELECT atthasmissing FROM pg_attribute
+        WHERE attrelid = 'lab07_modeling.my_c4_stores'::regclass AND attname = 'data') AS them_cot_khong_viet_lai;</code></pre></div>
+    <label class="fields"><span class="muted">Dán EXPLAIN của bạn</span><textarea class="field" data-store="l07-c4-explain" placeholder="Index Scan using my_c4_stores_district_idx …"></textarea></label>
+    <details class="fold"><summary>Lời giải mẫu</summary><div class="fold-body">
+      <div class="code"><pre><code>SET search_path = lab07_modeling;
+SET lock_timeout = '2s';
+DROP TABLE IF EXISTS my_c4_stores;
+CREATE TABLE my_c4_stores AS SELECT g AS id, 'MC-' || g AS code FROM generate_series(1, 100000) g;
+SELECT pg_relation_filenode('my_c4_stores');            -- ghi lại số này
+ALTER TABLE my_c4_stores ADD COLUMN data jsonb NOT NULL DEFAULT '{}';
+SELECT pg_relation_filenode('my_c4_stores');            -- phải giống số trên
+UPDATE my_c4_stores SET data = jsonb_build_object('district', CASE WHEN id % 50 = 0 THEN 'Q7' ELSE 'Q1' END);
+CREATE INDEX my_c4_stores_district_idx ON my_c4_stores ((data-&gt;&gt;'district'));
+ANALYZE my_c4_stores;
+EXPLAIN (ANALYZE, COSTS OFF) SELECT count(*) FROM my_c4_stores WHERE data-&gt;&gt;'district' = 'Q7';</code></pre></div>
+      <p><code>atthasmissing = t</code> nghĩa là PG đang giữ default trong catalog thay vì ghi vào từng dòng cũ. Trên bảng thật, tạo index bằng <code>CREATE INDEX CONCURRENTLY</code> ở tab auto-commit.</p>
+    </div></details>
+  </div>
+
+  <h3>Kiểm chứng chặng 4</h3>
+  <div class="code"><pre data-sql="04-table-format#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 4
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K4.1' AS ma, CASE WHEN (SELECT count(*) FROM ddl_contracts) = 500000 THEN '✔' ELSE '✘' END AS ket_qua, 'ddl_contracts có 500.000 dòng' AS chi_tiet
+UNION ALL
+SELECT 'K4.2', CASE WHEN (SELECT count(*) FROM (SELECT filenode &lt;&gt; lag(filenode) OVER (ORDER BY id) AS r FROM ddl_events) x WHERE r) = 2
+               THEN '✔' ELSE '✘' END, 'đúng 2 bước viết lại bảng: DEFAULT random() và int → bigint'
+UNION ALL
+SELECT 'K4.3', CASE WHEN to_regclass('lab07_modeling.ddl_contracts_channel_idx') IS NOT NULL AND to_regclass('lab07_modeling.ddl_contracts_data_gin') IS NOT NULL
+               THEN '✔' ELSE '✘' END, 'có index biểu thức (data-&gt;&gt;''channel'') và GIN jsonb_path_ops'
+UNION ALL
+SELECT 'K4.4', CASE WHEN (SELECT version FROM tpl_stores WHERE id = 1) = 1 THEN '✔' ELSE '✘' END, 'tpl_stores: chỉ một lần lưu thắng, version = 1'
+UNION ALL
+SELECT 'K4.5', CASE WHEN to_regclass('lab07_modeling.ddl_contracts_status_cic') IS NULL THEN '–'
+                    WHEN (SELECT indisvalid FROM pg_index WHERE indexrelid = 'ddl_contracts_status_cic'::regclass) THEN '✔' ELSE '✘' END,
+       'index tạo bằng CONCURRENTLY hợp lệ (chạy 04-index-online #cic trước)';
+-- #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>04-table-format.sql #kiem-chung</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-table-format.kiem-chung">  ma  | ket_qua |                               chi_tiet
+------+---------+----------------------------------------------------------------------
+ K4.1 | ✔       | ddl_contracts có 500.000 dòng
+ K4.2 | ✔       | đúng 2 bước viết lại bảng: DEFAULT random() và int → bigint
+ K4.3 | ✔       | có index biểu thức (data-&gt;&gt;'channel') và GIN jsonb_path_ops
+ K4.4 | ✔       | tpl_stores: chỉ một lần lưu thắng, version = 1
+ K4.5 | ✔       | index tạo bằng CONCURRENTLY hợp lệ (chạy 04-index-online #cic trước)
+(5 rows)</pre></div>
+  <p class="muted">K4.5 ra <code>–</code> nếu bạn bỏ qua phần hai phiên (tùy chọn).</p>
+
+  <div class="quiz" data-quiz="4"></div>
+</section>

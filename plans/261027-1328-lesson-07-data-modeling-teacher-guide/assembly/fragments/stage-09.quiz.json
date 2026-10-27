@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Tấn công 2 chèn một bút toán +50000 đứng một mình. Lỗi xuất hiện ở đâu?",
+    "opts": [
+      "Ngay ở câu INSERT vào ledger_entries, mã 23514",
+      "Ở COMMIT, mã 23514, vì constraint trigger là DEFERRABLE INITIALLY DEFERRED",
+      "Không có lỗi, phải chờ đối soát ban đêm mới thấy",
+      "Ở câu INSERT vào transfers, mã 23505"
+    ],
+    "ans": 1,
+    "why": "runs/09-ledger.attack-unbalanced.txt: hai câu INSERT đều thành công, dòng 'chưa lỗi: trigger DEFERRED chỉ kiểm tra lúc COMMIT' in ra, rồi COMMIT nhận ERROR 23514: giao dịch 4 lệch."
+  },
+  {
+    "q": "App gửi lại request order-DH001 lần thứ hai. Điều gì chặn việc ghi sổ hai lần?",
+    "opts": [
+      "UNIQUE trên transfers.idempotency_key, trả 23505",
+      "CHECK (allow_negative OR balance >= 0)",
+      "Khóa FOR UPDATE trong post_transfer",
+      "Constraint trigger ledger_balanced"
+    ],
+    "ans": 0,
+    "why": "runs/09-ledger.attack-duplicate.txt: so_giao_dich_dh001 = 1, rồi post_transfer nhận ERROR 23505 trên transfers_idempotency_key_key. K9.5 của kiem-chung xác nhận chỉ có 1 giao dịch."
+  },
+  {
+    "q": "Ai đó cộng tay 5000 vào wallets.balance của STORE_Q7. Câu sửa đúng là gì?",
+    "opts": [
+      "Trừ tay 5000 lại cho khớp",
+      "Thêm một bút toán +5000 để sổ khớp với cache",
+      "Xóa ví rồi tạo lại",
+      "Tính lại balance = tổng ledger_entries của ví, vì sổ cái là sự thật còn balance chỉ là cache"
+    ],
+    "ans": 3,
+    "why": "runs/09-ledger.reconcile.txt: cache 50000.00, sổ cái 45000.00, lech = 1; UPDATE tính lại từ sổ (UPDATE 1), lech = 0. Đây là phi chuẩn hóa có kiểm soát của slide 10."
+  },
+  {
+    "q": "Hai giao dịch ngược chiều (3 → 2 và 2 → 3) chạy qua post_transfer cùng lúc. Kết quả đo được?",
+    "opts": [
+      "Một phiên nhận 40P01 như bản khóa tay",
+      "Cả hai chạy song song, không ai chờ",
+      "B chờ A ở câu khóa đầu tiên (1983.522 ms), không deadlock, cả hai COMMIT",
+      "B nhận 55P03 vì lock_timeout"
+    ],
+    "ans": 2,
+    "why": "runs/09-ledger-race.ordered.timeline.txt: post_transfer của B chờ 4926.950 ms rồi trả transfer_id 9, cả hai COMMIT: không có vòng vì cả hai cùng khóa ví 2 trước. Bản khóa tay (unordered.timeline) thì có đúng một 40P01; nạn nhân là phiên kiểm tra deadlock SAU khi vòng đã khép (ở đây là A, lặp lại 3 lần), không phải \"luôn là A\"."
+  }
+]

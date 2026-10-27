@@ -1,0 +1,57 @@
+-- chạy lúc 27/10/2026 22:13 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region 2nf · 2NF: tách thuộc tính chỉ phụ thuộc MỘT PHẦN khóa (product_id) ra bảng riêng
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.145 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.087 ms
+SET
+Time: 0.066 ms
+-- CASCADE: xóa luôn các view của chặng 7 (nếu đã tạo) vì chúng đọc nf_*; chạy lại 07-views.sql sau.
+DROP TABLE IF EXISTS nf_order_lines, nf_orders, nf_products, nf_customers CASCADE;
+psql:<stdin>:5: NOTICE:  00000: drop cascades to 4 other objects
+DETAIL:  drop cascades to view v_cheap_products
+drop cascades to view v_order_lines
+drop cascades to view v_customer_revenue
+drop cascades to view v_top_lines
+LOCATION:  reportDependentObjects, dependency.c:1221
+DROP TABLE
+Time: 12.184 ms
+CREATE TABLE nf_products AS
+  SELECT DISTINCT product_id, product_name, category_name, supplier_name FROM order_sheet;
+SELECT 77
+Time: 4.033 ms
+ALTER TABLE nf_products ADD PRIMARY KEY (product_id);
+ALTER TABLE
+Time: 16.689 ms
+CREATE TABLE nf_orders AS   -- 2NF: vẫn còn customer_name, customer_city phụ thuộc bắc cầu qua customer_id
+  SELECT DISTINCT order_id, order_date, customer_id, customer_name, customer_city, employee_name FROM order_sheet;
+SELECT 830
+Time: 8.186 ms
+ALTER TABLE nf_orders ADD PRIMARY KEY (order_id);
+ALTER TABLE
+Time: 5.638 ms
+CREATE TABLE nf_order_lines AS
+  SELECT order_id, product_id, unit_price, quantity, discount FROM order_sheet;
+SELECT 2155
+Time: 3.042 ms
+ALTER TABLE nf_order_lines ADD PRIMARY KEY (order_id, product_id);
+ALTER TABLE
+Time: 6.305 ms
+-- Update anomaly: đổi tên món số 1 ở bảng phẳng phải sửa nhiều dòng; ở bảng đã tách chỉ 1 dòng.
+BEGIN;
+BEGIN
+Time: 0.093 ms
+UPDATE order_sheet SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+UPDATE 38
+Time: 0.762 ms
+UPDATE nf_products SET product_name = 'Chai (đổi tên)' WHERE product_id = 1;
+UPDATE 1
+Time: 0.367 ms
+ROLLBACK;
+ROLLBACK
+Time: 0.124 ms
+-- #endregion

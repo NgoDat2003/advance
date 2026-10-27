@@ -1,0 +1,53 @@
+-- chạy lúc 27/10/2026 21:09 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region cost · Ghi 200.000 dòng con: có FK và không có FK
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.186 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.091 ms
+SET
+Time: 0.079 ms
+DROP TABLE IF EXISTS fk_child, fk_child_nofk, fk_parent;
+psql:<stdin>:4: NOTICE:  00000: table "fk_child" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "fk_child_nofk" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "fk_parent" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.419 ms
+CREATE TABLE fk_parent (id int PRIMARY KEY, name text NOT NULL);
+CREATE TABLE
+Time: 24.616 ms
+-- 20.000 cha có con; id 20001–20010 cố ý KHÔNG có con để đo phép xóa cha ở region index.
+INSERT INTO fk_parent SELECT g, 'cửa hàng ' || g FROM generate_series(1, 20010) g;
+INSERT 0 20010
+Time: 132.167 ms
+CREATE TABLE fk_child (id int PRIMARY KEY, parent_id int NOT NULL REFERENCES fk_parent (id), note text);
+CREATE TABLE
+Time: 9.161 ms
+CREATE TABLE fk_child_nofk (id int PRIMARY KEY, parent_id int NOT NULL, note text);   -- chỉ là "reference column", không có ràng buộc
+CREATE TABLE
+Time: 7.301 ms
+-- Đồng hồ: xem dòng thời gian (Time / Execution time) của 2 câu INSERT dưới đây.
+INSERT INTO fk_child      SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+INSERT 0 200000
+Time: 3947.629 ms (00:03.948)
+INSERT INTO fk_child_nofk SELECT g, (g % 20000) + 1, 'hợp đồng ' || g FROM generate_series(1, 200000) g;
+INSERT 0 200000
+Time: 381.176 ms
+ANALYZE fk_parent, fk_child, fk_child_nofk;
+ANALYZE
+Time: 129.245 ms
+-- PG không tự tạo index cho cột FK: fk_child chỉ có index của khóa chính.
+SELECT indexrelid::regclass AS index_cua_fk_child FROM pg_index WHERE indrelid = 'fk_child'::regclass;
+ index_cua_fk_child 
+--------------------
+ fk_child_pkey
+(1 row)
+
+Time: 1.550 ms
+-- #endregion

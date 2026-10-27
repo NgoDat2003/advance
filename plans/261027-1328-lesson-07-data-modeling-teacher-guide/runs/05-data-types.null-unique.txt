@@ -1,0 +1,44 @@
+-- chạy lúc 27/10/2026 21:13 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region null-unique · UNIQUE mặc định cho phép nhiều NULL; PG 15+ có NULLS NOT DISTINCT (slide 25)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.186 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.073 ms
+SET
+Time: 0.082 ms
+DROP TABLE IF EXISTS ty_phone, ty_phone_strict;
+psql:<stdin>:4: NOTICE:  00000: table "ty_phone" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "ty_phone_strict" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.650 ms
+CREATE TEMP TABLE ty_phone (id int, phone text UNIQUE);
+CREATE TABLE
+Time: 6.164 ms
+INSERT INTO ty_phone VALUES (1, NULL), (2, NULL);          -- hai khách chưa có số điện thoại: được
+INSERT 0 2
+Time: 0.401 ms
+SELECT count(*) AS so_khach_chua_co_sdt FROM ty_phone WHERE phone IS NULL;
+ so_khach_chua_co_sdt 
+----------------------
+                    2
+(1 row)
+
+Time: 0.391 ms
+CREATE TEMP TABLE ty_phone_strict (id int, phone text UNIQUE NULLS NOT DISTINCT);
+CREATE TABLE
+Time: 7.323 ms
+INSERT INTO ty_phone_strict VALUES (1, NULL), (2, NULL);   -- NULL thứ hai bị coi là trùng
+psql:<stdin>:9: ERROR:  23505: duplicate key value violates unique constraint "ty_phone_strict_phone_key"
+DETAIL:  Key (phone)=(null) already exists.
+SCHEMA NAME:  pg_temp_3
+TABLE NAME:  ty_phone_strict
+CONSTRAINT NAME:  ty_phone_strict_phone_key
+LOCATION:  _bt_check_unique, nbtinsert.c:666
+Time: 0.519 ms
+-- #endregion

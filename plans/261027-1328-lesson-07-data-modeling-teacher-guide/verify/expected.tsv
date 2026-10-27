@@ -1,0 +1,51 @@
+id	run	slides	regex	claim	chip	status
+X01	01-design-erd.refcol	12	so_khoan\s*\n-+\n\s*1\s*\n	payment row for a donate has NULL order_id; reference column lives on the later entity	OK	expect
+X02	02-normal-forms.0nf	9	\b2155\b	string_to_table turns 830 raw orders into 2155 lines	OK	expect
+X03	02-normal-forms.2nf	9	UPDATE (\d{2,})[\s\S]*UPDATE 1\b	renaming one product rewrites many order_sheet rows vs 1 nf_products row	OK	expect
+X04	02-normal-forms.3nf	9	23502|null value in column	product that nobody ordered cannot be stored in the flat sheet (insert anomaly) and deleting lines loses customer cities	OK	expect
+X05	02-normal-forms.lossless	9	so_dong_lech\s*\n-+\n\s*0\s*\n[\s\S]*so_dong_lech\s*\n-+\n\s*0\s*\n	rejoined nf_* EXCEPT order_sheet = 0 rows both ways	-	expect
+X06	02-normal-forms.denorm	10	lech\s*\n-+\n\s*1\s*\n	cached order_total read without join; one edited line gives 1 mismatch	OK	expect
+X07	03-foreign-keys.cost	11	INSERT 0 200000[\s\S]*Time: [\d.]+ ms[\s\S]*INSERT 0 200000[\s\S]*Time: [\d.]+ ms	200,000 inserts timed with and without FK	OK	expect
+X08	03-foreign-keys.index	11	Trigger for constraint fk_child_parent_id_fkey: time=[\d.]+ calls=1[\s\S]*Trigger for constraint fk_child_parent_id_fkey: time=[\d.]+ calls=1	DELETE parent: RI trigger time before and after an index on the FK column	FIX	expect
+X09	03-foreign-keys.error	11	23503	FK violation is 23503 with the constraint name	OK	expect
+X10	03-fk-race.nofk.timeline	11	orphans\s*\n-+\n\s*1\s*\n	both app checks pass; orphans = 1	FIX	expect
+X11	03-fk-race.fk.timeline	11	23503	same app flow with an FK: the late INSERT fails with 23503; orphans 0	FIX	expect
+X12	04-table-format.add-column	14,17	rewrite\s*\|[\s\S]*\bt\b[\s\S]*\bf\b|\bf\b[\s\S]*\bt\b	nullable / constant-default ADD COLUMN keep the filenode; volatile default and int->bigint rewrite	DIFF	expect
+X13	04-table-format.lock	14	AccessExclusiveLock	ALTER TABLE holds AccessExclusiveLock	DIFF	expect
+X14	04-table-format.json	15,16	Index Scan|Bitmap Index Scan	jsonb expression index and GIN serve queries on JSON fields	DIFF	expect
+X15	04-table-format.json-gin-error	16	42704|does not have a default operator class	GIN on plain json fails: only jsonb has GIN operator classes	DIFF	expect
+X16	04-index-online.plain.timeline	18	ShareLock[\s\S]*55P03	CREATE INDEX holds ShareLock; reads pass, writes wait (55P03 with lock_timeout)	DIFF	expect
+X17	04-index-online.cic.timeline	18	ShareUpdateExclusiveLock	CREATE INDEX CONCURRENTLY holds ShareUpdateExclusiveLock; writes keep going	DIFF	expect
+X18	04-table-format.cic-txn	18	25001	CREATE INDEX CONCURRENTLY inside a transaction block fails with 25001	DIFF	expect
+X19	04-table-format.template	19,20	UPDATE 1[\s\S]*UPDATE 0	version CAS: first UPDATE 1, stale version UPDATE 0	OK	expect
+X20	05-data-types.string	22	^\s*12\s*\|\s*12\s*\|	text and varchar(255) store the same bytes	DIFF	expect
+X21	05-data-types.string-limit	22	22001	varchar(n) overflow is 22001	DIFF	expect
+X22	05-data-types.string-index	22	54000	btree entry over 2704 bytes is 54000	DIFF	expect
+X23	05-data-types.money	23	0\.30000000000000004	float cannot hold 0.1+0.2; numeric can	OK	expect
+X24	05-data-types.time	24	09:00:00\+07[\s\S]*02:00:00\+00	same instant shown in two session time zones; timestamp drops the offset	DIFF	expect
+X25	05-data-types.null	25	so_dong\s*\n-+\n\s*0\s*\n	NOT IN against a list containing NULL returns 0 rows	DIFF	expect
+X26	05-data-types.null-unique	25	23505	UNIQUE NULLS NOT DISTINCT rejects a second NULL	DIFF	expect
+X27	06-case-studies.i18n	27	ja	new language key added without DDL	OK	expect
+X28	06-case-studies.ordering	28	\|\s*53\s*\|\s*24\b	float8 bisects 53 times, float4 24 times	FIX	expect
+X29	06-case-studies.availability	29,30	INSERT 0 1095[\s\S]*UPDATE 3	365 rows per homestay generated; a 3-night booking is one conditional UPDATE 3	OK	expect
+X30	06-case-studies.exclusion	29,31	23P01	EXCLUDE USING gist rejects overlapping stays	OK	expect
+X31	06-case-studies.tags	32	Bitmap Index Scan on cs_articles_tags	tags @> uses the GIN index	OK	expect
+X32	06-case-studies.report	33,42	55000	REFRESH MATERIALIZED VIEW CONCURRENTLY needs a unique index	DIFF	expect
+X33	07-views.inline	40,41	^(?![\s\S]*Subquery Scan)[\s\S]*Index Scan	simple view is inlined: same plan as the base query, no Subquery Scan	DIFF	expect
+X34	07-views.fence	41,42	Subquery Scan	view with LIMIT cannot be flattened: Subquery Scan with the filter above it	DIFF	expect
+X35	07-views.updatable	40	44000	INSERT through a WITH CHECK OPTION view outside its filter is 44000	DIFF	expect
+X36	08-polymorphic.arc	-	23514	exclusive arc: two NULL parents violate CHECK num_nonnulls = 1	-	expect
+X37	08-polymorphic.typeid	-	orphans\s*\n-+\n\s*[1-9]	type+id design keeps orphan comments after the parent is deleted	-	expect
+X38	09-ledger.attack-overdraft	-	23514	buying more than the balance violates CHECK (balance >= 0)	-	expect
+X39	09-ledger.attack-unbalanced	-	23514	a one-sided entry is rejected at COMMIT by the deferred trigger	-	expect
+X40	09-ledger.attack-duplicate	-	23505	replaying the same idempotency key is rejected	-	expect
+X41	09-ledger.reconcile	-	lech\s*\n-+\n\s*0\s*\n	after repair, cached balances equal SUM(entries)	-	expect
+X42	09-ledger-race.unordered.timeline	-	40P01	locking two wallets in opposite order deadlocks	-	expect
+X43	09-ledger-race.ordered.timeline	-	^(?![\s\S]*40P01)[\s\S]*COMMIT	post_transfer locks by ORDER BY id: no deadlock	-	expect
+X44	hw-check.solution	35	H9\s*\|\s*✔	model solution passes every homework rule H0–H9	OK	expect
+X45	05-data-types.int-width	23	42601	INT(1) display width is MySQL-only: PG rejects the syntax	DIFF	expect
+X46	09-ledger.attack-edit	-	23001	ledger_entries is append-only: UPDATE of an old entry is rejected	-	expect
+X47	03-challenge-answer	11	DELETE 0[\s\S]*\b0\s*\|\s*1\s*\|\s*1\b[\s\S]*DELETE 1[\s\S]*INSERT 0 0[\s\S]*\b0\s*\|\s*0\s*\|\s*0\b	stage-3 answer key: FOR KEY SHARE + conditional insert / FOR UPDATE + conditional delete gives 0 orphans in both orders	-	expect
+X48	07-challenge-answer	41	Subquery Scan on my_v_top_line_per_order\s+Filter[\s\S]*Index Cond: \(order_id = 10248\)	stage-7 answer key: DISTINCT ON view is fenced for product_id and pushed down for order_id	-	expect
+X49	05-data-types.money	23	1265792\.95\s*\|\s*1265793\.29	same rounding both sides: per-line rounded float 1265792.95 vs numeric 1265793.29	OK	expect
+X50	04-table-format.lock	14	ShareUpdateExclusiveLock	not every ALTER takes AccessExclusiveLock: SET (fillfactor) takes ShareUpdateExclusiveLock	DIFF	expect

@@ -1,0 +1,29 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 8
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.147 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.099 ms
+SET
+Time: 0.110 ms
+SELECT 'K8.1' AS ma, CASE WHEN (SELECT count(*) FROM poly_comments WHERE commentable_type NOT IN ('Post', 'Product')) > 0 THEN '✔' ELSE '✘' END AS ket_qua,
+       'cách 1 nhận cả loại gõ sai (Psot): DB không kiểm được' AS chi_tiet
+UNION ALL
+SELECT 'K8.2', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE conrelid = 'poly_comments_arc'::regclass AND contype = 'c') = 1 THEN '✔' ELSE '✘' END,
+       'cách 2 có CHECK num_nonnulls(...) = 1'
+UNION ALL
+SELECT 'K8.3', CASE WHEN (SELECT count(*) FROM pg_constraint WHERE conrelid IN ('poly_post_comments'::regclass, 'poly_product_comments'::regclass) AND contype = 'f') = 2
+               THEN '✔' ELSE '✘' END, 'cách 3: mỗi bảng bình luận có FK tới đúng một cha';
+  ma  | ket_qua |                       chi_tiet                        
+------+---------+-------------------------------------------------------
+ K8.1 | ✔       | cách 1 nhận cả loại gõ sai (Psot): DB không kiểm được
+ K8.2 | ✔       | cách 2 có CHECK num_nonnulls(...) = 1
+ K8.3 | ✔       | cách 3: mỗi bảng bình luận có FK tới đúng một cha
+(3 rows)
+
+Time: 3.792 ms
+-- #endregion

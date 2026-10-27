@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Cột thứ tự kiểu float8, người dùng cứ kéo việc mới vào ngay sau việc ở vị trí 1000 (việc kế tiếp ở 2000). Chia đôi được bao nhiêu lần trước khi hết chỗ?",
+    "opts": [
+      "Vô hạn, vì float có phần thập phân",
+      "53",
+      "24",
+      "9"
+    ],
+    "ans": 1,
+    "why": "06-case-studies #ordering: int 9 lần, float8 53 lần, float4 24 lần. Float chỉ hoãn vấn đề; cách sửa là đánh số lại cả danh sách bằng một câu (UPDATE 5)."
+  },
+  {
+    "q": "Đêm 22/11 đã BOOKED. Khách khác đặt 22→24/11 bằng UPDATE … AND status = 'OPEN' và nhận UPDATE 1. App nên làm gì?",
+    "opts": [
+      "COMMIT, vì có ít nhất 1 dòng được đặt",
+      "ROLLBACK, vì cần 2 đêm mà chỉ sửa được 1 dòng",
+      "Chạy lại câu UPDATE cho tới khi đủ dòng",
+      "Đổi đêm 22 sang OPEN rồi đặt lại"
+    ],
+    "ans": 1,
+    "why": "06-case-studies #availability: lượt đầu 20→23/11 trả UPDATE 3 rồi COMMIT; lượt sau trả UPDATE 1 rồi ROLLBACK, nên đêm 23 vẫn OPEN. Kiểm tra nằm ngay trong WHERE, không có khe hở giữa đọc và ghi."
+  },
+  {
+    "q": "Lượt đặt lưu bằng daterange với EXCLUDE USING gist (homestay_id WITH =, during WITH &&). Chèn lượt chồng ngày cho cùng căn thì sao?",
+    "opts": [
+      "Thành công, vì id khác nhau",
+      "Lỗi 23505 unique_violation",
+      "Lỗi 23P01 exclusion_violation",
+      "Lỗi 23514 check_violation"
+    ],
+    "ans": 2,
+    "why": "06-case-studies #exclusion: Minh đặt căn 1 từ 22→24/11 nhận 23P01 vì chồng lên 20→23/11. Lan đặt căn 2 cùng ngày vẫn INSERT 0 1, vì homestay_id khác."
+  },
+  {
+    "q": "Vừa tạo materialized view cs_mv_clicks_daily, ngày 27/10 có 136001 click. Thêm 1 click rồi SELECT view. Sau đó chạy REFRESH … CONCURRENTLY. Kết quả?",
+    "opts": [
+      "View ra 136002 ngay; CONCURRENTLY chạy được",
+      "View vẫn 136001 tới khi REFRESH; CONCURRENTLY báo 55000 vì thiếu unique index",
+      "View ra 136002 ngay; CONCURRENTLY báo 55000",
+      "View vẫn 136001 mãi mãi; CONCURRENTLY chạy được"
+    ],
+    "ans": 1,
+    "why": "06-case-studies #report: số chỉ thành 136002 sau REFRESH (268.705 ms), và REFRESH CONCURRENTLY báo 55000. #report-fix: thêm unique index trên cột ngay thì CONCURRENTLY chạy được (282.970 ms)."
+  }
+]

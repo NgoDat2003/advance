@@ -1,0 +1,32 @@
+-- chạy lúc 27/10/2026 21:13 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region string-limit · varchar(n) chỉ là một ràng buộc độ dài (slide 22)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.145 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.090 ms
+SET
+Time: 0.071 ms
+SELECT 'Trà sữa trân châu đường đen'::varchar(10) AS ep_kieu_thi_cat;   -- ép kiểu tường minh: PG cắt bớt, không báo lỗi
+ ep_kieu_thi_cat 
+-----------------
+ Trà sữa tr
+(1 row)
+
+Time: 0.389 ms
+DROP TABLE IF EXISTS ty_short;
+psql:<stdin>:5: NOTICE:  00000: table "ty_short" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.250 ms
+CREATE TEMP TABLE ty_short (name varchar(10));
+CREATE TABLE
+Time: 5.950 ms
+INSERT INTO ty_short VALUES ('Trà sữa trân châu đường đen');                  -- ghi vào cột: PG báo lỗi
+psql:<stdin>:7: ERROR:  22001: value too long for type character varying(10)
+LOCATION:  varchar, varchar.c:638
+Time: 0.278 ms
+-- #endregion

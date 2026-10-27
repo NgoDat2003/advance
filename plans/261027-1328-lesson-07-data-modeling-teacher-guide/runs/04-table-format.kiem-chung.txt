@@ -1,0 +1,36 @@
+-- chạy lúc 27/10/2026 22:36 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region kiem-chung · Bảng ✔/✘ của chặng 4
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.247 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.160 ms
+SET
+Time: 0.133 ms
+SELECT 'K4.1' AS ma, CASE WHEN (SELECT count(*) FROM ddl_contracts) = 500000 THEN '✔' ELSE '✘' END AS ket_qua, 'ddl_contracts có 500.000 dòng' AS chi_tiet
+UNION ALL
+SELECT 'K4.2', CASE WHEN (SELECT count(*) FROM (SELECT filenode <> lag(filenode) OVER (ORDER BY id) AS r FROM ddl_events) x WHERE r) = 2
+               THEN '✔' ELSE '✘' END, 'đúng 2 bước viết lại bảng: DEFAULT random() và int → bigint'
+UNION ALL
+SELECT 'K4.3', CASE WHEN to_regclass('lab07_modeling.ddl_contracts_channel_idx') IS NOT NULL AND to_regclass('lab07_modeling.ddl_contracts_data_gin') IS NOT NULL
+               THEN '✔' ELSE '✘' END, 'có index biểu thức (data->>''channel'') và GIN jsonb_path_ops'
+UNION ALL
+SELECT 'K4.4', CASE WHEN (SELECT version FROM tpl_stores WHERE id = 1) = 1 THEN '✔' ELSE '✘' END, 'tpl_stores: chỉ một lần lưu thắng, version = 1'
+UNION ALL
+SELECT 'K4.5', CASE WHEN to_regclass('lab07_modeling.ddl_contracts_status_cic') IS NULL THEN '–'
+                    WHEN (SELECT indisvalid FROM pg_index WHERE indexrelid = 'ddl_contracts_status_cic'::regclass) THEN '✔' ELSE '✘' END,
+       'index tạo bằng CONCURRENTLY hợp lệ (chạy 04-index-online #cic trước)';
+  ma  | ket_qua |                               chi_tiet                               
+------+---------+----------------------------------------------------------------------
+ K4.1 | ✔       | ddl_contracts có 500.000 dòng
+ K4.2 | ✔       | đúng 2 bước viết lại bảng: DEFAULT random() và int → bigint
+ K4.3 | ✔       | có index biểu thức (data->>'channel') và GIN jsonb_path_ops
+ K4.4 | ✔       | tpl_stores: chỉ một lần lưu thắng, version = 1
+ K4.5 | ✔       | index tạo bằng CONCURRENTLY hợp lệ (chạy 04-index-online #cic trước)
+(5 rows)
+
+Time: 36.874 ms
+-- #endregion

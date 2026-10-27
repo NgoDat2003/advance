@@ -1,0 +1,68 @@
+-- chạy lúc 27/10/2026 21:15 +0700 · PostgreSQL 16.15 · psql trong container
+timing on
+Timing is on.
+-- #region typeid · Cách 1: commentable_type + commentable_id — không thể khai báo FK
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET
+Time: 0.153 ms
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SET
+Time: 0.059 ms
+SET
+Time: 0.079 ms
+DROP TABLE IF EXISTS poly_comments, poly_comments_arc, poly_post_comments, poly_product_comments, poly_posts, poly_products;
+psql:<stdin>:4: NOTICE:  00000: table "poly_comments" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "poly_comments_arc" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "poly_post_comments" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "poly_product_comments" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "poly_posts" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+psql:<stdin>:4: NOTICE:  00000: table "poly_products" does not exist, skipping
+LOCATION:  DropErrorMsgNonExistent, tablecmds.c:1326
+DROP TABLE
+Time: 0.406 ms
+CREATE TABLE poly_posts    (id int PRIMARY KEY, title text NOT NULL);
+CREATE TABLE
+Time: 11.823 ms
+CREATE TABLE poly_products (id int PRIMARY KEY, name text NOT NULL);
+CREATE TABLE
+Time: 6.041 ms
+INSERT INTO poly_posts VALUES (1, 'Khai trương chi nhánh Q7'), (2, 'Menu mùa đông');
+INSERT 0 2
+Time: 1.275 ms
+INSERT INTO poly_products VALUES (1, 'Trà sữa nướng'), (2, 'Cà phê muối');
+INSERT 0 2
+Time: 1.288 ms
+CREATE TABLE poly_comments (
+  id               int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  commentable_type text NOT NULL,      -- 'Post' hoặc 'Product'
+  commentable_id   int NOT NULL,       -- trỏ tới bảng nào thì tùy cột bên trên → không REFERENCES được
+  body             text NOT NULL
+);
+CREATE TABLE
+Time: 7.725 ms
+CREATE INDEX ON poly_comments (commentable_type, commentable_id);
+CREATE INDEX
+Time: 4.316 ms
+INSERT INTO poly_comments (commentable_type, commentable_id, body) VALUES
+  ('Post', 1, 'Chúc mừng!'), ('Post', 1, 'Có gửi xe không?'), ('Product', 1, 'Ngon'),
+  ('Psot', 2, 'Gõ sai loại vẫn lưu được'), ('Product', 99, 'Sản phẩm 99 không tồn tại vẫn lưu được');
+INSERT 0 5
+Time: 1.623 ms
+DELETE FROM poly_posts WHERE id = 1;   -- xóa bài viết: DB không biết có bình luận đang trỏ tới
+DELETE 1
+Time: 1.410 ms
+SELECT count(*) AS orphans FROM poly_comments c
+WHERE NOT (   (c.commentable_type = 'Post'    AND EXISTS (SELECT 1 FROM poly_posts p    WHERE p.id = c.commentable_id))
+           OR (c.commentable_type = 'Product' AND EXISTS (SELECT 1 FROM poly_products p WHERE p.id = c.commentable_id)));
+ orphans 
+---------
+       4
+(1 row)
+
+Time: 0.733 ms
+-- #endregion

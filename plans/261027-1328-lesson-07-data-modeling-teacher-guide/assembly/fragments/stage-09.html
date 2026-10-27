@@ -1,0 +1,445 @@
+<!-- CHẶNG 9 -->
+<section id="chang-9" class="stage col">
+<div class="stage-head">
+<span class="stage-no">09</span>
+<div>
+<div class="stage-meta"><span>Ôn slide 10, 12, 19–20, 23</span><span>45 phút + 10 tùy chọn (đua bằng tay)</span><span>Day 05</span></div>
+<h2>Capstone: sổ cái kép cho ví khách hàng</h2>
+</div>
+</div>
+<p class="goal"><b>Mục tiêu:</b> dựng <code>wallets</code>, <code>transfers</code>, <code>ledger_entries</code> để DB tự chặn 4 kiểu tấn công, đối soát được số dư cache, và giao dịch ngược chiều không deadlock.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>Sổ cái kép (double-entry): mỗi lần chuyển tiền ghi <b>2 bút toán</b>, âm ở ví nguồn, dương ở ví đích, tổng bằng 0. Số dư = tổng bút toán của ví.</dd>
+<dt>TẠI SAO?</dt><dd>Chỉ sửa cột <code>balance</code> thì sai một lần là mất dấu. Có sổ cái thì mọi đồng tiền có nguồn gốc và số dư sai tính lại được.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Bộ đếm lượt xem, điểm không quy ra tiền: một cột <code>n = n + 1</code> là đủ.</dd>
+</dl>
+
+<div class="callout pg">
+<span class="tag">Nhắc lại Bài 14 · 5 dòng</span>
+<ol>
+<li><code>UPDATE</code>, <code>FOR UPDATE</code> giữ khóa dòng tới COMMIT; phiên khác phải chờ (<a href="lesson_14_locking_teacher_guide.html#chang-1">Bài 14 chặng 1</a>).</li>
+<li><code>CHECK (balance &gt;= 0)</code> là lưới cuối: app kiểm tra sai vẫn bị chặn với 23514.</li>
+<li>Khóa cùng các dòng theo thứ tự ngược nhau → vòng chờ → 40P01 (<a href="lesson_14_locking_teacher_guide.html#chang-5">Bài 14 chặng 5</a>).</li>
+<li>Ai bị hủy do đồng hồ <code>deadlock_timeout</code> (1 s) của từng phiên; đừng viết code dựa vào đó.</li>
+<li>Chữa: <code>WHERE id IN (…) ORDER BY id FOR UPDATE</code>, mọi phiên khóa theo id tăng dần.</li>
+</ol>
+</div>
+
+<h3>Sơ đồ và 3 bất biến</h3>
+<div class="erd">
+<svg viewBox="0 0 660 250" role="img" aria-labelledby="c9-erd-title">
+<title id="c9-erd-title">ERD sổ cái: mỗi bút toán thuộc một transfer và một wallet</title>
+<rect class="erd-box" x="10" y="40" width="200" height="140"></rect>
+<text class="erd-title" x="22" y="62">transfers</text>
+<text class="erd-key" x="22" y="86">id PK</text>
+<text class="erd-key" x="22" y="106">idempotency_key UNIQUE</text>
+<text class="erd-col" x="22" y="126">order_ref (slide 12)</text>
+<text class="erd-col" x="22" y="146">amount &gt; 0</text>
+<text class="erd-col" x="22" y="166">created_at</text>
+<rect class="erd-box" x="230" y="40" width="200" height="140"></rect>
+<text class="erd-title" x="242" y="62">ledger_entries</text>
+<text class="erd-key" x="242" y="86">id PK</text>
+<text class="erd-key" x="242" y="106">transfer_id FK</text>
+<text class="erd-key" x="242" y="126">wallet_id FK</text>
+<text class="erd-col" x="242" y="146">amount ≠ 0 (âm = ra)</text>
+<text class="erd-col" x="242" y="166">created_at</text>
+<text class="erd-col" x="232" y="204">Σ amount mỗi transfer = 0</text>
+<text class="erd-col" x="232" y="222">(constraint trigger DEFERRED)</text>
+<rect class="erd-box" x="450" y="10" width="200" height="200"></rect>
+<text class="erd-title" x="462" y="32">wallets</text>
+<text class="erd-key" x="462" y="56">id PK</text>
+<text class="erd-key" x="462" y="76">code UNIQUE</text>
+<text class="erd-col" x="462" y="96">owner</text>
+<text class="erd-col" x="462" y="116">balance numeric(18,2)</text>
+<text class="erd-col" x="462" y="136">allow_negative</text>
+<text class="erd-col" x="462" y="156">version</text>
+<text class="erd-col" x="462" y="176">created_at, updated_at</text>
+<text class="erd-col" x="462" y="198">CHECK ≥ 0 trừ ví hệ thống</text>
+<path class="erd-edge" d="M230,102 C220,102 220,82 210,82"></path>
+<path class="erd-edge" d="M430,122 C440,122 440,52 450,52"></path>
+<text class="erd-key" x="214" y="74">1</text>
+<text class="erd-key" x="220" y="116">N</text>
+<text class="erd-key" x="434" y="136">N</text>
+<text class="erd-key" x="440" y="46">1</text>
+</svg>
+</div>
+
+<div class="callout key">
+<span class="tag">3 bất biến</span>
+<ol>
+<li><b>Mỗi giao dịch cân</b>: tổng bút toán của một <code>transfer_id</code> = 0.</li>
+<li><b>Cả hệ thống cân</b>: tổng mọi bút toán = 0; ví <code>SYSTEM_CASH</code> âm đúng bằng tiền mặt đã nạp.</li>
+<li><b>Cache khớp sổ</b>: <code>wallets.balance</code> = tổng bút toán của ví.</li>
+</ol>
+</div>
+
+<p>DDL gom lại 4 slide: <code>wallets.balance</code> là số dư tính sẵn, tức phi chuẩn hóa (slide 10); <code>transfers.order_ref</code> nằm ở bảng sinh sau (slide 12); <code>version</code>, <code>created_at</code>, <code>updated_at</code> theo table template (slide 19–20); mọi cột tiền là <code>numeric(18,2)</code> (slide 23).</p>
+
+<div class="code"><pre data-sql="09-ledger#ddl"><code>-- #region ddl · Ba bảng, một ràng buộc "mỗi giao dịch tổng bằng 0", một hàm ghi sổ
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+DROP TABLE IF EXISTS ledger_entries, transfers, wallets;
+CREATE TABLE wallets (
+  id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code           text NOT NULL UNIQUE,
+  owner          text NOT NULL,
+  balance        numeric(18,2) NOT NULL DEFAULT 0,     -- số dư CACHE (phi chuẩn hóa); sự thật nằm ở ledger_entries
+  allow_negative boolean NOT NULL DEFAULT false,       -- chỉ ví hệ thống (tiền mặt nạp vào) được âm
+  version        int NOT NULL DEFAULT 0,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  CHECK (allow_negative OR balance &gt;= 0)               -- lưới an toàn cuối của Bài 14 (23514)
+);
+CREATE TABLE transfers (
+  id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  idempotency_key text NOT NULL UNIQUE,                -- gọi lại cùng request không ghi sổ hai lần
+  order_ref       text,                                -- tham chiếu tới đơn hàng (slide 12), NULL nếu là nạp tiền
+  amount          numeric(18,2) NOT NULL CHECK (amount &gt; 0),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE ledger_entries (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  transfer_id bigint NOT NULL REFERENCES transfers (id),
+  wallet_id   bigint NOT NULL REFERENCES wallets (id),
+  amount      numeric(18,2) NOT NULL CHECK (amount &lt;&gt; 0),   -- âm = ghi nợ (tiền ra), dương = ghi có (tiền vào)
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ON ledger_entries (wallet_id);
+CREATE INDEX ON ledger_entries (transfer_id);
+-- Kiểm tra "tổng các bút toán của một giao dịch = 0" lúc COMMIT (DEFERRED): code có thể ghi hai bút toán bằng hai câu lệnh riêng,
+-- sau câu đầu tổng tạm thời khác 0. (post_transfer ghi cả hai trong MỘT câu INSERT nên kiểm tức thì cũng qua.)
+CREATE OR REPLACE FUNCTION ledger_check_balanced() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF (SELECT sum(amount) FROM lab07_modeling.ledger_entries WHERE transfer_id = NEW.transfer_id) &lt;&gt; 0 THEN
+    RAISE EXCEPTION 'giao dịch % lệch: tổng bút toán khác 0', NEW.transfer_id USING ERRCODE = '23514';
+  END IF;
+  RETURN NULL;
+END $$;
+CREATE CONSTRAINT TRIGGER ledger_balanced AFTER INSERT ON ledger_entries
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION ledger_check_balanced();
+-- Sổ cái chỉ được THÊM: sửa sai bằng bút toán đảo (refund), không UPDATE/DELETE bút toán cũ.
+CREATE OR REPLACE FUNCTION ledger_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'ledger_entries chỉ được thêm, không được %', TG_OP USING ERRCODE = '23001';
+END $$;
+CREATE TRIGGER ledger_no_update_delete BEFORE UPDATE OR DELETE ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_append_only();
+-- Ghi một giao dịch chuyển tiền: khóa 2 ví theo thứ tự id (Bài 14), ghi 2 bút toán, cập nhật số dư cache.
+CREATE OR REPLACE FUNCTION post_transfer(p_from bigint, p_to bigint, p_amount numeric, p_key text, p_order_ref text DEFAULT NULL)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE v_id bigint;
+BEGIN
+  PERFORM 1 FROM lab07_modeling.wallets WHERE id IN (p_from, p_to) ORDER BY id FOR UPDATE;
+  INSERT INTO lab07_modeling.transfers (idempotency_key, order_ref, amount) VALUES (p_key, p_order_ref, p_amount) RETURNING id INTO v_id;
+  INSERT INTO lab07_modeling.ledger_entries (transfer_id, wallet_id, amount) VALUES (v_id, p_from, -p_amount), (v_id, p_to, p_amount);
+  UPDATE lab07_modeling.wallets SET balance = balance - p_amount, version = version + 1, updated_at = now() WHERE id = p_from;  -- trừ trước
+  UPDATE lab07_modeling.wallets SET balance = balance + p_amount, version = version + 1, updated_at = now() WHERE id = p_to;    -- cộng sau
+  RETURN v_id;
+END $$;
+-- #endregion</code></pre></div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · đọc post_transfer từng dòng</span>
+<ol>
+<li><code>PERFORM 1 … ORDER BY id FOR UPDATE</code>: khóa <b>cả hai ví trước</b>, theo id tăng dần, bất kể tiền đi chiều nào (Bài 14).</li>
+<li><code>INSERT INTO transfers</code>: request gửi lần hai đụng UNIQUE <code>idempotency_key</code>.</li>
+<li>Hai bút toán <code>-p_amount</code>, <code>+p_amount</code>. <code>post_transfer</code> ghi cả hai trong MỘT câu INSERT nên kiểm tra tức thì cũng qua; trigger để <code>INITIALLY DEFERRED</code> (cộng lúc COMMIT) vì code khác có thể ghi hai bút toán bằng hai câu riêng, như tấn công 2 bên dưới.</li>
+<li>Trừ nguồn <b>trước</b>, cộng đích sau: nguồn không đủ thì CHECK dừng ngay ở câu trừ.</li>
+</ol>
+<p>Chạy region <code>post</code>: Đạt nạp 100.000 tiền mặt, rồi mua trà sữa 45.000 ở Q7. Ba bất biến đều bằng 0.</p>
+</div>
+<div class="code"><pre data-sql="09-ledger#post"><code>-- #region post · Nạp tiền rồi mua hàng: mỗi giao dịch là 2 bút toán có tổng bằng 0
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+TRUNCATE ledger_entries, transfers, wallets RESTART IDENTITY;
+INSERT INTO wallets (code, owner, allow_negative) VALUES ('SYSTEM_CASH', 'Tiền mặt nạp vào hệ thống', true),
+                                                         ('STORE_Q7', 'MayCha Quận 7', false), ('CUS_DAT', 'Khách Đạt', false);
+SELECT post_transfer(1, 3, 100000, 'topup-001');                     -- Đạt nạp 100.000 tiền mặt
+SELECT post_transfer(3, 2, 45000, 'order-DH001', 'DH001');           -- Đạt mua ly trà sữa 45.000 ở Q7
+SELECT t.idempotency_key, e.wallet_id, w.code, e.amount
+FROM ledger_entries e JOIN transfers t ON t.id = e.transfer_id JOIN wallets w ON w.id = e.wallet_id ORDER BY e.id;
+SELECT id, code, balance FROM wallets ORDER BY id;
+-- Ba bất biến của sổ cái kép:
+SELECT (SELECT count(*) FROM (SELECT transfer_id FROM ledger_entries GROUP BY transfer_id HAVING sum(amount) &lt;&gt; 0) x) AS giao_dich_lech,
+       (SELECT sum(amount) FROM ledger_entries) AS tong_moi_but_toan,
+       (SELECT count(*) FROM wallets w WHERE balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id)) AS vi_lech_cache;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region post</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.post"> idempotency_key | wallet_id |    code     |   amount
+-----------------+-----------+-------------+------------
+ topup-001       |         1 | SYSTEM_CASH | -100000.00
+ topup-001       |         3 | CUS_DAT     |  100000.00
+ order-DH001     |         3 | CUS_DAT     |  -45000.00
+ order-DH001     |         2 | STORE_Q7    |   45000.00
+(4 rows)
+…
+ giao_dich_lech | tong_moi_but_toan | vi_lech_cache
+----------------+-------------------+---------------
+              0 |              0.00 |             0</pre></div>
+
+<div class="widget" id="w9">
+<div class="widget-head"><h4>W9 · Phát lại sổ cái từng bước</h4><span class="eyebrow">run-w9 · 09-ledger</span></div>
+<div class="widget-body">
+<p>Bấm "Bước tiếp": số dư, bút toán, mã lỗi khi DB từ chối, 3 bất biến. Số lấy từ run đã ghi.</p>
+<div class="btns">
+<button type="button" class="btn" id="w9-prev">◀ Bước trước</button>
+<button type="button" class="btn primary" id="w9-next">Bước tiếp ▶</button>
+</div>
+<div class="out" id="w9-head" aria-live="polite"></div>
+<div class="table-wrap"><table class="ledger" id="w9-bal"></table></div>
+<div class="table-wrap"><table class="ledger" id="w9-ent"></table></div>
+<div class="out" id="w9-inv"></div>
+</div>
+</div>
+
+<h3>Ba cuộc tấn công, ba mã lỗi</h3>
+<p>Mỗi region kết thúc bằng một lỗi cố ý.</p>
+<div class="code"><pre data-sql="09-ledger#attack-overdraft"><code>-- #region attack-overdraft · Tấn công 1: mua quá số dư
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT balance AS so_du_cua_dat FROM wallets WHERE id = 3;
+SELECT post_transfer(3, 2, 999999, 'order-DH002', 'DH002');
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region attack-overdraft</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.attack-overdraft">      55000.00
+…
+psql:&lt;stdin&gt;:5: ERROR:  23514: new row for relation "wallets" violates check constraint "wallets_check"</pre></div>
+<p>Còn <b class="m" data-run="09-ledger.attack-overdraft">55000.00</b>, câu trừ làm số dư thành <b class="m" data-run="09-ledger.attack-overdraft">-944999.00</b>: CHECK chặn ngay, cả hàm rollback.</p>
+<div class="code"><pre data-sql="09-ledger#attack-unbalanced"><code>-- #region attack-unbalanced · Tấn công 2: code lỗi chỉ ghi một bút toán (tiền tự sinh ra)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+BEGIN;
+INSERT INTO transfers (idempotency_key, amount) VALUES ('bug-001', 50000);
+INSERT INTO ledger_entries (transfer_id, wallet_id, amount) SELECT id, 3, 50000 FROM transfers WHERE idempotency_key = 'bug-001';
+SELECT 'chưa lỗi: trigger DEFERRED chỉ kiểm tra lúc COMMIT' AS ghi_chu;
+COMMIT;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region attack-unbalanced</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.attack-unbalanced">INSERT 0 1
+…
+ chưa lỗi: trigger DEFERRED chỉ kiểm tra lúc COMMIT
+…
+COMMIT;
+psql:&lt;stdin&gt;:8: ERROR:  23514: giao dịch 4 lệch: tổng bút toán khác 0</pre></div>
+<p>Một bút toán +50.000 đứng một mình vẫn chèn được; tới <code>COMMIT</code> trigger mới cộng và trả <b class="m" data-run="09-ledger.attack-unbalanced">23514</b>, không dòng nào ở lại.</p>
+<div class="code"><pre data-sql="09-ledger#attack-duplicate"><code>-- #region attack-duplicate · Tấn công 3: client gửi lại cùng request (mạng chập chờn, bấm 2 lần)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT count(*) AS so_giao_dich_DH001 FROM transfers WHERE idempotency_key = 'order-DH001';
+SELECT post_transfer(3, 2, 45000, 'order-DH001', 'DH001');
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region attack-duplicate</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.attack-duplicate">                  1
+…
+psql:&lt;stdin&gt;:5: ERROR:  23505: duplicate key value violates unique constraint "transfers_idempotency_key_key"
+DETAIL:  Key (idempotency_key)=(order-DH001) already exists.</pre></div>
+<p>Gửi lại <code>order-DH001</code> → <b class="m" data-run="09-ledger.attack-duplicate">23505</b>. Ở NestJS, bắt 23505 trên constraint này và trả lại kết quả lần đầu, đừng báo lỗi cho khách.</p>
+
+<h3>Tấn công 4: sửa thẳng một bút toán cũ</h3>
+<p>Sổ cái chỉ được <b>thêm</b>. Muốn sửa sai thì ghi bút toán đảo (chính là <code>refund()</code> ở phần Tự làm), không UPDATE hay DELETE dòng cũ. Region <code>ddl</code> có trigger <code>ledger_no_update_delete</code> chặn việc đó ngay trong DB:</p>
+<div class="code"><pre data-sql="09-ledger#attack-edit"><code>-- #region attack-edit · Tấn công 4: sửa thẳng một bút toán cũ để "chữa cháy"
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+UPDATE ledger_entries SET amount = -40000 WHERE id = 3;
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region attack-edit</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.attack-edit">UPDATE ledger_entries SET amount = -40000 WHERE id = 3;
+psql:&lt;stdin&gt;:4: ERROR:  23001: ledger_entries chỉ được thêm, không được UPDATE</pre></div>
+
+<h3>Đối soát: cache lệch thì sửa từ sổ</h3>
+<p>Slide 10: phi chuẩn hóa đổi lấy rủi ro "data consistency". Ai đó cộng tay 5.000 vào ví cửa hàng, không qua sổ; đối soát tìm ra, rồi tính lại số dư từ sổ cái, vì sổ cái là sự thật.</p>
+<div class="code"><pre data-sql="09-ledger#reconcile"><code>-- #region reconcile · Số dư cache bị ai đó sửa tay: đối soát phát hiện và sửa lại từ sổ cái
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+UPDATE wallets SET balance = balance + 5000 WHERE id = 2;   -- lỗi vận hành: "cộng bù" thẳng vào số dư, không qua sổ
+SELECT w.id, w.code, w.balance AS so_du_cache, coalesce(sum(e.amount), 0) AS so_du_theo_so_cai
+FROM wallets w LEFT JOIN ledger_entries e ON e.wallet_id = w.id GROUP BY w.id ORDER BY w.id;
+SELECT count(*) AS lech FROM wallets w WHERE balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+-- Sửa: sự thật là sổ cái; số dư cache được tính lại từ sổ.
+UPDATE wallets w SET balance = (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id), updated_at = now()
+WHERE balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+SELECT count(*) AS lech FROM wallets w WHERE balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id);
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region reconcile</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.reconcile"> id |    code     | so_du_cache | so_du_theo_so_cai
+----+-------------+-------------+-------------------
+  1 | SYSTEM_CASH |  -100000.00 |        -100000.00
+  2 | STORE_Q7    |    50000.00 |          45000.00
+  3 | CUS_DAT     |    55000.00 |          55000.00
+(3 rows)
+…
+ lech
+------
+    1
+…
+UPDATE 1
+…
+ lech
+------
+    0</pre></div>
+<p>Cache <b class="m" data-run="09-ledger.reconcile">50000.00</b>, sổ cái <b class="m" data-run="09-ledger.reconcile">45000.00</b>: lệch 1 ví, sửa xong còn 0. Production: chạy câu đếm lệch theo lịch và báo động khi khác 0, đừng tự sửa im lặng.</p>
+
+<h3>Đua hai phiên: khóa không thứ tự và khóa theo id</h3>
+<p>Tùy chọn 10 phút, sau region <code>post</code>. Tab A mở <code>09-ledger-race.A.sql</code>, tab B mở <code>09-ledger-race.B.sql</code>. A chuyển 1.000 từ ví 3 sang ví 2; cùng lúc B hoàn 500 từ ví 2 về ví 3. Region dừng ở lỗi giữa BEGIN thì chạy riêng <code>ROLLBACK;</code>.</p>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>ADVANCE_BE_LAB (A)</th><th>ADVANCE_BE_LAB_B (B)</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>unordered</code>: trừ ví 3 (khóa ví 3), ngủ 3 s</td><td></td><td><input class="field" data-store="l07-c9-race1" placeholder="A1 lúc mấy giờ?"></td></tr>
+<tr><td>2</td><td></td><td>Trong 3 s, region <code>unordered</code>: trừ ví 2, cộng ví 3 → treo</td><td><input class="field" data-store="l07-c9-race2" placeholder="B chờ ai?"></td></tr>
+<tr><td>3</td><td>Tỉnh, cộng ví 2 → vòng A → B → A</td><td>(vẫn chờ)</td><td><input class="field" data-store="l07-c9-race3" placeholder="Tab nào nhận 40P01, sau bao lâu?"></td></tr>
+<tr><td>4</td><td>Region <code>ordered</code>: <code>post_transfer(3, 2, …)</code>, ngủ 3 s</td><td></td><td><input class="field" data-store="l07-c9-race4" placeholder="A khóa ví nào trước?"></td></tr>
+<tr><td>5</td><td><code>COMMIT</code></td><td>Region <code>ordered</code>: <code>post_transfer(2, 3, …)</code> → chờ, rồi <code>COMMIT</code></td><td><input class="field" data-store="l07-c9-race5" placeholder="B chờ bao lâu? có 40P01?"></td></tr>
+</tbody>
+</table></div>
+<details class="fold"><summary>SQL: A khóa tay (unordered) và B gọi post_transfer (ordered)</summary><div class="fold-body">
+<p>B#unordered đối xứng với A; A#ordered gọi <code>post_transfer(3, 2, …)</code>.</p>
+<div class="code"><pre data-sql="09-ledger-race.A#unordered"><code>-- #region unordered · Khóa ví theo thứ tự "nguồn trước, đích sau" (viết tay, không dùng post_transfer)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '10s';
+BEGIN;
+SELECT 'A1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'ghi 2 bút toán, trừ ví 3 (khóa ví 3)' AS viec;
+WITH t AS (INSERT INTO transfers (idempotency_key, amount) VALUES ('race-A-' || txid_current(), 1000) RETURNING id)
+INSERT INTO ledger_entries (transfer_id, wallet_id, amount) SELECT id, 3, -1000 FROM t UNION ALL SELECT id, 2, 1000 FROM t;
+UPDATE wallets SET balance = balance - 1000 WHERE id = 3;
+SELECT pg_sleep(6);   -- lúc này hãy chạy phiên B (trong 5 giây đầu)
+SELECT 'A2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'cộng ví 2 (xin khóa ví 2)' AS viec;
+UPDATE wallets SET balance = balance + 1000 WHERE id = 2;
+COMMIT;   -- nếu A là nạn nhân 40P01, transaction đã hỏng: COMMIT chỉ còn tác dụng ROLLBACK (DBX dừng ở lỗi thì tự chạy ROLLBACK;)
+SELECT 'A3' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'A kết thúc' AS viec;
+-- #endregion</code></pre></div>
+<div class="code"><pre data-sql="09-ledger-race.B#ordered"><code>-- #region ordered · Cùng nghiệp vụ qua post_transfer
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '10s';
+BEGIN;
+SELECT 'B1' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'post_transfer 2 → 3 (khóa ví 2 trước: chờ A)' AS viec;
+SELECT post_transfer(2, 3, 500, 'race-ord-B-' || txid_current()) AS transfer_id;
+SELECT 'B2' AS buoc, to_char(clock_timestamp(), 'HH24:MI:SS.MS') AS luc, 'hết chờ, B commit' AS viec;
+COMMIT;
+-- #endregion</code></pre></div>
+</div></details>
+
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger-race · unordered (A + B gộp theo bước)</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger-race.unordered.timeline">── A · bước A1 · 15:25:32.648 ──
+…
+UPDATE wallets SET balance = balance - 1000 WHERE id = 3;
+UPDATE 1
+…
+── B · bước B1 · 15:25:33.666 ──
+…
+UPDATE wallets SET balance = balance - 500 WHERE id = 2;
+UPDATE 1
+── B · bước B2 · 15:25:33.672 ──
+…
+UPDATE wallets SET balance = balance + 500 WHERE id = 3;
+UPDATE 1
+Time: 5993.849 ms (00:05.994)
+COMMIT;
+COMMIT
+…
+── A · bước A2 · 15:25:38.664 ──
+…
+UPDATE wallets SET balance = balance + 1000 WHERE id = 2;
+psql:&lt;stdin&gt;:11: ERROR:  40P01: deadlock detected
+DETAIL:  Process 15185 waits for ShareLock on transaction 17405; blocked by process 15206.
+Process 15206 waits for ShareLock on transaction 17404; blocked by process 15185.
+…
+Time: 1001.469 ms (00:01.001)
+…
+ROLLBACK</pre></div>
+<div class="callout teacher">
+<span class="tag">Vì sao nạn nhân là A?</span>
+<p>Quy tắc: mỗi phiên chỉ kiểm tra deadlock <b>một lần</b>, 1 giây (<code>deadlock_timeout</code>) sau khi bắt đầu chờ. B chờ ví 3 từ bước B2; 1 giây sau B kiểm tra, lúc đó A còn ngủ nên chưa có vòng, và B không kiểm tra lại. A tỉnh, xin ví 2, khép vòng; <b class="m" data-run="09-ledger-race.unordered.timeline">1001.469 ms</b> sau A kiểm tra, thấy vòng, tự hủy. UPDATE của B treo <b class="m" data-run="09-ledger-race.unordered.timeline">5993.849 ms</b> rồi chạy tiếp. Vì vậy A là nạn nhân khi bạn chạy B trong 5 giây đầu lúc A đang ngủ 6 giây; chạy B sau khi A tỉnh thì không có deadlock nào. Ba lần chạy lại (try1–3) đều đúng một <b class="m" data-run="09-ledger-race.unordered.try1.timeline">40P01</b>, nạn nhân A (quy tắc Bài 14 chặng 5).</p>
+</div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger-race · ordered (A + B gộp theo bước)</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger-race.ordered.timeline">── A · bước A1 · 15:25:40.374 ──
+…
+SELECT post_transfer(3, 2, 1000, 'race-ord-A-' || txid_current()) AS transfer_id;
+…
+── B · bước B1 · 15:25:41.487 ──
+…
+SELECT post_transfer(2, 3, 500, 'race-ord-B-' || txid_current()) AS transfer_id;
+ transfer_id
+-------------
+           9
+(1 row)
+
+Time: 4926.950 ms (00:04.927)
+── A · bước A2 · 15:25:46.402 ──
+…
+COMMIT;
+COMMIT
+…
+COMMIT;
+COMMIT</pre></div>
+<p>Qua <code>post_transfer</code>, cả hai đều xin ví 2 trước. B chờ ngay ở câu khóa đầu, không giữ ví nào, nên không có vòng: chờ <b class="m" data-run="09-ledger-race.ordered.timeline">4926.950 ms</b> rồi cả hai COMMIT. Chạy lại 3 lần: 0 lần 40P01.</p>
+
+<p><b>Đem về OmniPOS:</b> Cluster 1 phase B đưa đúng <code>wallets</code> + <code>ledger_entries</code> (kèm <code>transfers</code>) vào <code>create-template-project</code>: model bằng Prisma, CHECK và constraint trigger viết tay trong <code>migration.sql</code>.</p>
+
+<div class="callout challenge" id="chang-9-tu-lam">
+<span class="tag">Tự làm · chặng 9</span>
+<p><b>Đề:</b> viết <code>refund(p_transfer_id bigint) RETURNS bigint</code> ghi bút toán <b>ngược</b> của một giao dịch (từ ví được cộng về ví bị trừ, cùng số tiền), key <code>'refund-' || p_transfer_id</code> để hoàn hai lần bị DB chặn. Gợi ý: gọi lại <code>post_transfer</code> để giữ thứ tự khóa.</p>
+<p><b>PASS khi:</b></p>
+<ul>
+<li>Lần đầu <code>refund(2)</code> trả id mới; sổ có 2 bút toán <code>refund-2</code> tổng 0.</li>
+<li>Chạy <code>check.sql</code>: C09, C10, C11, C12 đều ✔.</li>
+<li>Lần hai nhận <code>23505</code> trên <code>transfers_idempotency_key_key</code>.</li>
+</ul>
+<div class="code"><pre><code>-- Tự kiểm tra (câu lỗi cố ý để cuối)
+SET search_path = lab07_modeling;
+SELECT refund(2);
+SELECT t.idempotency_key, e.wallet_id, e.amount
+FROM ledger_entries e JOIN transfers t ON t.id = e.transfer_id
+WHERE t.idempotency_key IN ('order-DH001', 'refund-2') ORDER BY e.id;
+SELECT refund(2);   -- lần hai: phải là 23505</code></pre></div>
+<label class="fields"><span class="muted">Ghi lại id giao dịch hoàn, kết quả C09–C12 và mã lỗi lần hai</span>
+<input class="field" data-store="l07-c9-refund" placeholder="refund id = … · C09–C12: … · lần hai: …">
+</label>
+<details class="fold"><summary>Đáp án tham khảo, chưa chạy trên máy</summary><div class="fold-body">
+<div class="code"><pre><code>SET search_path = lab07_modeling;
+CREATE OR REPLACE FUNCTION refund(p_transfer_id bigint) RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE v_from bigint; v_to bigint; v_amount numeric; v_ref text;
+BEGIN
+  SELECT max(e.wallet_id) FILTER (WHERE e.amount &lt; 0), max(e.wallet_id) FILTER (WHERE e.amount &gt; 0),
+         max(e.amount), max(t.order_ref)
+    INTO v_from, v_to, v_amount, v_ref
+  FROM lab07_modeling.ledger_entries e JOIN lab07_modeling.transfers t ON t.id = e.transfer_id
+  WHERE e.transfer_id = p_transfer_id;
+  IF v_amount IS NULL THEN
+    RAISE EXCEPTION 'không có giao dịch %', p_transfer_id USING ERRCODE = 'P0002';
+  END IF;
+  -- đảo chiều; khóa theo id và UNIQUE idempotency_key do post_transfer lo
+  RETURN lab07_modeling.post_transfer(v_to, v_from, v_amount, 'refund-' || p_transfer_id, v_ref);
+END $$;</code></pre></div>
+<p>Lần hai đụng UNIQUE ở <code>INSERT INTO transfers</code>, không bút toán nào được ghi. Ví cửa hàng không đủ tiền hoàn thì nhận 23514: đúng hành vi.</p>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 9</h3>
+<div class="code"><pre data-sql="09-ledger#kiem-chung"><code>-- #region kiem-chung · Bảng ✔/✘ của chặng 9 (giống C09–C12 của check.sql)
+SET search_path = lab07_modeling;  -- DB mặc định trỏ vào lab03_indexing
+SET statement_timeout = '60s'; SET lock_timeout = '5s';
+SELECT 'K9.1' AS ma, CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END AS ket_qua, 'không giao dịch nào lệch (tổng bút toán = 0)' AS chi_tiet
+FROM (SELECT transfer_id FROM ledger_entries GROUP BY transfer_id HAVING sum(amount) &lt;&gt; 0) x
+UNION ALL
+SELECT 'K9.2', CASE WHEN (SELECT coalesce(sum(amount), 0) FROM ledger_entries) = 0 THEN '✔' ELSE '✘' END, 'tổng mọi bút toán của hệ thống = 0'
+UNION ALL
+SELECT 'K9.3', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END, 'số dư cache khớp tổng bút toán của từng ví'
+FROM wallets w WHERE balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e WHERE e.wallet_id = w.id)
+UNION ALL
+SELECT 'K9.4', CASE WHEN count(*) = 0 THEN '✔' ELSE '✘' END, 'không ví khách nào bị âm' FROM wallets WHERE balance &lt; 0 AND NOT allow_negative
+UNION ALL
+SELECT 'K9.5', CASE WHEN (SELECT count(*) FROM transfers WHERE idempotency_key = 'order-DH001') = 1 THEN '✔' ELSE '✘' END,
+       'request DH001 gửi 2 lần chỉ ghi sổ 1 lần';
+-- #endregion</code></pre></div>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 27/10/2026 · <code>09-ledger.sql · region kiem-chung</code></div>
+<div class="code terminal"><pre class="code terminal" data-run="09-ledger.kiem-chung">  ma  | ket_qua |                   chi_tiet
+------+---------+----------------------------------------------
+ K9.1 | ✔       | không giao dịch nào lệch (tổng bút toán = 0)
+ K9.2 | ✔       | tổng mọi bút toán của hệ thống = 0
+ K9.3 | ✔       | số dư cache khớp tổng bút toán của từng ví
+ K9.4 | ✔       | không ví khách nào bị âm
+ K9.5 | ✔       | request DH001 gửi 2 lần chỉ ghi sổ 1 lần
+(5 rows)</pre></div>
+
+<div class="quiz" data-quiz="9"></div>
+</section>

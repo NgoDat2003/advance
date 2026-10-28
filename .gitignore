@@ -33,3 +33,6 @@ __pycache__/
 .claude/.credentials.json
 .claude.json
 RESTORE.ps1
+
+# Dự án cá nhân OmniPOS & FinLedger Hub — repo git riêng, không lồng vào advance-be
+/omnipos-finledger-hub/

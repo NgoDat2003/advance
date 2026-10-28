@@ -1,0 +1,181 @@
+version: 1
+meta:
+  title: "Plan Cụm 1: khung M0 + sổ cái kép & Flash-Voucher M1"
+  description: "Plan triển khai giai đoạn 1 (Cụm 1) cho OmniPOS & FinLedger Hub: AI dựng khung, Đạt làm phần kiến thức. Viết cho executor yếu hơn, có red-team 4 góc nhìn và 4 câu xác nhận."
+  locale: vi
+theme:
+  preset: editorial
+blocks:
+  - type: hero
+    eyebrow: "PLAN · /ak:plan --advice --hard --ak-render · 28/10/2026"
+    title: "Cụm 1: khung hub M0 + sổ cái kép & Flash-Voucher M1"
+    description: "AI dựng khung và mọi phần vỏ (Nhóm 2). Đạt làm 3 phần kiến thức: DDL Bài 07, dòng khóa Bài 14, rà code theo Bài 12. Mỗi task có lệnh kiểm cơ học; mỗi phase có Failure Protocol (STOP → kongming)."
+
+  - type: key-value
+    title: "Trạng thái"
+    items:
+      - { key: "Trạng thái", value: "Sẵn sàng cook (ready to cook) — chưa bắt đầu" }
+      - { key: "Ưu tiên", value: "P1" }
+      - { key: "Công sức", value: "~17,5 giờ: executor ~11,5h, Đạt ~6h" }
+      - { key: "Plan (nguồn thật)", value: "plans/261027-0907-cluster1-m0-m1-implementation/plan.md + 6 file phase" }
+      - { key: "Repo", value: "omnipos-finledger-hub → GitHub private; public 01/11 khi Đạt nói rõ 'đồng ý public'" }
+      - { key: "Phiên bản (ADR-019)", value: "Node 24.22.1 (nvm) · NestJS 12.2 · Jest 30.5 · Next 16.4 · React 19.3 · Prisma 7.9.x · TS 5.9" }
+      - { key: "Cổng", value: "PG 5434 · API 3101 · web 3100, bind 127.0.0.1. Cấm 3000/3001/5433/6379" }
+      - { key: "Gate", value: "Red-team 4 góc nhìn: nhận 26/26 · Validation 4 câu: đã trả lời · ak plan validate: OK" }
+
+  - type: alert
+    tone: warning
+    title: "Đạt cần làm trước khi AI chạy phase 1"
+    text: "(1) T1.1: giữ Node 22 bản MSI cho hook của Claude, bỏ C:\\Program Files\\nodejs khỏi PATH cấp Machine (Admin), rồi nvm install 24.22.1, nvm use 24.22.1, corepack enable cho pnpm 11.2.2 (~15 phút; máy dùng nvm for Windows 2.0 chế độ shim). (2) T1.0b: bật Docker Desktop và container của bạn; tạo file checks/guard.local.sh chứa tên container công ty/lab/nhãn khách hàng (file này không commit)."
+
+  - type: section
+    title: "1. Luồng triển khai"
+    blocks:
+      - type: diagram-panel
+        title: "Ai làm gì, theo thứ tự nào"
+        caption: "Executor dừng hẳn ở phase 4 cho tới khi file DDL của Đạt qua tiền kiểm và phát lại. Phase 6 là phần Đạt tự gõ."
+        spec:
+          schema_version: 1
+          diagram_type: workflow
+          meta:
+            title: "Cụm 1: M0 → M1"
+            visual_preset: editorial
+            theme: light
+          lanes:
+            - { id: lane-dat, label: "Đạt", role: user }
+            - { id: lane-ai, label: "Executor (AI)", role: worker }
+            - { id: lane-gate, label: "Mốc", role: approver }
+          steps:
+            - { id: s-node, label: "T1.1 Node 24 qua nvm", kind: start, lane: lane-dat }
+            - { id: s-p1, label: "P1 snapshot + spike S1–S5", kind: action, lane: lane-ai }
+            - { id: s-p2, label: "P2 khung M0, repo private", kind: action, lane: lane-ai }
+            - { id: s-p3, label: "P3 stores/products, stub 501, checks/", kind: action, lane: lane-ai }
+            - { id: s-p4, label: "P4 DDL Bài 07 (hạn 31/10 12:00)", kind: wait, lane: lane-dat }
+            - { id: s-p5, label: "P5 Prisma, seed ví, naive, TODO(Đạt)", kind: action, lane: lane-ai }
+            - { id: s-p6, label: "P6 gõ dòng khóa + rà 8 câu", kind: action, lane: lane-dat }
+            - { id: s-done, label: "Tag m1, public 01/11 nếu đồng ý", kind: terminal-success, lane: lane-gate }
+          transitions:
+            - { from: s-node, to: s-p1, label: "Node 24 sẵn" }
+            - { from: s-p1, to: s-p2, label: "S1–S5 pass" }
+            - { from: s-p2, to: s-p3, label: "S6–S10 pass" }
+            - { from: s-p3, to: s-p4, label: "Đề Bài 07" }
+            - { from: s-p4, to: s-p5, label: "Replay pass" }
+            - { from: s-p5, to: s-p6, label: "checks/m1 sẵn" }
+            - { from: s-p6, to: s-done, label: "Mọi AC pass" }
+
+  - type: section
+    title: "2. Lịch"
+    blocks:
+      - type: table
+        columns: ["Ngày", "Việc", "Ai"]
+        rows:
+          - ["T4 28/10", "Sáng Đạt làm T1.1 (Node) + T1.0b (Docker, file guard). AI chạy phase 1–3, cuối ngày soạn đề Bài 07. Đạt học Bài 14 chặng 5–8", "Đạt, AI"]
+          - ["T5 29/10", "Phase 4: Bài 07, Đạt tự thiết kế DDL (hạn cứng 31/10 12:00)", "Đạt"]
+          - ["T6 30/10", "Phase 5 + 30 phút X-ray luồng request cùng Đạt", "AI, Đạt"]
+          - ["T7 31/10 → CN 01/11", "Phase 6; 01/11 là ngày đệm + chuyển public", "Đạt, AI hỗ trợ"]
+
+  - type: section
+    title: "3. Các phase"
+    blocks:
+      - type: accordion
+        items:
+          - title: "Phase 1 — Môi trường + snapshot + spike (Đạt 0,5–1h · executor 1h)"
+            text: "Mục tiêu: máy chạy Node 24.22.1 qua nvm (đường dẫn C:\\Program Files\\nodejs giữ nguyên); hub có commit snapshot template để lùi; Docker và container của Đạt được chụp mốc; bộ phiên bản qua spike S1–S5 (không DB, không mở cổng). Task: T1.1 nvm 2.0 shim, giữ MSI cho hook (Đạt) · T1.0 snapshot + tag · T1.0b Docker + checks/guard.local.sh · T1.3 .nvmrc, pin, minimumReleaseAge 4320, bỏ @scarf/scarf · T1.4 pnpm install + rà lockfile · T1.5 S2–S5 · T1.6 bảng fallback (đồng hồ 60 phút; lỗi ESM → Nest 11.2.8 + Next 15.5.28; lỗi đường dẫn → Failure Protocol, không hạ phiên bản)."
+          - title: "Phase 2 — Khung repo M0 (executor 2,5h)"
+            text: "Mục tiêu: hub boot trên 127.0.0.1 cổng 5434/3101/3100, qua S6–S10, sạch cổng cấm, nhãn cũ, bí mật; lịch sử git bắt đầu bằng 1 commit mới, push lên repo private. Task: T2.1 cổng trống · T2.2 compose riêng (mem_limit, named volume) · T2.3 env, secret sinh ngầm, guard DB trong prisma.config.ts (chỉ cho localhost:5434/omnipos_hub) · T2.4 đổi cổng/host/tên từng dòng · T2.5 throttle ra env (.env.example 100, cục bộ 10000), wildcard '{*path}' · T2.6 seed đọc mật khẩu từ env · T2.7 dọn nhãn cũ, README · T2.8 checks/lib + ensure-login · T2.9 boot gate S6–S10 (đồng hồ 45 phút) · T2.10 cổng nghiệm thu G1–G5 · T2.11 orphan commit, gh repo private."
+          - title: "Phase 3 — Dữ liệu nền + API đọc + stub + checks/ (executor 2,5h)"
+            text: "Mục tiêu: GET /stores trả 300 quán, GET /products trả 77 món; 5 route ví/voucher trả 501 kèm TODO(Đạt); checks/smoke.sh in toàn PASS. Task: T3.1 model Store, Product (Int autoincrement, snake_case) · T3.2 xuất 77 món northwind, DB lab chỉ-đọc · T3.3 seed idempotent · T3.4 API đọc · T3.5 module wallets/vouchers: route + DTO (400 SAME_WALLET ở DTO) + 501 · T3.6 burst phát theo chỉ số (xargs -d '\\n'), kiểm 3 POST → 3×501 · T3.7 codegen + type check web · T3.8 smoke · T3.9 commit + push."
+          - title: "Phase 4 — Gate Bài 07: DDL của Đạt (Đạt ~2h · executor 30 phút)"
+            text: "Mục tiêu: Đạt tự thiết kế cột và ràng buộc cho 4 bảng M1; ví quán âm bị chặn 23514, claim trùng bị chặn 23505. Executor chỉ soạn đề (câu hỏi, không có cột) và phát lại để kiểm. Task: T4.1 soạn đề (executor, cuối 28/10) · T4.2 Đạt thiết kế, chạy thử trên DB lab của mình hoặc schema nháp 5434 (Đạt tự chọn), lưu docs/design/bai07-ddl.sql · T4.3 executor tiền kiểm file (không BEGIN/COMMIT/ROLLBACK/public./BOM), phát lại trong transaction rồi ROLLBACK, so bảng public trước/sau. Hạn 31/10 12:00, quá hạn thì Đạt chọn lùi lịch hay cắt phạm vi."
+          - title: "Phase 5 — Tích hợp M1 sau DDL (executor 4h)"
+            text: "Mục tiêu: bảng của Đạt lên 5434 qua migration, ràng buộc khớp 100%; seed 301 ví cân sổ; API đọc ví/campaign chạy; transfer có bản naive đo được, bản locked và claim còn 501 TODO(Đạt); checks/m1 và UI sẵn sàng. Task: T5.0 chọn biến thể kiểu id (int/bigint/uuid; BigInt trả chuỗi) · T5.1 dịch PART A sang schema.prisma · T5.2 migration --create-only + chép CHECK + so khớp 4 chiều (CHECK, UNIQUE, FK, cột + default), lệch → hỏi Đạt · T5.3 sqlState(), M1_TX_TIMEOUT_MS, DB_POOL_MAX qua ConfigService · T5.4 seed ví · T5.5–T5.6 module wallets/vouchers (404 tính trong transaction) · T5.7 SQL đối soát · T5.8 checks/m1 (voucher: campaign 1 hết slot, campaign 2 claim lại) · T5.9 UI minh họa (tùy chọn, dời ra sau T5.11) · T5.10 chạy kiểm · T5.11 grep chặn rò đáp án + commit."
+          - title: "Phase 6 — Slot của Đạt + nghiệm thu M1 (Đạt ~3h · executor 1h)"
+            text: "Mục tiêu: số 'trước' đo trên DB sạch; Đạt tự gõ dòng chịu lực của transfer và claim; mọi AC M1 pass bằng cURL + SQL; README có số trước/sau; git tag m1. Task: T6.0 chuẩn bị (Git Bash, uname -s = MINGW64) · T6.1 reset về seed gốc (Đạt) · T6.2 đo naive · T6.3 gõ khối transfer · T6.4 chuyển chéo không deadlock · T6.5 gõ khối claim · T6.6 thấy khóa trong pg_locks (drill timeout 15000 rồi trả 5000) · T6.7 rà code AI theo phiếu 8 câu · T6.8 nghiệm thu, README, tag m1 · T6.9 chuyển public chỉ ngày 01/11, chỉ khi Đạt nói 'đồng ý public', sau khi quét toàn lịch sử và ảnh."
+
+  - type: section
+    title: "4. Tiêu chí hoàn thành"
+    blocks:
+      - type: list
+        items:
+          - { text: "Không đụng thứ khác: G5 không in gì; advance-be không có file output nào của plan" }
+          - { text: "Cổng sạch: git grep 3000/3001/5433/6379 trong hub = 0; API, web bind 127.0.0.1" }
+          - { text: "Bí mật: env trong git chỉ là *.example; secret sinh ngầm; guard DB chặn URL khác localhost:5434/omnipos_hub" }
+          - { text: "Seed: 300 quán, 77 món, 301 ví; tổng số dư = 0" }
+          - { text: "Rút quá (30 × 200.000 từ ví 1.000.000): 5×201, 25×409 INSUFFICIENT_FUNDS, 0×5xx" }
+          - { text: "Chuyển chéo (15 A→B + 15 B→A): 30×201, 0 lần 40P01, A và B về số cũ" }
+          - { text: "Voucher: campaign 1 (10 slot, 30 quán) → 10×201, 20×409 SOLD_OUT; campaign 2 → quán X 201 rồi 409 ALREADY_CLAIMED" }
+          - { text: "Lỗi: 400 SAME_WALLET; 404 WALLET_NOT_FOUND; 404 CAMPAIGN_NOT_FOUND" }
+          - { text: "pg_locks WHERE NOT granted ≥ 1 dòng khi DBX giữ khóa; COMMIT trong thời gian drill → 201" }
+          - { text: "Đối soát = 0 dòng sau mọi test; README có số Trước và Sau; tag m1" }
+
+  - type: section
+    title: "5. Rủi ro"
+    blocks:
+      - type: risk-matrix
+        items:
+          - area: "Lộ tên công ty/khách hàng qua advance-be (public) hoặc lịch sử hub"
+            impact: high
+            likelihood: medium
+            note: "Tên thật chỉ nằm trong checks/guard.local.sh (không commit); cổng chặn trước commit; orphan commit; quét lịch sử trước khi public."
+          - area: "Nest 12 / Jest 30 / Next 16 hỏng khi spike"
+            impact: medium
+            likelihood: medium
+            note: "Đồng hồ 60 + 45 phút; bảng fallback ở phase 1."
+          - area: "Executor lỡ viết đáp án của Đạt (cột, SQL khóa)"
+            impact: high
+            likelihood: medium
+            note: "Ranh giới ghi đầu phase 4–6; khung todoDat(); grep chặn rò không phân biệt hoa thường."
+          - area: "Lệnh Prisma/seed trỏ nhầm DB hoặc ghi vào DB lab 5433"
+            impact: high
+            likelihood: low
+            note: "Guard trong prisma.config.ts; export lab ở chế độ chỉ-đọc."
+          - area: "Burst 30 request ra 429/400/P2028 giả"
+            impact: high
+            likelihood: medium
+            note: "Pool 20, maxWait 5000; THROTTLE_LIMIT 10000 cục bộ; burst phát theo chỉ số và có kiểm 3×501."
+
+  - type: section
+    title: "6. Red-team và xác nhận"
+    blocks:
+      - type: table
+        title: "Red-team: 4 góc nhìn, 27 phát hiện → gộp 26, nhận 26"
+        columns: ["Nhóm phát hiện", "Xử lý"]
+        rows:
+          - ["Claim lại trên campaign đã hết slot không bao giờ ra ALREADY_CLAIMED", "Claim lại trên campaign 2 còn slot"]
+          - ["advance-be là repo public", "Tên trung tính; tên thật chỉ trong file guard; output ở checks/out"]
+          - ["Rollback dùng git clean khi chưa có commit", "Commit snapshot + tag trước; orphan commit trước khi push"]
+          - ["Node MSI, Docker tắt", "T1.1 nvm toàn máy; T1.0b bật Docker, chụp mốc StartedAt"]
+          - ["Lệnh Prisma trỏ nhầm DB; replay DDL làm bẩn DB", "Guard DB; tiền kiểm file DDL; DROP SCHEMA IF EXISTS; so bảng public"]
+          - ["xargs làm vỡ JSON; cookie 15 phút; drill 5 giây", "xargs -d '\\n'; ensure-login.sh; M1_TX_TIMEOUT_MS"]
+          - ["So ràng buộc thiếu; kiểu id chưa biết", "So 4 chiều; bảng biến thể int/bigint/uuid"]
+          - ["Bảo mật mặc định yếu, chuỗi cung ứng", "Bind 127.0.0.1; secret sinh ngầm; minimumReleaseAge; rà lockfile"]
+      - type: table
+        title: "Câu hỏi xác nhận (Đạt đã trả lời)"
+        columns: ["Câu hỏi", "Trả lời"]
+        rows:
+          - ["Áp dụng các phát hiện red-team?", "Áp dụng tất cả"]
+          - ["Tên công ty/khách hàng trong tài liệu?", "Đổi sang tên trung tính"]
+          - ["Node 22 bản MSI?", "Giữ MSI cho hook, bỏ khỏi Machine PATH; nvm 2.0 quản lý Node trong shell (chốt lại 28/10 sau kongming)"]
+          - ["Mã lỗi ngoài hợp đồng?", "400 SAME_WALLET ở DTO; 404 tính trong transaction; bỏ đọc trước"]
+
+  - type: section
+    title: "7. Câu hỏi mở"
+    blocks:
+      - type: list
+        items:
+          - { text: "Shim của nvm 2.0 có đứng trước %APPDATA%\\npm (pnpm@9 cũ) trong PATH sau khi đổi không? (kiểm pnpm -v ở T1.1)" }
+          - { text: "Các bản pin có cũ hơn 3 ngày (minimumReleaseAge) không? Nếu chưa, T1.6 hỏi Đạt." }
+          - { text: "Tên enum Prisma.TransactionIsolationLevel trên Prisma 7.9 (check-types sẽ bắt)." }
+          - { text: "Một số file đã commit trước đây trong advance-be (handoff, roadmap, lab) đã chứa tên thương hiệu và tên container lab: Đạt quyết có xử lý lịch sử repo hay không." }
+
+  - type: section
+    title: "8. Nguồn"
+    blocks:
+      - type: table
+        columns: ["Nguồn", "Đường dẫn"]
+        rows:
+          - ["SRS v1.3", "docs/omnipos-finledger-hub/software-requirements-specification.md"]
+          - ["Kiến trúc (ADR-019)", "docs/omnipos-finledger-hub/architecture-evolution.md"]
+          - ["Hợp đồng khung", "plans/reports/brainstorm-261027-1333-hub-skeleton-contract.md"]
+          - ["Research", "research/researcher-01-nest12-next16-migration.md, research/researcher-02-prisma-postgres-checks.md, research/scout-template-facts.md"]
+          - ["Lệnh chạy plan", "/ak:cook plans/261027-0907-cluster1-m0-m1-implementation/plan.md --advice"]

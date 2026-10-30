@@ -919,6 +919,15 @@ LockRows
     <p>Deadlock cần đủ cả 4. <code>ORDER BY id</code> phá điều kiện 4: mọi phiên xin dòng theo id tăng dần, nên không ai giữ id lớn rồi xin id nhỏ. Lab đo <b class="m" data-run="lab05">10 vòng song song (không in từng câu): 40P01 × 0</b>, và <code>EXPLAIN</code> cho thấy <code>LockRows</code> nằm trên <code>Sort</code>: dòng được sắp xếp rồi mới bị khóa.</p>
   </div>
 
+  <div class="callout teacher">
+    <span class="tag">Ghi chú thực chiến · Cơ chế chuông 1s &amp; cách gom khóa lên đầu $transaction</span>
+    <ul>
+      <li><b>Vì sao xếp hàng tuần tự (Case 1) cũng hẹn giờ 1s nhưng không nổ 40P01?</b> Khi một phiên bị chặn đợi khóa, PG chưa biết đó là xếp hàng bình thường hay khóa chéo nên luôn cho đi ngủ kèm hẹn giờ <code>deadlock_timeout = 1s</code>. Nếu người giữ khóa <code>COMMIT</code> sớm (VD 30 ms), người chờ được đánh thức ngay ở 30 ms (không phải đợi hết 1 s). Nếu quá 1 s vẫn chưa xong, người chờ thức dậy quét đồ thị: thấy chỉ là <code>B → A</code> (không có vòng lặp <code>A → B → A</code>) thì tắt chuông ngủ tiếp chờ A; chỉ khi thấy vòng tròn khép kín <code>A ↔ B</code> mới nổ <code>40P01</code> và tự động Rollback phiên nạn nhân để giải cứu phiên kia.</li>
+      <li><b>Tại sao phải có <code>ORDER BY id</code> chứ không chỉ gom vào <code>IN (2, 1)</code>?</b> PG không khóa nhiều dòng cùng một tích tắc mà khóa lần lượt từng dòng ở nút <code>LockRows</code>. Nhờ <code>Sort</code> nằm dưới <code>LockRows</code>, mọi tiến trình đều phải đi qua "cổng số 1" (<code>id</code> nhỏ nhất) trước: ai đến sau bị chặn ngay tại <code>id</code> nhỏ nhất khi tay đang trắng (chưa giữ <code>id</code> lớn), biến bài toán Khóa chéo (Deadlock) quay về Xếp hàng 1 chiều (Serialize).</li>
+      <li><b>Áp dụng vào code thực tế (NestJS / Prisma):</b> Khi hàm <code>$transaction</code> cần <code>UPDATE</code> từ 2 dòng trở lên (VD chuyển tiền <code>fromWalletId</code> ↔ <code>toWalletId</code> hoặc trừ tồn kho giỏ hàng nhiều món), hãy lấy các ID từ DTO đem lên ngay dòng đầu tiên của <code>$transaction</code> để khóa 1 mẻ bằng <code>SELECT ... WHERE id IN (...) ORDER BY id ASC FOR UPDATE</code> (hoặc <code>.sort()</code> mảng ID tăng dần trước vòng lặp <code>UPDATE</code>). Nếu nghiệp vụ phức tạp chưa biết trước ID thứ 2 ở đầu hàm, bọc thêm vòng lặp Retry bắt mã <code>40P01</code>.</li>
+    </ul>
+  </div>
+
   <div class="callout key">
     <span class="tag">DoD Day 04 · tự đánh dấu</span>
     <ul>
@@ -964,6 +973,17 @@ LockRows
     </tbody>
   </table></div>
   <p>Cùng mã 55P03 nhưng hai thông điệp khác nhau. Log phải đọc cả message mới biết là NOWAIT hay hết hạn chờ.</p>
+
+  <div class="callout teacher">
+    <span class="tag">Ghi chú thực chiến · Phân biệt SELECT trơn vs 4 cách xin khóa phòng (id = 1)</span>
+    <ul>
+      <li><b><code>SELECT ... WHERE id = 1</code> (KHÔNG có <code>FOR UPDATE</code>):</b> Chỉ đứng ngoài nhìn qua cửa kính (đọc bản chụp MVCC cũ — Bài 12), <b>không xin khóa dòng</b> nên chạy xong ngay 0 ms kể cả khi Tab A đang khóa dòng đó (nhưng nếu dùng số đọc được để trừ tiền sẽ bị lỗi Ví âm −20).</li>
+      <li><b><code>SELECT ... WHERE id = 1 FOR UPDATE</code> (Mặc định của <code>FOR UPDATE</code>):</b> Đòi cầm chìa khóa phòng 1; thấy Tab A đang giữ thì <b>đứng chờ vô tận</b> tới khi Tab A <code>COMMIT/ROLLBACK</code>.</li>
+      <li><b><code>FOR UPDATE NOWAIT</code>:</b> Đòi đích danh phòng 1, thấy bận là <b>quay xe báo lỗi <code>55P03</code> ngay lập tức (0 ms)</b> (VD: khách chọn đích danh Ghế 12A).</li>
+      <li><b><code>SET lock_timeout = '2s'</code> + <code>FOR UPDATE</code>:</b> Chấp nhận xếp hàng chờ lịch sự tối đa 2 giây; quá 2 giây chưa tới lượt thì tự hủy với <code>55P03</code> để cứu Connection Pool.</li>
+      <li><b><code>FOR UPDATE SKIP LOCKED</code>:</b> Cần 1 phòng trống bất kỳ trong danh sách — thấy phòng 1 đang khóa thì <b>lẳng lặng nhảy cóc qua phòng 1 để bốc ngay phòng 2 trống kế bên (0 ms, không lỗi)</b>. Kết hợp tách 1 dòng <code>remaining = 10</code> (Dòng nóng / Hot Row) thành 10 dòng slot riêng lẻ + <code>SKIP LOCKED</code> giúp 10 người săn Flash-Voucher cùng lúc không ai phải chờ ai!</li>
+    </ul>
+  </div>
 
   <div class="run-label">Kết quả đã chạy trên máy bạn ngày 24/10/2026 · <code>npm run lab6</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="lab06.txt">Lab 14.06 — NOWAIT/lock_timeout báo 55P03 khác nhau, SKIP LOCKED chia ghế không chờ (slide 14, 20)
@@ -1428,6 +1448,17 @@ Chưa có bộ SQL nào điền đủ — từ chối chấm, chưa mở kết n
 <section id="prisma-drill" class="stage col">
   <h2>Prisma 7 drill: rà một BookingService do AI viết</h2>
   <p>Đây là code NestJS + Prisma 7 giống dự án <code>quan-ly-hop-dong</code> của bạn. Nó chạy được khi chỉ có 1 người dùng. Tìm 6 lỗi khóa trước khi mở đáp án; mỗi lỗi đã có một lab đo trong bài.</p>
+
+  <div class="callout teacher">
+    <span class="tag">Ghi chú thực chiến · Kính Tia X 5 câu hỏi khi rà bất kỳ hàm $transaction nào</span>
+    <ol>
+      <li><b>Trước <code>$transaction</code>:</b> Có <code>findUnique</code> / <code>findFirst</code> đọc số dư / tồn kho ở ngoài để <code>if (...)</code> không? (Đó là <code>SELECT</code> trơn không khóa → lỗi Ví âm −20).</li>
+      <li><b>Đầu <code>$transaction</code>:</b> Nếu khóa từ 2 dòng trở lên (<code>IN</code> / <code>ANY</code> / vòng lặp), đã có <b><code>ORDER BY id</code> trước <code>FOR UPDATE</code></b> chưa? (Thiếu là nổ Deadlock <code>40P01</code>).</li>
+      <li><b>Chỗ <code>updateMany</code>:</b> Dùng <code>updateMany</code> kèm điều kiện <code>version</code> hoặc <code>balance &gt;= amount</code> thì đã hứng <code>const { count } = ...</code> và kiểm tra <b><code>if (count === 0) throw ...</code></b> chưa? (Không kiểm là sửa 0 dòng vẫn chạy tiếp).</li>
+      <li><b>Biến kết nối bên trong callback:</b> Bên trong <code>async (tx) =&gt; { ... }</code>, có chỗ nào gõ nhầm <b><code>this.prisma.</code></b> thay vì <b><code>tx.</code></b> không? (Dùng <code>this.prisma</code> vừa tự commit lẻ không rollback được, vừa tự khóa chính mình vì <code>tx</code> đang giữ khóa <code>xmax</code> ở trên khiến <code>this.prisma</code> đứng quay vòng chờ chính <code>tx</code> tới khi nổ timeout!).</li>
+      <li><b>Cuối <code>$transaction</code>:</b> Có lệnh <code>await</code> gọi mạng ngoài DB (<code>payment</code>, <code>axios</code>, <code>zalo</code>, <code>mail</code>) nằm trước dấu đóng <code>});</code> không? (Phải vứt ra ngoài <code>$transaction</code> để không ngâm khóa gây Dòng nóng).</li>
+    </ol>
+  </div>
   <div class="code"><pre><code>// booking.service.ts — bản nháp AI (NestJS + Prisma 7, adapter-pg)
 @Injectable()
 export class BookingService {
@@ -1552,16 +1583,15 @@ if (count === 0) throw new ConflictException('Dữ liệu đã đổi, hãy tả
       <tr><td><code>FOR UPDATE</code></td><td><code>SELECT … FOR UPDATE</code>, DELETE, UPDATE cột khóa</td><td>cả 4</td></tr>
     </tbody>
   </table></div>
-  <h3>Mã lỗi cần thuộc</h3>
+  <h3>Mẹo nhớ nhanh mã lỗi PostgreSQL theo 3 Đầu Số (23 · 40 · 55) + 2 mã phụ</h3>
+  <p>Không cần học vẹt từng mã lẻ — chỉ cần nhìn <b>2 chữ số đầu của SQLSTATE</b> để quyết định ngay trong khối <code>catch</code>:</p>
   <div class="table-wrap"><table>
-    <thead><tr><th>Mã</th><th>Thông điệp</th><th>Làm gì</th></tr></thead>
+    <thead><tr><th>Họ lỗi (Đầu số)</th><th>Ý nghĩa dễ nhớ (5 giây)</th><th>Mã cụ thể &amp; Thông điệp</th><th>Cách xử lý trong Backend (<code>catch</code>)</th></tr></thead>
     <tbody>
-      <tr><td>40P01</td><td>deadlock detected</td><td>ROLLBACK, thử lại cả transaction; sửa thứ tự khóa</td></tr>
-      <tr><td>55P03</td><td>could not obtain lock on row in relation …</td><td>NOWAIT: báo "đang bận" ngay</td></tr>
-      <tr><td>55P03</td><td>canceling statement due to lock timeout</td><td>Đã chờ hết <code>lock_timeout</code>: thử lại sau</td></tr>
-      <tr><td>40001</td><td>could not serialize access due to concurrent update</td><td>RR/SER: thử lại cả transaction</td></tr>
-      <tr><td>0A000</td><td>FOR UPDATE is not allowed with aggregate functions</td><td>Khóa dòng cha thay vì <code>count(*)</code></td></tr>
-      <tr><td>23514</td><td>violates check constraint</td><td>Lưới an toàn cuối: báo lỗi nghiệp vụ</td></tr>
+      <tr><td><b>1. Đầu <code>23xxx</code></b></td><td><b>Dữ liệu sai luật bảng</b><br><span class="muted">(Constraint Violation)</span></td><td>• <code>23505</code>: <code>unique_violation</code> (trùng UNIQUE, nhận voucher 2 lần)<br>• <code>23514</code>: <code>check_violation</code> (vi phạm <code>CHECK balance &gt;= 0</code>)<br>• <code>23503</code>: <code>foreign_key_violation</code> (sai FK)</td><td><b>CẤM Retry!</b> (Thử lại 100 lần vẫn sai luật).<br>Trả ngay <code>409 Conflict</code> / <code>400</code> (<code>ALREADY_CLAIMED</code>, <code>INSUFFICIENT_FUNDS</code>).</td></tr>
+      <tr><td><b>2. Đầu <code>40xxx</code></b></td><td><b>Hai thằng chạy đè nhau</b><br><span class="muted">(Concurrency Rollback)</span></td><td>• <code>40001</code>: <code>serialization_failure</code> (đụng Snapshot ở RR / SER — Bài 12)<br>• <code>40P01</code>: <code>deadlock_detected</code> (khóa chéo vòng tròn <code>A ↔ B</code> sau 1s)</td><td><b>ĐƯỢC PHÉP Retry!</b> (DB đã tự Rollback sạch phiên lỗi).<br>Cho vòng lặp thử lại 2–3 lần; riêng <code>40P01</code> sửa thêm <code>ORDER BY id FOR UPDATE</code>.</td></tr>
+      <tr><td><b>3. Đầu <code>55xxx</code></b></td><td><b>Đợi khóa hết kiên nhẫn</b><br><span class="muted">(Lock Not Available)</span></td><td>• <code>55P03</code>: <code>could not obtain lock on row …</code> (do <code>NOWAIT</code>, nổ ngay 0 ms)<br>• <code>55P03</code>: <code>canceling statement due to lock timeout</code> (hết giờ <code>lock_timeout</code>)</td><td><b>Từ chối nhanh để cứu Connection Pool!</b><br>Đọc <code>message</code> để phân biệt NOWAIT vs timeout; trả <code>409 / 429 / 503</code> báo khách thử lại sau.</td></tr>
+      <tr><td><b>Mã phụ</b></td><td><b>Lỗi cú pháp / trạng thái phiên</b></td><td>• <code>25P02</code>: <code>in_failed_sql_transaction</code> (cố chạy tiếp khi chưa <code>ROLLBACK</code>)<br>• <code>0A000</code>: <code>FOR UPDATE is not allowed with aggregate functions</code></td><td>• <code>25P02</code>: Phải <code>ROLLBACK</code> ngay, không nuốt lỗi trong <code>$transaction</code>.<br>• <code>0A000</code>: Khóa dòng cha hoặc dòng chi tiết thay vì <code>count(*)</code>.</td></tr>
     </tbody>
   </table></div>
   <h3>Câu chẩn đoán</h3>

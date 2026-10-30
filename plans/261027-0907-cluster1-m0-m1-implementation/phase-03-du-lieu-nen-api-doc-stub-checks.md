@@ -144,11 +144,11 @@ source checks/guard.local.sh && mkdir -p apps/api/prisma/fixtures && docker exec
 - Verify: `git status --porcelain` → không in gì; `git rev-list --count @{u}` → `2`.
 
 ## Success Criteria (khớp AC hợp đồng khung)
-- [ ] `/health` trên 3101 → 200
-- [ ] Login có cookie `app_access_token`
-- [ ] `GET /stores` 300, `GET /products` 77
-- [ ] `POST /wallets/transfers` → 501, message có `TODO(Đạt)`
-- [ ] G1–G5 pass; không còn node trên 3100/3101; chỉ `omnipos-hub-pg` của hub còn Up
+- [x] `/health` trên 3101 → 200
+- [x] Login có cookie `app_access_token`
+- [x] `GET /stores` 300, `GET /products` 77
+- [x] `POST /wallets/transfers` → 501, message có `TODO(Đạt)`
+- [x] G1–G5 pass; không còn node trên 3100/3101; chỉ `omnipos-hub-pg` của hub còn Up
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

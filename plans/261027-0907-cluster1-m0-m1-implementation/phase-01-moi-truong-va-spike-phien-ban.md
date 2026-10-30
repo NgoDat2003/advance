@@ -149,10 +149,10 @@ git diff -U0 template-snapshot -- package.json apps/api/package.json apps/web/pa
 - Verify khi có lùi: bảng T1.5 chạy lại đều pass; `test -s "$OUT/proposed-doc-deltas.md"`. Không lùi: `no verification needed`.
 
 ## Success Criteria
-- [ ] 3 lệnh `-v` ở T1.1 đúng
-- [ ] Commit snapshot + tag `template-snapshot` (cục bộ)
-- [ ] `OUT/protected-before.txt` có container công ty kèm `StartedAt`
-- [ ] S1–S5 pass, `minimumReleaseAge` bật, không gói top-level lạ
+- [x] 3 lệnh `-v` ở T1.1 đúng
+- [x] Commit snapshot + tag `template-snapshot` (cục bộ)
+- [x] `OUT/protected-before.txt` có container công ty kèm `StartedAt`
+- [x] S1–S5 pass, `minimumReleaseAge` bật, không gói top-level lạ
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

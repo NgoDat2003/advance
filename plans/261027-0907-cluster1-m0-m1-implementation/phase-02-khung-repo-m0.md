@@ -175,9 +175,9 @@ git tag -d template-snapshot
 - Verify: `git log --all --oneline | wc -l` → `1`; `git tag -l | wc -l` → `0`; `gh repo view NgoDat2003/omnipos-finledger-hub --json visibility -q .visibility` → `PRIVATE`; ở `D:/học/advance-be`: `git status --porcelain | grep -c omnipos-finledger-hub` → `0`.
 
 ## Success Criteria
-- [ ] Guard DB chặn URL sai; 3 secret sinh ngầm
-- [ ] B1–B5, S6–S10, K1–K2 pass trong 45 phút
-- [ ] G1–G5 pass; lịch sử 1 commit, không tag; repo `PRIVATE`
+- [x] Guard DB chặn URL sai; 3 secret sinh ngầm
+- [x] B1–B5, S6–S10, K1–K2 pass trong 45 phút
+- [x] G1–G5 pass; lịch sử 1 commit, không tag; repo `PRIVATE`
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

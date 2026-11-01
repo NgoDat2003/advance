@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo Cáo Công Nghệ Cuối 2026 (--ultra --ak-render) | X · Reddit · GitHub · Hacker News</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #090b10;
+      --bg-elevated: #11151f;
+      --bg-card: #151a26;
+      --bg-card-hover: #1b2232;
+      --fg: #eef2ff;
+      --fg-muted: #94a3b8;
+      --fg-subtle: #64748b;
+      --border: #222b3d;
+      --border-strong: #334155;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.14);
+      --adopt: #10b981;
+      --adopt-bg: rgba(16, 185, 129, 0.12);
+      --trial: #3b82f6;
+      --trial-bg: rgba(59, 130, 246, 0.12);
+      --assess: #f59e0b;
+      --assess-bg: rgba(245, 158, 11, 0.12);
+      --hold: #ef4444;
+      --hold-bg: rgba(239, 68, 68, 0.12);
+      --purple: #a855f7;
+      --code-bg: #0c0f17;
+      --shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.55);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-elevated: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --fg: #0f172a;
+      --fg-muted: #475569;
+      --fg-subtle: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #0284c7;
+      --accent-glow: rgba(2, 132, 199, 0.1);
+      --adopt: #059669;
+      --adopt-bg: rgba(5, 150, 105, 0.1);
+      --trial: #2563eb;
+      --trial-bg: rgba(37, 99, 235, 0.1);
+      --assess: #d97706;
+      --assess-bg: rgba(217, 119, 6, 0.1);
+      --hold: #dc2626;
+      --hold-bg: rgba(220, 38, 38, 0.1);
+      --purple: #7c3aed;
+      --code-bg: #0f172a;
+      --shadow: 0 10px 25px -8px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      line-height: 1.65;
+      font-size: 15px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    code, pre, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Top Sticky Navigation */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+    }
+    .topbar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .nav-links a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.38rem 0.7rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover {
+      color: var(--fg);
+      background: var(--bg-elevated);
+    }
+    .theme-btn {
+      background: var(--bg-card);
+      color: var(--fg);
+      border: 1px solid var(--border-strong);
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .theme-btn:hover { border-color: var(--accent); }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 5rem;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: radial-gradient(circle at 85% 15%, var(--accent-glow), transparent 45%),
+                  linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 2.25rem;
+      margin-bottom: 2.25rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .flag-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.15rem;
+    }
+    .flag-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--fg-muted);
+    }
+    .flag-pill.active {
+      border-color: var(--adopt);
+      color: var(--adopt);
+      background: var(--adopt-bg);
+    }
+    .flag-pill.render {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .hero h1 {
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 1rem;
+    }
+    .hero-sub {
+      color: var(--fg-muted);
+      max-width: 920px;
+      font-size: 1.02rem;
+      margin-bottom: 1.75rem;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.15rem;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--fg-subtle);
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .kpi-val {
+      font-family: 'Space Grotesk', 'JetBrains Mono', monospace;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.15;
+      margin-bottom: 0.3rem;
+    }
+    .kpi-desc {
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+    }
+
+    /* Section Headers */
+    .section {
+      margin-top: 3rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .section-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      background: var(--accent-glow);
+      color: var(--accent);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .section-sub {
+      color: var(--fg-muted);
+      font-size: 0.88rem;
+    }
+
+    /* Interactive Tech Radar Controls */
+    .radar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 1.25rem;
+    }
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+    }
+    .filter-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--fg-subtle);
+      margin-right: 0.25rem;
+      text-transform: uppercase;
+    }
+    .filter-btn {
+      background: var(--bg-card);
+      color: var(--fg-muted);
+      border: 1px solid var(--border-strong);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--accent);
+      color: #090b10;
+      border-color: var(--accent);
+    }
+    .search-input {
+      background: var(--bg-card);
+      color: var(--fg);
+      border: 1px solid var(--border-strong);
+      padding: 0.42rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      min-width: 240px;
+    }
+
+    /* Radar Cards Grid */
+    .radar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.1rem;
+    }
+    .radar-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.85rem;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .radar-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+    .radar-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .radar-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+    .radar-cat {
+      font-size: 0.73rem;
+      color: var(--fg-subtle);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .ring-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.22rem 0.6rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .ring-ADOPT { background: var(--adopt-bg); color: var(--adopt); border: 1px solid var(--adopt); }
+    .ring-TRIAL { background: var(--trial-bg); color: var(--trial); border: 1px solid var(--trial); }
+    .ring-ASSESS { background: var(--assess-bg); color: var(--assess); border: 1px solid var(--assess); }
+    .ring-HOLD { background: var(--hold-bg); color: var(--hold); border: 1px solid var(--hold); }
+
+    .radar-body {
+      font-size: 0.87rem;
+      color: var(--fg-muted);
+    }
+    .radar-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed var(--border);
+      font-size: 0.75rem;
+    }
+    .meta-tag {
+      background: var(--bg-elevated);
+      color: var(--fg-muted);
+      padding: 0.18rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Two-Column Benchmarks & Diagrams */
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 1.25rem;
+    }
+    @media (max-width: 600px) {
+      .two-col, .radar-grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.4rem;
+    }
+    .panel h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .panel-caption {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      margin-bottom: 1.15rem;
+    }
+
+    /* Bar Chart Styling */
+    .bar-group {
+      margin-bottom: 1rem;
+    }
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+    .bar-track {
+      width: 100%;
+      height: 12px;
+      background: var(--bg-elevated);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    /* Platform Discourse Table */
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      background: var(--bg-elevated);
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--fg-muted);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-card-hover); }
+
+    /* Code Tabs */
+    .code-tabs {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .code-tab {
+      background: var(--bg-elevated);
+      color: var(--fg-muted);
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .code-tab.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .code-pane {
+      display: none;
+      position: relative;
+    }
+    .code-pane.active { display: block; }
+    pre {
+      background: var(--code-bg);
+      color: #e2e8f0;
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-strong);
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .svg-box {
+      width: 100%;
+      overflow-x: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+    }
+    .footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--fg-subtle);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span>🛰️ TECH RADAR OBSERVATORY</span>
+        <span class="brand-badge">2026-11-01 · --ultra · --ak-render</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#radar">1. Tech Radar (18)</a>
+        <a href="#architecture">2. Kiến Trúc & Ranh Giới</a>
+        <a href="#benchmarks">3. Benchmarks Thực Nghiệm</a>
+        <a href="#discourse">4. Tranh Luận X / Reddit / HN</a>
+        <a href="#playbook">5. Code Playbook (OmniPOS)</a>
+      </nav>
+      <button class="theme-btn" id="themeToggle" onclick="toggleTheme()">🌓 Giao diện: Tối</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="flag-strip">
+        <span class="flag-pill active">✓ SKILL: ak-research</span>
+        <span class="flag-pill active">✓ NATIVE FLAG: --ultra (Best-of-5 + Kongming Verifier)</span>
+        <span class="flag-pill render">✓ PIPELINE FLAG: --ak-render (Interactive HTML Visual Showcase)</span>
+        <span class="flag-pill">SCOPE: X · Reddit · GitHub Trending · Hacker News</span>
+      </div>
+      <h1>Báo Cáo Toàn Cảnh Công Nghệ & Tranh Luận Kỹ Thuật Cuối Năm 2026</h1>
+      <p class="hero-sub">
+        Tổng hợp đa chiều từ <strong>GitHub Trending, Hacker News (Show HN), Reddit (r/programming, r/backend, r/PostgreSQL, r/WebAfterAI, r/ClaudeCode)</strong> và các bản tin kỹ thuật tháng 05–11/2026. Phân tích sâu 4 trụ cột: <strong>AI Agent Orchestration & Context Economics</strong>, <strong>Trình biên dịch TS/Rust (tsrs vs tsgo)</strong>, <strong>Cách mạng Postgres 18/19 & ORM (Prisma 7 vs Drizzle 1.0)</strong>, cùng lộ trình áp dụng trực tiếp cho <code>omnipos-finledger-hub</code>.
+      </p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">GitHub Agent Velocity</div>
+          <div class="kpi-val">417k / 112k ★</div>
+          <div class="kpi-desc"><code>morluto/rea</code> (+109k/tuần) & <code>stablyai/orca</code> (112,058 ★) dẫn đầu làn sóng Agent & ADE.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">MCP Schema Tax</div>
+          <div class="kpi-val">55,000 tok</div>
+          <div class="kpi-desc">GitHub MCP (93 tools) ngốn 27% context trước câu lệnh đầu; Tool Search cắt giảm 85–98.7%.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cloudflare + VoidZero tsrs</div>
+          <div class="kpi-val">8.1x / -70%</div>
+          <div class="kpi-desc">Port TypeScript sang Rust (20/10/2026): nhanh gấp 8.1x TS 7.0, giảm 70% RAM, đồng bộ bằng Agent.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Prisma 7 Xóa Bỏ Rust</div>
+          <div class="kpi-val">3.4x / 1.6MB</div>
+          <div class="kpi-desc">Thay Rust Engine bằng TS+WASM: giảm 90% dung lượng (14MB→1.6MB), loại bỏ thuế IPC serialize.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">PostgreSQL 18 + 19 Beta</div>
+          <div class="kpi-val">3.0x AIO</div>
+          <div class="kpi-desc">PG18 <code>io_uring</code> giảm 64% thời gian quét lạnh + <code>uuidv7()</code>; PG19 thêm <code>pg_plan_advice</code>.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Local AI (Strata / Qwen 3.8)</div>
+          <div class="kpi-val">100 tok/s</div>
+          <div class="kpi-desc"><code>Niko1221/Strata</code> (Top 1 HN 940 pts) chạy Qwen 3.8 Flash Next 125B trên 1 card RTX 4090.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: INTERACTIVE TECH RADAR -->
+    <section class="section" id="radar">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span class="section-num">01</span> Ma Trận Tech Radar Cuối 2026 (Interactive Filter)</h2>
+          <p class="section-sub">Phân loại 18 công nghệ nóng nhất theo 4 vòng quyết định: <strong>ADOPT</strong> (Áp dụng ngay), <strong>TRIAL</strong> (Thử nghiệm), <strong>ASSESS</strong> (Theo dõi), <strong>HOLD</strong> (Cảnh giác/Tránh Hype).</p>
+        </div>
+      </div>
+
+      <div class="radar-controls">
+        <div class="filter-group" id="ringFilters">
+          <span class="filter-label">Vòng Quyết Định:</span>
+          <button class="filter-btn active" onclick="setRingFilter('ALL', this)">Tất cả (18)</button>
+          <button class="filter-btn" onclick="setRingFilter('ADOPT', this)">🟢 ADOPT (Áp dụng ngay)</button>
+          <button class="filter-btn" onclick="setRingFilter('TRIAL', this)">🔵 TRIAL (Thử nghiệm)</button>
+          <button class="filter-btn" onclick="setRingFilter('ASSESS', this)">🟡 ASSESS (Nghiên cứu)</button>
+          <button class="filter-btn" onclick="setRingFilter('HOLD', this)">🔴 HOLD (Cảnh giác)</button>
+        </div>
+        <div class="filter-group" id="pillarFilters">
+          <span class="filter-label">Trụ cột:</span>
+          <button class="filter-btn active" onclick="setPillarFilter('ALL', this)">Mọi trụ cột</button>
+          <button class="filter-btn" onclick="setPillarFilter('AI', this)">AI & Agents</button>
+          <button class="filter-btn" onclick="setPillarFilter('TS', this)">Compilers & TS</button>
+          <button class="filter-btn" onclick="setPillarFilter('DB', this)">Backend & DB</button>
+          <button class="filter-btn" onclick="setPillarFilter('SEC', this)">Infra & Security</button>
+        </div>
+        <input type="text" id="radarSearch" class="search-input" placeholder="🔍 Tìm kiếm công nghệ (vd: Postgres, tsrs, Orca)..." oninput="renderRadar()" />
+      </div>
+
+      <div class="radar-grid" id="radarContainer"></div>
+    </section>
+
+    <!-- SECTION 2: SYSTEM ARCHITECTURE SVG DIAGRAMS -->
+    <section class="section" id="architecture">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span class="section-num">02</span> Giải Phẫu Kiến Trúc Cốt Lõi (Semantic SVG Blueprints)</h2>
+          <p class="section-sub">Hai quy luật kiến trúc định hình kỹ nghệ phần mềm năm 2026: Phân cấp bộ nhớ ngữ cảnh Agent (L1/L2/Disk) và Định luật Thuế Ranh Giới Ngôn Ngữ (FFI Boundary Tax).</p>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h3>Kiến Trúc 3 Tầng Bộ Nhớ Ngữ Cảnh (Context Window Hierarchy)</h3>
+          <p class="panel-caption">Giải quyết bài toán GitHub MCP ngốn 55,000 tokens trước câu lệnh đầu tiên bằng Tiết lộ lũy tiến (Progressive Disclosure).</p>
+          <div class="svg-box">
+            <svg viewBox="0 0 600 320" width="100%" role="img" aria-labelledby="ctx-title ctx-desc">
+              <title id="ctx-title">Kiến trúc 3 tầng bộ nhớ ngữ cảnh cho AI Coding Agent năm 2026</title>
+              <desc id="ctx-desc">Sơ đồ so sánh L1 Cache (AGENTS.md), L2 Cache (Agent Skills), và Disk/Remote (MCP Tool Search + Streamable HTTP).</desc>
+              <rect x="15" y="15" width="570" height="82" rx="10" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="1.5"/>
+              <text x="32" y="42" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">L1 CACHE · AGENTS.md / CLAUDE.md (Luôn thường trực)</text>
+              <text x="32" y="64" fill="currentColor" font-family="Be Vietnam Pro, sans-serif" font-size="12">• Chi phí: 100% số token ở MỌI lượt hội thoại (&gt;60,000 repos áp dụng).</text>
+              <text x="32" y="82" fill="#94a3b8" font-family="Be Vietnam Pro, sans-serif" font-size="11.5">• Quy tắc sống còn: Viết tay &lt;150 dòng; file do LLM tự sinh làm giảm 3% tỷ lệ thành công &amp; tốn +20% phí.</text>
+
+              <rect x="15" y="114" width="570" height="90" rx="10" fill="rgba(56, 189, 248, 0.1)" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="32" y="140" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">L2 CACHE · Agent Skills (agentskills.io — 3-Stage Progressive)</text>
+              <text x="32" y="162" fill="currentColor" font-family="Be Vietnam Pro, sans-serif" font-size="12">• Cấp 1 (Metadata): ~100 tokens/skill | Cấp 2 (SKILL.md body): &lt;5,000 tokens khi kích hoạt.</text>
+              <text x="32" y="182" fill="#94a3b8" font-family="Be Vietnam Pro, sans-serif" font-size="11.5">• Cấp 3 (Bundled Scripts): Chạy ngoài context window (0 token code), chỉ nạp kết quả stdout.</text>
+
+              <rect x="15" y="220" width="570" height="86" rx="10" fill="rgba(168, 85, 247, 0.1)" stroke="#a855f7" stroke-width="1.5"/>
+              <text x="32" y="246" fill="#a855f7" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">EXTERNAL / DISK · MCP 2025-06-18 / 2026-07-28 + Tool Search</text>
+              <text x="32" y="268" fill="currentColor" font-family="Be Vietnam Pro, sans-serif" font-size="12">• Streamable HTTP + OAuth 2.1 (RFC 8707 Resource Indicators) + Lazy Tool Search.</text>
+              <text x="32" y="288" fill="#94a3b8" font-family="Be Vietnam Pro, sans-serif" font-size="11.5">• Hiệu quả: Cắt giảm 85%–98.7% token (150k → 2k tokens); nâng độ chính xác Opus từ 49% → 74%.</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Nghịch Lý Ranh Giới Ngôn Ngữ: Tại Sao Rolldown Thêm Rust Còn Prisma 7 Xóa Rust?</h3>
+          <p class="panel-caption">Chi phí vượt biên giới JS ↔ Native (Serialization Tax) quyết định kiến trúc thành bại năm 2026.</p>
+          <div class="svg-box">
+            <svg viewBox="0 0 600 320" width="100%" role="img" aria-labelledby="ffi-title ffi-desc">
+              <title id="ffi-title">So sánh ranh giới ngôn ngữ giữa Bundler (Rolldown) và ORM (Prisma 7 / Drizzle 1.0)</title>
+              <desc id="ffi-desc">Rolldown vượt ranh giới 1 lần cho khối lượng việc lớn nên thắng lớn với Rust; Prisma 6 vượt ranh giới trên từng câu query nên chậm vì serialize JSON/IPC.</desc>
+              <!-- Rolldown Box -->
+              <rect x="15" y="15" width="570" height="132" rx="10" fill="rgba(16, 185, 129, 0.08)" stroke="#10b981" stroke-width="1.5"/>
+              <text x="30" y="40" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">1. CHUNKY WORKLOAD (Bundler / Type Checker: Rolldown 1.0, Vite 8, tsrs)</text>
+              <rect x="30" y="55" width="145" height="44" rx="6" fill="#151a26" stroke="#334155"/>
+              <text x="102" y="81" text-anchor="middle" fill="#eef2ff" font-family="JetBrains Mono, monospace" font-size="11.5">JS Config / CLI</text>
+              <path d="M180 77 L235 77" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrow)"/>
+              <text x="207" y="68" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">1x Call</text>
+              <rect x="240" y="55" width="325" height="44" rx="6" fill="rgba(16, 185, 129, 0.18)" stroke="#10b981"/>
+              <text x="402" y="75" text-anchor="middle" fill="#eef2ff" font-family="JetBrains Mono, monospace" font-size="11.5" font-weight="700">Rust Core (Oxc / Rolldown / tsrs)</text>
+              <text x="402" y="91" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10.5">Xử lý 10,000 files nội bộ → Linear build 46s xuống 6s!</text>
+              <text x="30" y="128" fill="#94a3b8" font-family="Be Vietnam Pro, sans-serif" font-size="11.5">✓ Kết luận: Vượt biên giới ÍT LẦN + tính toán NẶNG ở giữa ⇒ Rust/Go thắng tuyệt đối (10–30x).</text>
+
+              <!-- Prisma 7 / Drizzle Box -->
+              <rect x="15" y="168" width="570" height="138" rx="10" fill="rgba(56, 189, 248, 0.08)" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="30" y="193" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">2. CHATTY WORKLOAD (ORM Query Path: Prisma 7 TS+WASM &amp; Drizzle 1.0 JIT)</text>
+              <rect x="30" y="208" width="255" height="50" rx="6" fill="rgba(239, 68, 68, 0.14)" stroke="#ef4444"/>
+              <text x="157" y="228" text-anchor="middle" fill="#ef4444" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">❌ Prisma ≤6 (Rust Binary IPC)</text>
+              <text x="157" y="246" text-anchor="middle" fill="#eef2ff" font-family="Be Vietnam Pro, sans-serif" font-size="10.5">Rust sinh SQL 1ms + Serialize 25k rows mất 162ms!</text>
+
+              <rect x="305" y="208" width="260" height="50" rx="6" fill="rgba(56, 189, 248, 0.18)" stroke="#38bdf8"/>
+              <text x="435" y="228" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">✓ Prisma 7 (WASM) &amp; Drizzle 1.0 (JIT)</text>
+              <text x="435" y="246" text-anchor="middle" fill="#eef2ff" font-family="Be Vietnam Pro, sans-serif" font-size="10.5">Chạy In-Process V8 → Nhanh gấp 3.4x–11.3x!</text>
+              <text x="30" y="286" fill="#94a3b8" font-family="Be Vietnam Pro, sans-serif" font-size="11.5">✓ Kết luận: Vượt biên giới LIÊN TỤC kèm dữ liệu lớn ⇒ Giữ In-Process (TS + WASM + JIT Mapper) thắng!</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: VERIFIED BENCHMARKS -->
+    <section class="section" id="benchmarks">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span class="section-num">03</span> Đối Chiếu Benchmark Thực Nghiệm (Tháng 05–10/2026)</h2>
+          <p class="section-sub">Số liệu đo đạc có kiểm chứng độc lập và công bố kỹ thuật từ Cloudflare, pganalyze, Prisma và Bun 1.4.3.</p>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Benchmark 1: TS Compilers -->
+        <div class="panel">
+          <h3>Cuộc Đua TypeScript Compiler Trên Repo VS Code (4 Checkers Đồng Nhất)</h3>
+          <p class="panel-caption">Nguồn: Cloudflare &amp; VoidZero Benchmark (20/10/2026) — Thời gian kiểm tra kiểu &amp; Đỉnh bộ nhớ RAM (Càng thấp càng tốt).</p>
+
+          <div class="bar-group">
+            <div class="bar-header"><span><code>oxc-project/tsrs</code> (Rust — 20/10/2026)</span><span class="mono" style="color:var(--adopt)">1.73s · 1.78 GiB RAM (3.83x nhanh hơn, -77% RAM)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 26%; background: var(--adopt);"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-header"><span><code>TypeScript 7.0.2 (tsgo)</code> (Microsoft Go Port)</span><span class="mono" style="color:var(--assess)">6.62s · 7.68 GiB RAM (Baseline TS7)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 100%; background: var(--assess);"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-header"><span>MUI Docs Repo — <code>tsrs</code> vs <code>tsgo 7.0.2</code></span><span class="mono" style="color:var(--accent)">1.29s vs 10.44s (Nhanh gấp 8.10x)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 12.4%; background: var(--accent);"></div></div>
+          </div>
+          <p style="font-size:0.78rem; color:var(--fg-subtle); margin-top:0.75rem;">
+            💡 <strong>Lưu ý phản biện:</strong> Trên máy 64 nhân (Bun 1.4.3 benchmark), nếu cấu hình công bằng 16 luồng thì khoảng cách thu hẹp: <code>tsrs</code> (0.53s) vs <code>bun check</code> (1.49s) vs <code>tsgo</code> (4.54s). Giá trị lớn nhất của <code>tsrs</code> là giảm 70% RAM để chạy nhiều coding agents cùng lúc.
+          </p>
+        </div>
+
+        <!-- Benchmark 2: Postgres 18 & Prisma 7 -->
+        <div class="panel">
+          <h3>PostgreSQL 18 Async I/O &amp; Prisma 7 Rust-Free Query Compiler</h3>
+          <p class="panel-caption">Nguồn: pganalyze (Quét lạnh 100M dòng trên EBS c7i.8xlarge) &amp; Prisma 7.0 Release Benchmarks.</p>
+
+          <div class="bar-group">
+            <div class="bar-header"><span>PG 18 <code>io_method = io_uring</code> (Linux 5.1+ liburing)</span><span class="mono" style="color:var(--adopt)">5,723 ms (-64% thời gian chờ I/O)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 36%; background: var(--adopt);"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-header"><span>PG 18 <code>io_method = worker</code> (Đa nền tảng / Windows)</span><span class="mono" style="color:var(--trial)">10,052 ms (-36% thời gian chờ I/O)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 63.5%; background: var(--trial);"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-header"><span>PG 17 / PG 18 Default <code>io_method = sync</code></span><span class="mono" style="color:var(--hold)">15,830 ms (Mặc định chưa bật AIO!)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 100%; background: var(--hold);"></div></div>
+          </div>
+          <div class="bar-group" style="margin-top:1.1rem;">
+            <div class="bar-header"><span>Prisma 7 (TS+WASM) vs Prisma 6 (Rust) — <code>m2m include 2k rows</code></span><span class="mono" style="color:var(--accent)">136 ms vs 1,539 ms (Nhanh gấp 11.32x)</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 9%; background: var(--accent);"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: MULTI-PLATFORM DISCOURSE -->
+    <section class="section" id="discourse">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span class="section-num">04</span> Nhịp Đập Đa Nền Tảng: Hype Trên X/GitHub vs Thực Tế Trên Reddit/HN</h2>
+          <p class="section-sub">Đối chiếu trực diện những lời tung hô trên mạng xã hội với thực tế vận hành bị các kỹ sư phanh phui.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Chủ Đề Nóng (Cuối 2026)</th>
+              <th>Hype Trên X (Twitter) &amp; GitHub</th>
+              <th>Thực Tế Phũ Phàng Trên Reddit, Hacker News &amp; Lobsters</th>
+              <th>Bài Học Thực Chiến Cho Kỹ Sư</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Fleet of Coding Agents &amp; ADEs</strong><br><span class="mono" style="font-size:0.75rem;color:var(--accent)">stablyai/orca (112k★)<br>getpaseo/paseo (22.6k★)</span></td>
+              <td>Chia màn hình 8–12 ô terminal chạy song song hàng chục agent qua <code>git worktree</code> để "code nhanh gấp 10 lần".</td>
+              <td><strong>r/WebAfterAI &amp; Dosa AI:</strong> (1) Chạm trần quota token nhanh gấp 5 lần; (2) <code>git worktree</code> chỉ cô lập đĩa lúc chạy, lúc merge về <code>main</code> vẫn nổ <code>CONFLICT</code> nếu chạm dòng liền kề; (3) Nghẽn cổ chai dồn vào khâu con người đọc hiểu diff (Review Fatigue).</td>
+              <td>Giới hạn tối đa <strong>2–3 luồng song song</strong> có biên giới module tách biệt. Học tập bộ <strong>Anti-Slop Ratchets</strong> của Orca (<code>max-lines: 300</code>, <code>oxlint</code>) và Git hook <code>guilyx/grip</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Cú Merge 1 Triệu Dòng Rust Của Bun</strong><br><span class="mono" style="font-size:0.75rem;color:var(--accent)">oven-sh/bun PR #30412</span></td>
+              <td>Claude viết 1 triệu dòng Rust thay thế Zig trong 6 ngày (6,755 commits), đạt 99.8% test pass — "Kỷ nguyên AI tự port hệ thống!".</td>
+              <td><strong>Lobsters &amp; HN:</strong> Phát hiện hơn <strong>13,000 khối <code>unsafe</code></strong> (mật độ gấp 60 lần <code>uv</code> của Astral) và lỗi ép kiểu lifetime cơ bản. <em>"99.8% test pass chứng minh hành vi (behavior), KHÔNG chứng minh tính an toàn bộ nhớ (soundness)!"</em></td>
+              <td>Dùng <strong>Agent-Maintained Matrix</strong> (như <code>tsrs</code> của Cloudflare) cho công cụ biên dịch, nhưng tuyệt đối không đồng nhất "CI xanh" với "an toàn bộ nhớ" ở tầng nhân hệ thống.</td>
+            </tr>
+            <tr>
+              <td><strong>Durable Execution: Temporal vs Postgres</strong><br><span class="mono" style="font-size:0.75rem;color:var(--accent)">HN #48313530 · r/programming</span></td>
+              <td>Mọi hệ thống bất đồng bộ đều phải dựng cụm Temporal riêng biệt để đảm bảo thực thi bền vững (Durable Execution).</td>
+              <td><strong>HN (359 pts, 147 comments):</strong> Nhiều đội ngũ than phiền Temporal ngốn hạ tầng quá nặng và đốt hết $1,000 credit cloud trước khi kịp lên prod. Cộng đồng chuyển sang <strong>DBOS, pgflow (pgmq), absurd</strong> ngay trên Postgres.</td>
+              <td>Ở quy mô &lt; vài TB (như <code>omnipos-finledger-hub</code>), dùng <strong>Postgres ACID Transaction + Transactional Outbox / DBOS / SKIP LOCKED</strong>. Chỉ tách sang <strong>Restate (Rust)</strong> hoặc Temporal khi lưu lượng cực lớn.</td>
+            </tr>
+            <tr>
+              <td><strong>Hệ Sinh Thái MCP &amp; Bộ Nhớ Agent</strong><br><span class="mono" style="font-size:0.75rem;color:var(--accent)">9,889+ MCP Servers · claude-mem</span></td>
+              <td>Cắm càng nhiều MCP server và plugin ghi nhớ ngữ cảnh vào agent thì agent càng thông minh.</td>
+              <td><strong>Unblocked &amp; Speakeasy:</strong> Quá 20 tools làm tụt độ chính xác, chạm 107 tools model "mù" hoàn toàn. <strong>HN #50289137 (29/10/2026):</strong> <code>thedotmack/claude-mem</code> (109k★) âm thầm tải 30 ngày lịch sử prompt lên <code>cmem.ai</code> không xin phép; 157 Agent Skills chứa mã độc (arXiv).</td>
+              <td>Bật <strong>Lazy Tool Search / Code Mode</strong>, lọc biến môi trường <code>GITHUB_TOOLSETS</code>, kiểm duyệt mã nguồn mọi <code>SKILL.md</code> và tuyệt đối không cài plugin đóng gói kín gửi dữ liệu ra ngoài.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: ACTIONABLE CODE PLAYBOOK -->
+    <section class="section" id="playbook">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span class="section-num">05</span> Code Playbook Thực Chiến Cho <code>omnipos-finledger-hub</code> &amp; <code>advance-be</code></h2>
+          <p class="section-sub">Các mẫu cấu hình và mã nguồn chuẩn năm 2026 có thể copy và áp dụng ngay vào dự án học tập của Đạt.</p>
+        </div>
+      </div>
+
+      <div class="code-tabs">
+        <button class="code-tab active" onclick="showTab('tab-pg', this)">1. Postgres 18/19 (uuidv7 + AIO + Plan Advice)</button>
+        <button class="code-tab" onclick="showTab('tab-drizzle', this)">2. Drizzle 1.0 RC (JIT Mapper + SnakeCase)</button>
+        <button class="code-tab" onclick="showTab('tab-ratchet', this)">3. Anti-Slop Ratchet (oxlint + npm v12)</button>
+        <button class="code-tab" onclick="showTab('tab-worktree', this)">4. Bash Proof: Lỗi Merge Conflict trên Worktree</button>
+      </div>
+
+      <div id="tab-pg" class="code-pane active">
+        <button class="copy-btn" onclick="copyCode(this)">Copy SQL</button>
+        <pre><code>-- 1. PostgreSQL 18: Dùng hàm uuidv7() tích hợp sẵn cho bảng Sổ cái (Ledger)
+-- Giúp khóa chính sắp xếp theo thời gian, chống phân mảnh trang B-tree (Index Page Split)
+CREATE TABLE ledger_entries (
+    id           uuid PRIMARY KEY DEFAULT uuidv7(),
+    tenant_id    uuid NOT NULL,
+    account_id   uuid NOT NULL,
+    amount_minor bigint NOT NULL,
+    created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- PG 18 B-tree Skip Scan: Vẫn tận dụng được index này ngay cả khi query thiếu điều kiện lọc tenant_id!
+CREATE INDEX idx_ledger_tenant_created ON ledger_entries (tenant_id, created_at);
+
+-- 2. Kiểm tra tiến trình đọc bất đồng bộ (Async I/O) đang chạy trong PostgreSQL 18
+SELECT pid, io_method, op, state, off, nbytes
+FROM pg_aios
+WHERE state &lt;&gt; 'IDLE';
+
+-- 3. PostgreSQL 19 Beta: Xuất và ghim kế hoạch thực thi bằng pg_plan_advice (không làm bẩn câu SQL)
+EXPLAIN (COSTS OFF, PLAN_ADVICE)
+SELECT * FROM ledger_entries l JOIN accounts a ON l.account_id = a.id;
+-- Giữ cố định Hash Join và thứ tự bảng khi thống kê bị lệch tạm thời:
+SET pg_plan_advice.advice = 'JOIN_ORDER(l a) HASH_JOIN(a)';</code></pre>
+      </div>
+
+      <div id="tab-drizzle" class="code-pane">
+        <button class="copy-btn" onclick="copyCode(this)">Copy TS</button>
+        <pre><code>// Drizzle ORM v1.0.0-rc.1: Bật JIT Row Mapper + Schema-level snakeCase
+import * as d from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { eq } from "drizzle-orm";
+
+// 1. Khai báo snakeCase trực tiếp trên Schema (thay thế cấu hình rời rạc cũ)
+export const finledgerSchema = d.snakeCase.schema("finledger");
+
+export const accounts = finledgerSchema.table("accounts", {
+  id: d.uuid().defaultRandom().primaryKey(),
+  MerchantId: d.uuid().notNull(),      // tự động ánh xạ -> merchant_id
+  BalanceMinor: d.bigint({ mode: "bigint" }).notNull(), // -> balance_minor
+  UpdatedAt: d.timestamp().defaultNow(),                // -> updated_at
+});
+
+// 2. Bật cờ jit: true để biên dịch hàm đọc dòng dữ liệu chuyên biệt (tốc độ ngang pg driver thuần)
+const db = drizzle({ connection: process.env.DATABASE_URL!, jit: true });
+
+// 3. Kết hợp .prepare() trên các API đọc tần suất cao (giảm 25-30% độ trễ)
+const getAccountById = db
+  .select()
+  .from(accounts)
+  .where(eq(accounts.id, d.sql.placeholder("accountId")))
+  .prepare("get_account_by_id_hotpath");
+
+export async function fetchAccountFast(accountId: string) {
+  return await getAccountById.execute({ accountId });
+}</code></pre>
+      </div>
+
+      <div id="tab-ratchet" class="code-pane">
+        <button class="copy-btn" onclick="copyCode(this)">Copy Config</button>
+        <pre><code>// 1. File .oxlintrc.json — Áp dụng "Anti-Slop Ratchet" học từ stablyai/orca + Oxlint Type-Aware
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "eslint/max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "eslint/no-unused-vars": "error"
+  }
+}
+
+# 2. File .npmrc — Phòng thủ chuỗi cung ứng theo chuẩn npm v12 / pnpm 10 (Chống sâu Shai-Hulud)
+allow-git=root
+allow-remote=none
+# Chỉ cho phép chạy install scripts đối với các gói native đã kiểm duyệt rõ ràng:
+allow-scripts=sharp,esbuild</code></pre>
+      </div>
+
+      <div id="tab-worktree" class="code-pane">
+        <button class="copy-btn" onclick="copyCode(this)">Copy Bash</button>
+        <pre><code>#!/usr/bin/env bash
+# Thực nghiệm 25 dòng chứng minh: git worktree KHÔNG ngăn được Merge Conflict khi 2 Agent sửa dòng liền kề
+set -e
+TMP_DIR=$(mktemp -d)
+cd "$TMP_DIR" && git init -b main
+printf "export const PORT = 3000;\nexport const DB_HOST = 'localhost';\n" > config.ts
+git add config.ts && git commit -m "init config"
+
+# Tạo 2 git worktree độc lập cho Agent A và Agent B (giống hệt cơ chế của Orca / Paseo)
+git worktree add -b feat-redis ../wt-agent-a main
+git worktree add -b feat-kafka ../wt-agent-b main
+
+# Agent A thêm biến REDIS_URL vào cuối file config.ts
+echo "export const REDIS_URL = 'redis://localhost:6379';" >> ../wt-agent-a/config.ts
+git -C ../wt-agent-a commit -am "feat(redis): add REDIS_URL"
+
+# Agent B thêm biến KAFKA_BROKER vào cuối file config.ts
+echo "export const KAFKA_BROKER = 'localhost:9092';" >> ../wt-agent-b/config.ts
+git -C ../wt-agent-b commit -am "feat(kafka): add KAFKA_BROKER"
+
+# Gộp nhánh của Agent A về main -> Thành công
+git merge feat-redis --no-edit
+# Gộp nhánh của Agent B về main -> NỔ CONFLICT NGAY LẬP TỨC!
+git merge feat-kafka --no-edit || echo "💥 BẰNG CHỨNG: CONFLICT (content): Merge conflict in config.ts!"</code></pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <strong>Báo cáo được tạo tự động bởi quy trình <code>ak-research --ultra --ak-render</code></strong> · Lưu trữ cục bộ tại <code>D:/study/advance-be/reports/</code>
+      </div>
+      <div>
+        Timestamp: <span class="mono">2026-11-01</span> · Model: <span class="mono">google-antigravity/gemini-4-argon</span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const RADAR_ITEMS = [
+      {
+        name: "PostgreSQL 18 (AIO + uuidv7 + Skip Scan)",
+        ring: "ADOPT",
+        pillar: "DB",
+        cat: "Database Engine · GA 09/2025",
+        desc: "Bắt buộc dùng DEFAULT uuidv7() cho khóa chính bảng giao dịch/sổ cái để chống phân mảnh B-tree; bật io_method = io_uring (trên Linux) hoặc worker để tăng tốc quét lạnh và VACUUM gấp 3 lần.",
+        tags: ["pganalyze: 3x scan", "uuidv7()", "Skip Scan"]
+      },
+      {
+        name: "AGENTS.md Tinh Gọn + 3-Tier Context",
+        ring: "ADOPT",
+        pillar: "AI",
+        cat: "Context Engineering · Agentic AI Foundation",
+        desc: "Viết tay AGENTS.md ngắn gọn (<150 dòng) chứa quy tắc không thể suy luận từ code; đẩy quy trình dài sang Agent Skills (chỉ tốn ~100 tokens metadata) để tránh lãng phí 20% chi phí suy luận.",
+        tags: ["InfoQ Study 03/2026", "L1/L2 Cache", "Zero Bloat"]
+      },
+      {
+        name: "Oxlint 1.0 + Anti-Slop Ratchets (max-lines: 300)",
+        ring: "ADOPT",
+        pillar: "TS",
+        cat: "Rust Linter & Guardrail · VoidZero",
+        desc: "Nhanh gấp 50–100x ESLint. Học tập trực tiếp từ mã nguồn stablyai/orca: khóa cứng giới hạn 300 dòng/file bằng oxlint để ngăn chặn coding agent sinh ra các 'God files' 2,000 dòng không thể bảo trì.",
+        tags: ["50-100x ESLint", "--type-aware (59/61)", "Anti-Slop"]
+      },
+      {
+        name: "Postgres Durable Execution (DBOS / pgmq / Outbox)",
+        ring: "ADOPT",
+        pillar: "DB",
+        cat: "Workflow & Queue · HN #48313530",
+        desc: "Với quy mô dưới vài Terabytes, dùng ngay giao dịch ACID của Postgres kết hợp SELECT ... FOR UPDATE SKIP LOCKED hoặc DBOS để đảm bảo tính nguyên tử giữa nghiệp vụ và hàng đợi, không cần dựng cụm Temporal cồng kềnh.",
+        tags: ["ACID Queue", "SKIP LOCKED", "Zero Extra Infra"]
+      },
+      {
+        name: "Chính Sách Khóa Install Scripts (npm v12 / pnpm 10)",
+        ring: "ADOPT",
+        pillar: "SEC",
+        cat: "Supply-Chain Security · 07/2026",
+        desc: "Sau đại dịch sâu tự nhân bản Shai-Hulud qua postinstall, bắt buộc khóa mặc định lifecycle scripts của dependencies (pnpm.onlyBuiltDependencies hoặc npm approve-scripts) và chặn allow-remote=none.",
+        tags: ["Anti-Shai-Hulud", "npm v12", "pnpm 10+"]
+      },
+      {
+        name: "Drizzle ORM v1.0-rc.1 (JIT Row Mappers)",
+        ring: "TRIAL",
+        pillar: "DB",
+        cat: "TypeScript ORM · 05/2026",
+        desc: "Cờ jit: true kết hợp .prepare() biên dịch hàm ánh xạ dòng dữ liệu chuyên biệt, giảm 25–30% độ trễ (đạt 15,300 RPS ngang ngửa raw driver), kèm tầng Codec mới và tích hợp Effect v4.",
+        tags: ["jit: true", "15,300 RPS", "Effect v4"]
+      },
+      {
+        name: "Prisma 7.0 (Rust-Free TS + WASM Compiler)",
+        ring: "TRIAL",
+        pillar: "DB",
+        cat: "TypeScript ORM · 01/2026",
+        desc: "Xóa bỏ hoàn toàn Rust Engine, chuyển sang TS + WASM và Driver Adapters (@prisma/adapter-pg). Nhanh hơn tới 3.4x (11.3x ở truy vấn m2m lớn), giảm 90% kích thước client (14MB → 1.6MB), kiểm tra kiểu tsc nhanh hơn 70%.",
+        tags: ["3.4x Faster", "1.6MB Client", "Zero IPC Tax"]
+      },
+      {
+        name: "Rolldown 1.0 & Vite 8 (Unified Rust Bundler)",
+        ring: "TRIAL",
+        pillar: "TS",
+        cat: "Build Toolchain · 05/2026",
+        desc: "Hợp nhất esbuild (dev) và Rollup (prod) thành 1 bundler Rust duy nhất. Giảm thời gian build của Linear từ 46s xuống 6s và giảm tới 100x lượng RAM đỉnh. Thử nghiệm qua gói rolldown-vite trước khi nâng lên Vite 8.",
+        tags: ["46s → 6s Build", "Rollup API", "VoidZero"]
+      },
+      {
+        name: "stablyai/orca (v1.4.245 Desktop ADE)",
+        ring: "TRIAL",
+        pillar: "AI",
+        cat: "Agent Orchestrator · 112,058 ★",
+        desc: "Môi trường ADE Desktop hoàn chỉnh tích hợp Monaco Editor, GPU Terminal, Chromium Design Mode và nhận diện trực tiếp oh-my-pi trên Windows. Chỉ nên chạy song song tối đa 2–3 worktree có ranh giới rõ ràng.",
+        tags: ["112k ★", "Supports oh-my-pi", "Design Mode"]
+      },
+      {
+        name: "Vercel agent-desktop (v1.0.2 Accessibility Tree)",
+        ring: "TRIAL",
+        pillar: "AI",
+        cat: "Computer Use CLI · 30/10/2026",
+        desc: "Điều khiển ứng dụng desktop qua cây trợ năng (Windows UI Automation / macOS AX) bằng mã tham chiếu @snapshot:element thay vì chụp ảnh màn hình tốn kém, giúp chạy ngầm không cướp chuột.",
+        tags: ["Zero Screenshot", "Windows UIA", "Apache-2.0"]
+      },
+      {
+        name: "Seqora & guilyx/grip (Human-in-the-Loop DevTools)",
+        ring: "TRIAL",
+        pillar: "SEC",
+        cat: "DB & Git Guardrails · 10–11/2026",
+        desc: "Seqora giúp xem trước DB Lock và Table Rewrite trước khi chạy migration SQL; grip là Git hook bắt lập trình viên trả lời quiz về bản diff trước khi cho phép git push code do AI viết.",
+        tags: ["Lock Preview", "Anti-Blind-Push", "Show HN"]
+      },
+      {
+        name: "TanStack Start 1.0 (Full-Stack React)",
+        ring: "TRIAL",
+        pillar: "TS",
+        cat: "Web Framework · 05/2026",
+        desc: "Giải pháp Full-stack React đạt 1.0 với kiến trúc hàm server tường minh, nổi lên mạnh mẽ sau sự cố Next.js phải vá khẩn cấp 13 lỗ hổng CVE (SSRF, Auth Bypass, Cache Poisoning) trong một buổi chiều.",
+        tags: ["v1.0 Stable", "Non-Vercel", "Type-Safe Server Fn"]
+      },
+      {
+        name: "oxc-project/tsrs (Rust TypeScript Compiler)",
+        ring: "ASSESS",
+        pillar: "TS",
+        cat: "TypeScript Compiler · 20/10/2026",
+        desc: "Bản port TS sang Rust của Cloudflare + VoidZero: nhanh gấp 8.1x TS 7.0, giảm 70% RAM, chạy được trên WebAssembly và tự động đồng bộ upstream bằng AI Agent. Đáng thử nghiệm với npx tsrs --noEmit.",
+        tags: ["8.1x vs TS 7.0", "-70% RAM", "Agent-Synced"]
+      },
+      {
+        name: "PostgreSQL 19 Beta (pg_plan_advice & REPACK)",
+        ring: "ASSESS",
+        pillar: "DB",
+        cat: "Database Preview · 06/2026",
+        desc: "Bước ngoặt lịch sử sau 20 năm: bổ sung pg_plan_advice giúp cố định kế hoạch thực thi mà không cần sửa SQL, kèm lệnh REPACK CONCURRENTLY tích hợp sẵn và Parallel Autovacuum.",
+        tags: ["pg_plan_advice", "REPACK CONCURRENTLY", "LZ4 Default"]
+      },
+      {
+        name: "pg_clickhouse (v0.3.2) & KiviDB (Rust Cache)",
+        ring: "ASSESS",
+        pillar: "DB",
+        cat: "HTAP & In-Memory DB · 06–10/2026",
+        desc: "pg_clickhouse đẩy truy vấn phânitic từ Postgres xuống ClickHouse qua FDW (cần kiểm tra EXPLAIN vì CTE/Window chưa pushdown hết); KiviDB là giải pháp thay thế Redis/Valkey đa luồng bằng Rust có sẵn Vector Search.",
+        tags: ["HTAP Pushdown", "Rust Redis Drop-in", "Show HN"]
+      },
+      {
+        name: "Strata (Qwen 3.8 125B @ 100T/s) & getpaseo/paseo",
+        ring: "ASSESS",
+        pillar: "AI",
+        cat: "Local AI & Headless Daemon · 10/2026",
+        desc: "Strata dẫn đầu HN (940 pts) khi chạy Qwen 3.8 125B trên RTX 4090 ở 100 tok/s; Paseo (22.6k★) tiên phong kiến trúc Daemon + Mobile E2EE + giao thức ACP nhưng chưa tương thích sâu với oh-my-pi.",
+        tags: ["940 HN Points", "ACP Protocol", "Mobile Relay"]
+      },
+      {
+        name: "Chạy >5 Coding Agents Cùng Lúc Không Tách Module",
+        ring: "HOLD",
+        pillar: "AI",
+        cat: "Anti-Pattern · r/WebAfterAI",
+        desc: "Đốt cạn hạn mức token gấp 5 lần, gây bão xung đột merge trên các file dùng chung (config.ts, schema.ts, package.json) và làm tê liệt khả năng review code của con người.",
+        tags: ["5x Token Burn", "Merge Conflict Trap", "Review Fatigue"]
+      },
+      {
+        name: "Cài Plugin/MCP Đóng Kín & Nạp Full 100+ MCP Tools",
+        ring: "HOLD",
+        pillar: "SEC",
+        cat: "Security & Context Footgun · 10/2026",
+        desc: "Tránh xa các plugin không rõ cơ chế truyền dữ liệu (như vụ claude-mem tự tải 30 ngày prompt lên cmem.ai) và tuyệt đối không nạp trực tiếp hàng chục MCP tools không qua Lazy Tool Search.",
+        tags: ["Data Exfiltration", "55k Token Tax", "Accuracy Cliff"]
+      }
+    ];
+
+    let currentRing = "ALL";
+    let currentPillar = "ALL";
+
+    function setRingFilter(ring, btn) {
+      currentRing = ring;
+      document.querySelectorAll("#ringFilters .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderRadar();
+    }
+
+    function setPillarFilter(pillar, btn) {
+      currentPillar = pillar;
+      document.querySelectorAll("#pillarFilters .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderRadar();
+    }
+
+    function renderRadar() {
+      const q = (document.getElementById("radarSearch").value || "").toLowerCase();
+      const container = document.getElementById("radarContainer");
+      const filtered = RADAR_ITEMS.filter(item => {
+        const matchRing = currentRing === "ALL" || item.ring === currentRing;
+        const matchPillar = currentPillar === "ALL" || item.pillar === currentPillar;
+        const matchText = !q || item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q) || item.cat.toLowerCase().includes(q);
+        return matchRing && matchPillar && matchText;
+      });
+
+      container.innerHTML = filtered.map(item => `
+        <article class="radar-card">
+          <div>
+            <div class="radar-top">
+              <div>
+                <div class="radar-name">${item.name}</div>
+                <div class="radar-cat">${item.cat}</div>
+              </div>
+              <span class="ring-badge ring-${item.ring}">${item.ring}</span>
+            </div>
+            <p class="radar-body" style="margin-top:0.65rem;">${item.desc}</p>
+          </div>
+          <div class="radar-meta">
+            ${item.tags.map(t => `<span class="meta-tag">#${t}</span>`).join("")}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function showTab(tabId, btn) {
+      document.querySelectorAll(".code-pane").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".code-tab").forEach(b => b.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
+      btn.classList.add("active");
+    }
+
+    function copyCode(btn) {
+      const code = btn.nextElementSibling.innerText;
+      navigator.clipboard.writeText(code);
+      const old = btn.innerText;
+      btn.innerText = "✓ Đã Copy!";
+      setTimeout(() => btn.innerText = old, 1600);
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      document.getElementById("themeToggle").innerText = next === "dark" ? "🌓 Giao diện: Tối" : "☀️ Giao diện: Sáng";
+    }
+
+    renderRadar();
+  </script>
+</body>
+</html>

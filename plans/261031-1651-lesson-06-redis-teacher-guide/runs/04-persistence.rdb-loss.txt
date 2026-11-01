@@ -1,0 +1,46 @@
+# chạy lúc 01/11/2026 09:40 +0700 · Redis 7.2.3 · advance-be-redis-rdb
+$ echo "→ advance-be-redis-rdb"
+→ advance-be-redis-rdb
+$ set -u
+$ docker exec advance-be-redis-rdb redis-cli FLUSHALL
+OK
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis-rdb rm -f /data/dump.rdb
+$ docker exec advance-be-redis-rdb redis-cli CONFIG SET save ""
+OK
+$ seq 1 1000 | awk '{print "SET l06:p:"$1" v"$1}' | docker exec -i advance-be-redis-rdb redis-cli > /dev/null
+$ docker exec advance-be-redis-rdb redis-cli BGSAVE
+Background saving started
+$ for i in $(seq 100); do docker exec advance-be-redis-rdb redis-cli INFO persistence | grep -q '^rdb_bgsave_in_progress:0' && break; sleep 0.2; done
+$ docker exec advance-be-redis-rdb redis-cli INFO persistence | grep -E '^(rdb_bgsave_in_progress|rdb_last_bgsave_status|rdb_last_save_time):'
+rdb_bgsave_in_progress:0
+rdb_last_save_time:1793500840
+rdb_last_bgsave_status:ok
+$ docker exec advance-be-redis-rdb redis-cli INFO stats | grep ^latest_fork_usec
+latest_fork_usec:325
+$ seq 1001 1500 | awk '{print "SET l06:p:"$1" v"$1}' | docker exec -i advance-be-redis-rdb redis-cli > /dev/null
+$ docker exec advance-be-redis-rdb redis-cli DBSIZE
+1500
+$ docker kill advance-be-redis-rdb
+advance-be-redis-rdb
+$ docker start advance-be-redis-rdb
+advance-be-redis-rdb
+$ for i in $(seq 50); do docker exec advance-be-redis-rdb redis-cli PING 2>/dev/null | grep -q PONG && break; sleep 0.2; done
+$ docker exec advance-be-redis-rdb redis-cli DBSIZE
+1000
+$ docker exec advance-be-redis-rdb redis-cli CONFIG SET slowlog-log-slower-than 0
+OK
+$ docker exec advance-be-redis-rdb redis-cli SLOWLOG RESET
+OK
+$ docker exec advance-be-redis-rdb redis-cli SAVE
+OK
+$ docker exec advance-be-redis-rdb redis-cli SLOWLOG GET 1
+2
+1793500843
+7158
+SAVE
+127.0.0.1:42552
+
+$ docker exec advance-be-redis-rdb redis-cli CONFIG SET slowlog-log-slower-than 10000
+OK
+$ docker exec advance-be-redis-rdb redis-cli CONFIG SET save ""
+OK

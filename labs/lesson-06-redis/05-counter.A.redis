@@ -1,0 +1,29 @@
+# Bài 06 · Chặng 5 — Terminal A: đếm lượt xem bằng GET rồi SET (sai) và bằng INCR (đúng) (slide 31).
+# Thứ tự mỗi kịch bản: (1) region *-reset ở A, (2) region cùng tên ở B (B đứng chờ), (3) region ở A.
+
+# #region getset-reset · Chuẩn bị: bộ đếm = 0 (slide 31)
+SET l06:cnt:views 0
+UNLINK l06:barrier:counter-getset
+# #endregion
+
+# #region getset · Đọc 0, tự cộng 1 trong code, ghi 1. B làm y hệt cùng lúc (slide 31)
+RPUSH l06:barrier:counter-getset go
+GET l06:cnt:views
+#@ sleep 0.5
+SET l06:cnt:views 1
+#@ sleep 0.5
+# Hai người cùng xem mà bộ đếm chỉ là 1: mất một lượt.
+GET l06:cnt:views
+# #endregion
+
+# #region incr-reset · Chuẩn bị: bộ đếm = 0 (slide 31)
+SET l06:cnt:views 0
+UNLINK l06:barrier:counter-incr
+# #endregion
+
+# #region incr · INCR cộng ngay trên server, không có khoảng hở đọc-ghi (slide 31)
+RPUSH l06:barrier:counter-incr go
+INCR l06:cnt:views
+#@ sleep 0.5
+GET l06:cnt:views
+# #endregion

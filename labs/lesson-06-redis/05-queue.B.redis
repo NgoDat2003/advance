@@ -1,0 +1,6 @@
+# Bài 06 · Chặng 5 — Terminal B: consumer chặn chờ đơn (slide 32). Dán ở B TRƯỚC khi dán ở A.
+
+# #region brpop · B chặn ở BRPOP (tối đa 10 s) cho tới khi có đơn (slide 32)
+BLPOP l06:barrier:queue 5
+BRPOP l06:q:orders 10
+# #endregion

@@ -1,0 +1,162 @@
+{
+  "sources": [
+    "09-bridge.bucket30"
+  ],
+  "capacity": 10,
+  "refill_per_s": 0.01,
+  "rows": [
+    {
+      "allowed": 1,
+      "tokens": 9,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 8,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 7,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 6,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 5,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 4,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 3,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 2,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 1,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 1,
+      "tokens": 0,
+      "retry_after_ms": 0
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    },
+    {
+      "allowed": 0,
+      "tokens": 0,
+      "retry_after_ms": 100000
+    }
+  ],
+  "allowed": 10,
+  "denied": 20,
+  "min_retry_after_ms": 100000
+}

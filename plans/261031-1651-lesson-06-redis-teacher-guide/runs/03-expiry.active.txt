@@ -1,0 +1,79 @@
+# chạy lúc 01/11/2026 09:37 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+expired_keys:1004
+$ seq 1 10000 | awk '{print "SET l06:exp:a:"$1" v PX 1000"}' | docker exec -i advance-be-redis redis-cli --pipe
+All data transferred. Waiting for the last reply...
+Last reply received from server.
+errors: 0, replies: 10000
+$ docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+db0:keys=10029,expires=10000,avg_ttl=898
+$ sleep 3
+$ docker exec advance-be-redis redis-cli INFO stats | grep -E '^(expired_keys|expired_stale_perc|expire_cycle_cpu_milliseconds):'
+expired_keys:11004
+expired_stale_perc:3.40
+expire_cycle_cpu_milliseconds:24
+$ docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+db0:keys=29,expires=0,avg_ttl=0
+$ docker exec advance-be-redis redis-cli MEMORY STATS
+peak.allocated
+112614416
+total.allocated
+2206360
+startup.allocated
+865896
+replication.backlog
+0
+clients.slaves
+0
+clients.normal
+0
+cluster.links
+0
+aof.buffer
+0
+lua.caches
+280
+functions.caches
+184
+db.0
+overhead.hashtable.main
+3208
+overhead.hashtable.expires
+32
+overhead.hashtable.slot-to-keys
+0
+overhead.total
+869600
+keys.count
+29
+keys.bytes-per-key
+46222
+dataset.bytes
+1336760
+dataset.percentage
+99.72367858886719
+peak.percentage
+1.9592163562774658
+allocator.allocated
+2296448
+allocator.active
+6049792
+allocator.resident
+13787136
+allocator-fragmentation.ratio
+2.6344127655029297
+allocator-fragmentation.bytes
+3753344
+allocator-rss.ratio
+2.2789437770843506
+allocator-rss.bytes
+7737344
+rss-overhead.ratio
+1.305109977722168
+rss-overhead.bytes
+4206592
+fragmentation
+8.299322128295898
+fragmentation.bytes
+15825632

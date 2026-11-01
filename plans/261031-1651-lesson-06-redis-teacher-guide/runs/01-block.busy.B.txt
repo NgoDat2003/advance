@@ -1,0 +1,10 @@
+# chạy lúc 01/11/2026 09:33 +0700 · Redis 7.2.3 · advance-be-redis
+$ docker exec advance-be-redis redis-cli BLPOP l06:barrier:block-busy 5
+l06:barrier:block-busy
+go
+$ set -u
+$ sleep 0.5
+$ docker exec advance-be-redis redis-cli --no-raw PING
+(error) BUSY Redis is busy running a script. You can only call SCRIPT KILL or SHUTDOWN NOSAVE.
+$ docker exec advance-be-redis redis-cli --no-raw SCRIPT KILL
+OK

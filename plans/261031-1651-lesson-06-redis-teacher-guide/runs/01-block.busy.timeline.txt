@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 09:33 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > $ docker exec advance-be-redis redis-cli BLPOP l06:barrier:block-busy 5
++   396 A > RPUSH l06:barrier:block-busy go
++   398 A < (integer) 1
++   398 A > EVAL "local function now() local t = redis.call('TIME') return t[1] * 1000000 + t[2] end local s = now() while now() - s < 6000000 do end return 'xong'" 0
++   398 B < l06:barrier:block-busy
++   398 B < go
++   411 B > $ set -u
++   411 B > $ sleep 0.5
++   944 B > $ docker exec advance-be-redis redis-cli --no-raw PING
++  5017 B < (error) BUSY Redis is busy running a script. You can only call SCRIPT KILL or SHUTDOWN NOSAVE.
++  5029 B > $ docker exec advance-be-redis redis-cli --no-raw SCRIPT KILL
++  5206 A < (error) ERR Script killed by user with SCRIPT KILL... script: 7cd89da9eaaa9da0250cd9c7e0157dea6ac4bb0a, on @user_script:1.
++  5206 A < (5.79s)
++  5206 B < OK

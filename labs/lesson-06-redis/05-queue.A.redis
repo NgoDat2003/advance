@@ -1,0 +1,15 @@
+# Bài 06 · Chặng 5 — Terminal A: producer đẩy đơn vào hàng đợi, rồi tự làm consumer thứ hai (slide 32).
+# Thứ tự: (1) brpop-reset ở A, (2) brpop ở B (B đứng chờ), (3) brpop ở A. "#@ sleep 1" = tự đợi 1 s.
+
+# #region brpop-reset · Chuẩn bị: hàng đợi rỗng, xóa barrier (slide 32)
+UNLINK l06:q:orders l06:barrier:queue
+# #endregion
+
+# #region brpop · A đẩy 2 đơn sau 1 s; B đang chặn ở BRPOP nhận ngay 1 đơn (slide 32)
+RPUSH l06:barrier:queue go
+#@ sleep 1
+LPUSH l06:q:orders o1 o2
+# A làm consumer thứ hai, tới sau B một chút: chỉ còn đơn kia cho A.
+#@ sleep 0.3
+BRPOP l06:q:orders 5
+# #endregion

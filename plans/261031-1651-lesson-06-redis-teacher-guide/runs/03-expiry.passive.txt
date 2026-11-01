@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:37 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli DEBUG SET-ACTIVE-EXPIRE 0
+OK
+$ seq 1 1000 | awk '{print "SET l06:exp:p:"$1" v PX 100"}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+expired_keys:4
+$ sleep 0.5
+$ docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+db0:keys=1029,expires=1000,avg_ttl=0
+$ docker exec advance-be-redis redis-cli GET l06:exp:p:1
+
+$ docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+expired_keys:5
+$ docker exec advance-be-redis redis-cli DEBUG SET-ACTIVE-EXPIRE 1
+OK

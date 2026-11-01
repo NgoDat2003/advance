@@ -1,0 +1,7 @@
+# chạy lúc 31/10/2026 18:40 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> SET l06:fixture:x 1
+OK
+127.0.0.1:6379> EXISTS l06:fixture:none
+(integer) 0
+127.0.0.1:6379> HLEN l06:fixture:h
+(integer) 7

@@ -1,0 +1,8 @@
+# chạy lúc 01/11/2026 09:29 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli MSET l06:bench:1 v1 l06:bench:2 v2 l06:bench:3 v3 l06:bench:4 v4 l06:bench:5 v5 l06:bench:6 v6 l06:bench:7 v7 l06:bench:8 v8 l06:bench:9 v9 l06:bench:10 v10
+OK
+$ docker exec advance-be-redis redis-benchmark -q -c 1 -n 20000 GET l06:bench:1
+GET l06:bench:1: 21953.90 requests per second, p50=0.039 msec
+$ docker exec advance-be-redis redis-benchmark -q -c 1 -n 20000 MGET l06:bench:1 l06:bench:2 l06:bench:3 l06:bench:4 l06:bench:5 l06:bench:6 l06:bench:7 l06:bench:8 l06:bench:9 l06:bench:10
+MGET l06:bench:1 l06:bench:2 l06:bench:3 l06:bench:4 l06:bench:5 l06:bench:6 l06:bench:7 l06:bench:8 l06:bench:9 l06:bench:10: 20576.13 requests per second, p50=0.039 msec

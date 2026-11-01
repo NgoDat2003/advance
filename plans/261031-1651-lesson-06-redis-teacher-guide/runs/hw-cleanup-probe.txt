@@ -1,0 +1,2 @@
+# chạy lúc 01/11/2026 11:45 +0700 · Redis 7.2.3 · advance-be-redis
+đã xóa 2 khóa l06:hw:* · còn 0

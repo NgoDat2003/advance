@@ -1,0 +1,6 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:counter-incr 5
+1) "l06:barrier:counter-incr"
+2) "go"
+127.0.0.1:6379> INCR l06:cnt:views
+(integer) 2

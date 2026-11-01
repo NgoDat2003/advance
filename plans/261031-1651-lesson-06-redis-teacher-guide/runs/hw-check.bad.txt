@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 11:45 +0700 · Redis 7.2.3 · advance-be-redis
+chấm: HW_CMD=node D:/study/advance-be/plans/261031-1651-lesson-06-redis-teacher-guide/verify/hw-bad-fixture.mjs · 10 vòng + vòng H5
+vòng 1: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 2: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 3: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 4: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 5: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 6: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 7: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 8: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 9: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng 10: sổ +2, BOOKED=2 REJECTED=0, khóa còn=0, token khác nhau=2
+vòng H5: người giữ thứ hai seen=299 pttl=48 tok=4b7600d9-be06-4831-ba72-c44d2e391efd set=OK · khóa sau khi chương trình trả = (trống)
+✘ H1 sổ đặt chỗ tăng đúng 1 mỗi vòng · 0/10 vòng
+✘ H2 mỗi vòng 1 BOOKED + 1 REJECTED · 0/10 vòng
+✔ H3 không còn khóa sau mỗi vòng · 10/10 vòng
+✔ H4 giá trị khóa = token riêng mỗi lần giữ · 20/20 token khác nhau, khóa vòng H5 = token BOOKED
+✘ H5 không kiểm được hoặc sai (holder không thấy khóa / TTL không tôn trọng / chương trình lỗi / khóa bị xóa) · khóa sau cùng = (trống: bị xóa mất) (cần hw-check-holder2);

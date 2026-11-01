@@ -1,0 +1,6 @@
+# chạy lúc 01/11/2026 09:29 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> RPUSH l06:barrier:block-sleep go
+(integer) 1
+127.0.0.1:6379> DEBUG SLEEP 2
+OK
+(2.00s)

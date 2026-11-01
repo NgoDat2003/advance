@@ -1,0 +1,10 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:delay-naive 5
+1) "l06:barrier:delay-naive"
+2) "go"
+127.0.0.1:6379> ZRANGE l06:delay:orders -inf 2000000000 BYSCORE LIMIT 0 1
+1) "o1"
+127.0.0.1:6379> RPUSH l06:delay:done o1
+(integer) 2
+127.0.0.1:6379> ZREM l06:delay:orders o1
+(integer) 0

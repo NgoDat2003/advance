@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> ZRANGE l06:delay:orders 0 -1 WITHSCORES
+1) "o2"
+2) "4102444800"
+3) "o3"
+4) "4102444800"
+127.0.0.1:6379> LRANGE l06:delay:done 0 -1
+1) "o1"
+127.0.0.1:6379> EXISTS l06:big:h l06:big:h2 l06:big:h3
+(integer) 0
+127.0.0.1:6379> CONFIG GET lazyfree-lazy-user-del
+1) "lazyfree-lazy-user-del"
+2) "no"
+127.0.0.1:6379> CONFIG GET slowlog-log-slower-than
+1) "slowlog-log-slower-than"
+2) "10000"

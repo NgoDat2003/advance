@@ -1,0 +1,13 @@
+{
+  "name": "lesson-06-redis-labs",
+  "private": true,
+  "type": "module",
+  "description": "Lesson 06 (Redis) homework: distributed lock for seat A34_S012C on flight FA634. Needs the advance-be-redis container on 127.0.0.1:6379.",
+  "scripts": {
+    "hw": "node hw-solution.mjs",
+    "hw:check": "bash hw-check.sh"
+  },
+  "dependencies": {
+    "redis": "6.3.0"
+  }
+}

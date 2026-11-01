@@ -1,0 +1,265 @@
+<section id="chang-5" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">05</span>
+    <div>
+      <div class="stage-meta"><span>Slide 28, 32–35</span><span>30 phút + 10 tùy chọn</span><span>Lõi</span></div>
+      <h2>Kiểu dữ liệu vào việc thật: bộ đếm, hàng đợi bếp, giỏ hàng, người theo dõi, món bán chạy</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> thấy bộ đếm mất lượt khi app tự đọc-cộng-ghi, hai bếp chia nhau hàng đợi không trùng đơn, đơn sống sót khi bếp sập, và bảng món bán chạy bằng ZSET.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Mỗi kiểu dữ liệu có lệnh làm trọn một việc trên server: <code>INCR</code>, <code>BRPOP</code>/<code>BLMOVE</code>, <code>HINCRBY</code>, <code>SADD</code>/<code>SINTER</code>, <code>ZINCRBY</code>.</dd>
+    <dt>TẠI SAO?</dt><dd>Một lệnh Redis chạy trọn vẹn, không client nào chen vào giữa. App tự <code>GET</code> rồi <code>SET</code> thì có khe hở giữa hai lệnh.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Cần nhiều nhóm consumer, đọc lại tin cũ, ack theo consumer thì dùng Streams hoặc broker thật, không dùng List. ZSET bán chạy không phải nguồn sự thật (I-09).</dd>
+  </dl>
+
+  <div class="story">
+    <span class="tag">Tình huống</span>
+    <p>Giờ trưa, quán có hai máy tính bảng ở bếp. POS đẩy order vào hàng đợi; mỗi order phải tới <b>đúng một</b> bếp, và bếp sập giữa chừng thì order không được biến mất. App khách hiện "Món bán chạy hôm nay" (FR-M2-04), mỗi lượt mở trang món cộng một lượt xem, giỏ hàng nằm trong Redis tới lúc thanh toán.</p>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 28 · trang tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>3. In Practices.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định để đo. Encoding từng kiểu đã đo ở <a href="#chang-2">chặng 2</a>.</p></div>
+    </div>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 660 230" role="img" aria-labelledby="c5-q-title" style="width:100%;height:auto;display:block">
+      <title id="c5-q-title">Hàng đợi bếp tin cậy: POS LPUSH vào l06:q:orders, bếp BLMOVE sang l06:q:processing, làm xong mới LREM</title>
+      <defs><marker id="c5-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"></path></marker></defs>
+      <g style="font:500 13px var(--font-mono);fill:var(--fg)">
+        <rect x="8" y="60" width="92" height="50" rx="8" style="fill:var(--surface);stroke:var(--line)"></rect>
+        <text x="54" y="90" text-anchor="middle">POS</text>
+        <rect x="150" y="50" width="150" height="70" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"></rect>
+        <text x="225" y="44" text-anchor="middle">l06:q:orders</text>
+        <rect x="162" y="68" width="60" height="34" rx="4" style="fill:var(--surface);stroke:var(--line)"></rect>
+        <text x="192" y="90" text-anchor="middle">o2</text>
+        <rect x="228" y="68" width="60" height="34" rx="4" style="fill:var(--surface);stroke:var(--line)"></rect>
+        <text x="258" y="90" text-anchor="middle">o1</text>
+        <rect x="360" y="50" width="150" height="70" rx="8" style="fill:var(--warn-soft);stroke:var(--warn)"></rect>
+        <text x="435" y="44" text-anchor="middle">l06:q:processing</text>
+        <text x="435" y="90" text-anchor="middle">đang làm</text>
+        <rect x="560" y="60" width="92" height="50" rx="8" style="fill:var(--surface);stroke:var(--line)"></rect>
+        <text x="606" y="90" text-anchor="middle">Bếp</text>
+        <line x1="100" y1="85" x2="148" y2="85" style="stroke:var(--accent);stroke-width:2" marker-end="url(#c5-arrow)"></line>
+        <text x="124" y="140" text-anchor="middle">LPUSH</text>
+        <line x1="300" y1="85" x2="358" y2="85" style="stroke:var(--accent);stroke-width:2" marker-end="url(#c5-arrow)"></line>
+        <text x="330" y="140" text-anchor="middle">BLMOVE</text>
+        <line x1="510" y1="85" x2="558" y2="85" style="stroke:var(--accent);stroke-width:2" marker-end="url(#c5-arrow)"></line>
+        <path d="M606,112 C606,175 470,175 445,124" style="fill:none;stroke:var(--ok);stroke-width:2" marker-end="url(#c5-arrow)"></path>
+        <text x="560" y="190" text-anchor="middle" style="fill:var(--ok)">làm xong: LREM (ack)</text>
+        <text x="330" y="215" text-anchor="middle" style="fill:var(--bad)">bếp sập trước LREM → việc vẫn nằm trong processing</text>
+      </g>
+    </svg>
+    <figcaption class="muted">Lấy việc và ghi "đang làm" trong một lệnh <code>BLMOVE</code>; chỉ xóa khỏi processing khi làm xong.</figcaption>
+  </figure>
+
+  <div class="table-wrap">
+    <table class="stats">
+      <caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · main advance-be-redis · ms host phụ thuộc máy</caption>
+      <thead><tr><th>Việc</th><th>Kết quả đo</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td>Hai client <code>GET</code> rồi <code>SET</code> bộ đếm</td><td><b class="m" data-run="05-counter.getset.timeline">"1"</b></td><td>mất một lượt xem</td></tr>
+        <tr><td>Hai client <code>INCR</code></td><td><b class="m" data-run="05-counter.incr.timeline">"2"</b></td><td>không mất lượt nào</td></tr>
+        <tr><td>B chặn ở <code>BRPOP</code>, A <code>LPUSH</code></td><td>A đẩy +<b class="m" data-run="05-queue.brpop.timeline">1241</b> ms, B nhận +<b class="m" data-run="05-queue.brpop.timeline">1243</b> ms, chờ <b class="m" data-run="05-queue.brpop.timeline">(1.09s)</b></td><td>consumer ngủ trên server</td></tr>
+        <tr><td>Hai consumer, hai order</td><td>B <b class="m" data-run="05-queue.brpop.B">"o1"</b> · A <b class="m" data-run="05-queue.brpop.A">"o2"</b></td><td>mỗi order đúng một người</td></tr>
+        <tr><td><code>BLMOVE</code> rồi <code>LREM</code></td><td><b class="m" data-run="05-structures.list-reliable">"job-1"</b> ở processing tới khi ack <b class="m" data-run="05-structures.list-reliable">(integer) 1</b></td><td>bếp sập trước ack vẫn còn việc</td></tr>
+        <tr><td>Giỏ hàng <code>HINCRBY</code> latte</td><td><b class="m" data-run="05-structures.hash-cart">(integer) 2</b></td><td>sửa một món, không đụng món khác</td></tr>
+        <tr><td><code>SADD</code> trùng</td><td><b class="m" data-run="05-structures.set-likes">(integer) 0</b></td><td>Set tự loại trùng</td></tr>
+        <tr><td><code>ZINCRBY</code> croissant, top 3</td><td>latte <b class="m" data-run="05-structures.zset-board">"120"</b> · croissant <b class="m" data-run="05-structures.zset-board">"110"</b> · cold-brew <b class="m" data-run="05-structures.zset-board">"95"</b></td><td>bảng xếp hạng sắp sẵn</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="check30">
+    <span class="tag">Câu hỏi 30 giây</span>
+    <p>Hai máy tính bảng bếp cùng <code>BRPOP</code> một hàng đợi. Có khi nào cả hai nhận cùng một order? Máy vừa nhận order sập ngay sau <code>BRPOP</code> thì order đi đâu?</p>
+    <details><summary>Xem đáp án</summary>
+      <p>Không trùng: <code>BRPOP</code> lấy và xóa trong một lệnh (B <b class="m" data-run="05-queue.brpop.B">"o1"</b>, A <b class="m" data-run="05-queue.brpop.A">"o2"</b>). Nhưng máy sập thì order <b>mất hẳn</b>: nó đã rời hàng đợi và chỉ còn trong RAM của máy đó. Sửa bằng <code>BLMOVE</code> (bước 3).</p>
+    </details>
+  </div>
+
+  <h3>Làm mẫu</h3>
+  <h4>Bước 1 · Bộ đếm lượt xem: GET rồi SET mất lượt, INCR thì không</h4>
+  <p>Slide 31 ghi "Count" là ứng dụng của String (nhãn ở <a href="#chang-2">chặng 2</a>). Đây là lost update của chặng 2, nhưng trên một con số. Hai tab <code>redis-cli</code>, A và B, làm đúng thứ tự.</p>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>05-counter.A.redis</code> · <code>getset-reset</code></td><td></td><td><input class="field" data-store="l06-c5-getset-reset" placeholder="A in gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>05-counter.B.redis</code> · <code>getset</code>: <b>chỉ dán dòng</b> <code>BLPOP l06:barrier:counter-getset 5</code>. B đứng chờ.</td><td></td></tr>
+      <tr><td>3</td><td><code>05-counter.A.redis</code> · <code>getset</code>: trong 5 giây, dán <code>RPUSH … go</code> và <code>GET l06:cnt:views</code>.</td><td>BLPOP vừa trả về: dán <code>GET l06:cnt:views</code>.</td><td><input class="field" data-store="l06-c5-getset-b" placeholder="A và B đọc gì?"></td></tr>
+      <tr><td>4</td><td>Khoảng 0,5 s sau: dán <code>SET l06:cnt:views 1</code>.</td><td></td><td></td></tr>
+      <tr><td>5</td><td></td><td>Khoảng 0,6 s sau bước 3: dán <code>SET l06:cnt:views 1</code>.</td><td></td></tr>
+      <tr><td>6</td><td>Khoảng 0,5 s sau bước 4: dán <code>GET l06:cnt:views</code>.</td><td></td><td><input class="field" data-store="l06-c5-getset-a" placeholder="GET cuối?"></td></tr>
+    </tbody>
+  </table></div>
+<!--@CMD 05-counter.A.redis#getset-reset@-->
+<!--@CMD 05-counter.B.redis#getset@-->
+<!--@CMD 05-counter.A.redis#getset@-->
+<p><b>Kiểm lại lần chạy của bạn:</b> <code>GET</code> của B ở bước 3 phải in <code>"0"</code>. Nếu B đã thấy <code>"1"</code> thì A ghi trước khi B đọc, chưa có race (lệnh <code>SET … 1</code> của B được gõ sẵn nên kết quả vẫn là 1, nhưng không phải vì mất lượt): chạy lại <code>getset-reset</code>.</p>
+<!--@RUN 05-counter.getset.timeline@-->
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>05-counter.A.redis</code> · <code>incr-reset</code></td><td></td><td><input class="field" data-store="l06-c5-incr-reset" placeholder="A in gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>05-counter.B.redis</code> · <code>incr</code>: <b>chỉ dán dòng</b> <code>BLPOP l06:barrier:counter-incr 5</code>.</td><td></td></tr>
+      <tr><td>3</td><td><code>05-counter.A.redis</code> · <code>incr</code>: trong 5 giây, dán <code>RPUSH … go</code> và <code>INCR l06:cnt:views</code>.</td><td></td><td></td></tr>
+      <tr><td>4</td><td></td><td>Khoảng 0,2 s sau khi BLPOP trả về: dán <code>INCR l06:cnt:views</code>.</td><td><input class="field" data-store="l06-c5-incr-b" placeholder="INCR của B?"></td></tr>
+      <tr><td>5</td><td>Khoảng 0,5 s sau bước 3: dán <code>GET l06:cnt:views</code>.</td><td></td><td><input class="field" data-store="l06-c5-incr-a" placeholder="GET cuối?"></td></tr>
+    </tbody>
+  </table></div>
+<!--@CMD 05-counter.A.redis#incr-reset@-->
+<!--@CMD 05-counter.B.redis#incr@-->
+<!--@CMD 05-counter.A.redis#incr@-->
+<!--@RUN 05-counter.incr.timeline@-->
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc hai timeline</span>
+    <ol>
+      <li>GET rồi SET: B đọc ở +<b class="m" data-run="05-counter.getset.timeline">207</b> ms, A ở +<b class="m" data-run="05-counter.getset.timeline">208</b> ms, cả hai thấy <b class="m" data-run="05-counter.getset.timeline">"0"</b>, cả hai <code>SET … 1</code>. Kết quả <b class="m" data-run="05-counter.getset.timeline">"1"</b>: mất một lượt, không lỗi, không log.</li>
+      <li>INCR: A nhận <b class="m" data-run="05-counter.incr.timeline">(integer) 1</b>, B nhận <b class="m" data-run="05-counter.incr.timeline">(integer) 2</b>. Phép cộng xảy ra trên server nên không có khe để chen.</li>
+      <li>Trong NestJS: <code>await redis.incr(key)</code>, không bao giờ <code>get</code> rồi <code>set(n + 1)</code>. Đọc-tính-ghi phức tạp hơn thì dùng Lua (<a href="#chang-6">chặng 6</a>).</li>
+    </ol>
+  </div>
+
+  <h4>Bước 2 · Hàng đợi bếp: BRPOP với hai terminal</h4>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>05-queue.A.redis</code> · <code>brpop-reset</code></td><td></td><td><input class="field" data-store="l06-c5-brpop-reset" placeholder="UNLINK trả gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>05-queue.B.redis</code> · <code>brpop</code>: <b>chỉ dán dòng</b> <code>BLPOP l06:barrier:queue 5</code>.</td><td></td></tr>
+      <tr><td>3</td><td><code>05-queue.A.redis</code> · <code>brpop</code>: trong 5 giây, dán <code>RPUSH … go</code>.</td><td>BLPOP vừa trả về: dán <code>BRPOP l06:q:orders 10</code>. B chặn, chưa in gì.</td><td></td></tr>
+      <tr><td>4</td><td>Khoảng 1 s sau bước 3: dán <code>LPUSH l06:q:orders o1 o2</code>.</td><td></td><td><input class="field" data-store="l06-c5-brpop-b" placeholder="B nhận gì, chờ bao lâu?"></td></tr>
+      <tr><td>5</td><td>Sau khi B đã in đơn (khoảng 0,3 s): dán <code>BRPOP l06:q:orders 5</code>, A làm consumer thứ hai.</td><td></td><td><input class="field" data-store="l06-c5-brpop-a" placeholder="A nhận gì?"></td></tr>
+    </tbody>
+  </table></div>
+<!--@CMD 05-queue.A.redis#brpop-reset@-->
+<!--@CMD 05-queue.B.redis#brpop@-->
+<!--@CMD 05-queue.A.redis#brpop@-->
+<!--@RUN 05-queue.brpop.timeline@-->
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc timeline hàng đợi</span>
+    <ol>
+      <li>B gửi <code>BRPOP</code> ở +<b class="m" data-run="05-queue.brpop.timeline">234</b> ms rồi nằm ngủ trên server, không tốn vòng hỏi nào.</li>
+      <li>A <code>LPUSH … o1 o2</code> ở +<b class="m" data-run="05-queue.brpop.timeline">1241</b> ms; gần như ngay lập tức (+<b class="m" data-run="05-queue.brpop.timeline">1243</b> ms) B nhận <b class="m" data-run="05-queue.brpop.timeline">2) "o1"</b>, đã chờ <b class="m" data-run="05-queue.brpop.timeline">(1.09s)</b>.</li>
+      <li>Vì sao <code>o1</code>? <code>LPUSH o1 o2</code> đẩy lần lượt vào đầu trái thành <code>o2, o1</code>; <code>BRPOP</code> lấy đầu phải. Đẩy trái, lấy phải = FIFO. A là consumer thứ hai, nhận <b class="m" data-run="05-queue.brpop.timeline">2) "o2"</b>.</li>
+    </ol>
+  </div>
+
+  <div class="callout" id="sl-32">
+    <span class="tag">Slide 32 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>List theo thứ tự chèn, thêm ở đầu hoặc cuối; dùng làm danh sách và message queue. Giới hạn: tối đa 2^32 − 1 phần tử, không hỗ trợ nhiều consumer, giữ thứ tự yếu.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Nhiều consumer <b>chia nhau</b> một List chạy tốt, mỗi phần tử tới đúng một người (B <b class="m" data-run="05-queue.brpop.timeline">2) "o1"</b>, A <b class="m" data-run="05-queue.brpop.timeline">2) "o2"</b>). Thứ List thiếu là <b>nhóm consumer</b> (mỗi nhóm nhận đủ mọi tin), ack theo consumer, đọc lại tin cũ: đó là Streams. Mất tin khi worker sập thì sửa ngay trong List bằng <code>BLMOVE</code>.</p></div>
+    </div>
+  </div>
+
+  <h4>Bước 3 · Hàng đợi tin cậy: BLMOVE rồi mới ack</h4>
+<!--@CMD 05-structures.redis#list-reliable@-->
+<!--@RUN 05-structures.list-reliable@-->
+  <p><code>BLMOVE</code> lấy <b class="m" data-run="05-structures.list-reliable">"job-1"</b> và đặt vào processing <b>trong cùng một lệnh</b>, nên không lúc nào việc chỉ nằm trong RAM của worker. Worker sập thì một tiến trình dọn (reaper) chuyển việc quá hạn từ processing về hàng đợi. Làm xong thì <code>LREM</code> trả <b class="m" data-run="05-structures.list-reliable">(integer) 1</b>: đó là ack.</p>
+
+  <h4>Bước 4 · Giỏ hàng bằng Hash</h4>
+<!--@CMD 05-structures.redis#hash-cart@-->
+<!--@RUN 05-structures.hash-cart@-->
+  <p>Đúng các lệnh slide 33. <code>HINCRBY</code> tăng latte lên <b class="m" data-run="05-structures.hash-cart">(integer) 2</b> mà không đọc cả giỏ. Mỗi lệnh đổi một field, nên hai thiết bị sửa hai món khác nhau không đè nhau (khác JSON ở chặng 2).</p>
+  <div class="callout" id="sl-33">
+    <span class="tag">Slide 33 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Hash cài đặt bằng hash table; dùng cho object hay sửa từng thuộc tính và giỏ hàng (<code>HSET</code>, <code>HINCRBY</code>, <code>HLEN</code>, <code>HDEL</code>, <code>HGET</code>, <code>HGETALL</code>).</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Lệnh giỏ hàng chạy đúng (run <code>05-structures.hash-cart</code>). "Hash table" chỉ đúng với Hash lớn: tới <b class="m" data-run="02-encodings.hash">512</b> field vẫn là <b class="m" data-run="02-encodings.hash">listpack</b>, field thứ <b class="m" data-run="02-encodings.hash">513</b> mới thành <b class="m" data-run="02-encodings.hash">hashtable</b>; value <b class="m" data-run="02-encodings.hash">64</b> byte còn listpack, <b class="m" data-run="02-encodings.hash">65</b> byte thì chuyển. Giỏ vài món luôn là listpack.</p></div>
+    </div>
+  </div>
+
+  <h4>Bước 5 · Người theo dõi chung bằng Set</h4>
+<!--@CMD 05-structures.redis#set-likes@-->
+<!--@RUN 05-structures.set-likes@-->
+  <p><code>SADD</code> lần hai cùng <code>u1</code> trả <b class="m" data-run="05-structures.set-likes">(integer) 0</b>: "một khách like một lần" không cần kiểm tra ở app. <code>SINTER</code> trả người theo dõi chung <b class="m" data-run="05-structures.set-likes">1) "u3"</b> <b class="m" data-run="05-structures.set-likes">2) "u4"</b>.</p>
+  <div class="callout" id="sl-34">
+    <span class="tag">Slide 34 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Set không thứ tự, không trùng, cài đặt bằng hash table; dùng loại trùng, hợp/giao/hiệu, like, người theo dõi chung. Tối đa 2^32 − 1 phần tử; phép toán tập hợp nặng, có thể chặn luồng chính.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Loại trùng và giao tập đúng. "Hash table" là một trong ba encoding: Set số nguyên tới <b class="m" data-run="02-encodings.set-zset-list">512</b> phần tử là <b class="m" data-run="02-encodings.set-zset-list">intset</b>, Set chuỗi tới <b class="m" data-run="02-encodings.set-zset-list">128</b> là <b class="m" data-run="02-encodings.set-zset-list">listpack</b>, vượt ngưỡng mới là <b class="m" data-run="02-encodings.set-zset-list">hashtable</b>. "Chặn luồng chính" đúng với Set lớn nhưng chưa đo trên máy này.</p></div>
+    </div>
+  </div>
+
+  <h4>Bước 6 · Bảng món bán chạy bằng Sorted Set (FR-M2-04)</h4>
+<!--@CMD 05-structures.redis#zset-board@-->
+<!--@RUN 05-structures.zset-board@-->
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc bảng xếp hạng</span>
+    <ol>
+      <li><code>ZADD</code> trả <b class="m" data-run="05-structures.zset-board">(integer) 0</b>: số món <b>mới thêm</b>, không phải số món đổi điểm. Năm món có sẵn từ seed.</li>
+      <li><code>ZINCRBY</code> trả điểm mới <b class="m" data-run="05-structures.zset-board">"110"</b>. Cộng trên server, nhiều POS cùng cộng không mất điểm (như <code>INCR</code>).</li>
+      <li><code>ZRANGE … REV WITHSCORES</code> trả top 3 sắp sẵn; <code>ZREVRANK</code> cho croissant hạng <b class="m" data-run="05-structures.zset-board">(integer) 1</b> (đếm từ 0).</li>
+    </ol>
+  </div>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_35_img_01.png" alt="Slide 35: skip list ba tầng, tầng dưới đủ phần tử, tầng trên thưa dần" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 35 · Skip list: tầng trên nhảy xa, tầng dưới đi từng bước</figcaption></figure>
+  <div class="callout" id="sl-35">
+    <span class="tag">Slide 35 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Sorted Set có thứ tự, không trùng, cài đặt bằng skip list; dùng sắp xếp, xếp hạng.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Ứng dụng đúng. "Skip list" chỉ đúng khi ZSET lớn: tới <b class="m" data-run="02-encodings.set-zset-list">128</b> phần tử vẫn là <b class="m" data-run="02-encodings.set-zset-list">listpack</b>, phần tử thứ <b class="m" data-run="02-encodings.set-zset-list">129</b> mới thành <b class="m" data-run="02-encodings.set-zset-list">skiplist</b> (kèm dict cho <code>ZSCORE</code>). Bảng bán chạy vài chục món luôn là listpack.</p></div>
+    </div>
+  </div>
+  <div class="callout key">
+    <span class="tag">Nối với OmniPOS FR-M2-04 · best-sellers</span>
+    <ul>
+      <li>Mỗi dòng hóa đơn đã ghi vào PostgreSQL thì <code>ZINCRBY best:&lt;storeId&gt; &lt;qty&gt; &lt;productId&gt;</code>; <code>GET /products/best-sellers</code> là <code>ZRANGE … REV WITHSCORES</code>.</li>
+      <li>I-09: dựng lại từ SQL (<code>SUM(qty) GROUP BY product</code>) vào khóa tạm, rồi <code>RENAME</code> thành khóa thật; người đọc không bao giờ thấy bảng dựng dở. Vì dựng lại được nên chỉ cần RDB (<a href="#chang-4">chặng 4</a>).</li>
+    </ul>
+  </div>
+
+  <details class="fold">
+    <summary>Tùy chọn 10 phút · Streams: nhóm consumer và danh sách chờ ack</summary>
+    <div class="fold-body">
+<!--@CMD 05-structures.redis#streams@-->
+<!--@RUN 05-structures.streams@-->
+      <p>Nhóm <code>kitchen</code> chia tin: c1 nhận <b class="m" data-run="05-structures.streams">"1-1"</b>, c2 nhận <b class="m" data-run="05-structures.streams">"1-2"</b>. Đọc rồi tin vẫn còn: <code>XPENDING</code> giữ "đã giao, chưa ack" theo consumer; <code>XACK</code> tin của c1 thì chỉ còn tin của c2 chờ. Một nhóm khác trên cùng stream nhận lại đủ cả hai tin, việc List không làm được.</p>
+    </div>
+  </details>
+
+  <div class="callout challenge" id="chang-5-tu-lam">
+    <span class="tag">Tự làm · chặng 5</span>
+    <p><b>Đề:</b> dựng hàng đợi bếp <code>l06:my:kitchen</code> với processing <code>l06:my:kitchen:processing</code>. Đẩy hai order, cho bếp lấy một order bằng <code>BLMOVE</code>, rồi giả làm bếp sập: thoát <code>redis-cli</code> (<code>exit</code>) <b>trước khi</b> ack. Mở lại <code>redis-cli</code> và tìm order đó.</p>
+    <p><b>PASS khi:</b> order bếp đã lấy vẫn nằm trong <code>l06:my:kitchen:processing</code>, order kia vẫn chờ trong <code>l06:my:kitchen</code>, và bạn trả được order kẹt về hàng đợi sao cho nó được lấy tiếp theo.</p>
+    <p><b>Tự kiểm:</b> <code>LRANGE l06:my:kitchen:processing 0 -1</code> và <code>LRANGE l06:my:kitchen 0 -1</code>.</p>
+    <label class="fields"><span class="muted">Dán kết quả hai lệnh LRANGE</span><textarea class="field" data-store="l06-c5-kitchen" placeholder="processing: … · kitchen: …"></textarea></label>
+    <details class="fold"><summary>Lời giải mẫu</summary><div class="fold-body">
+      <div class="code"><pre><code>UNLINK l06:my:kitchen l06:my:kitchen:processing
+LPUSH l06:my:kitchen order-1 order-2
+BLMOVE l06:my:kitchen l06:my:kitchen:processing RIGHT LEFT 5
+exit</code></pre></div>
+      <p><code>BLMOVE</code> trả <code>"order-1"</code>. Mở lại <code>redis-cli</code>:</p>
+      <div class="code"><pre><code>LRANGE l06:my:kitchen:processing 0 -1
+LRANGE l06:my:kitchen 0 -1
+LMOVE l06:my:kitchen:processing l06:my:kitchen RIGHT RIGHT
+BLMOVE l06:my:kitchen l06:my:kitchen:processing RIGHT LEFT 5
+LREM l06:my:kitchen:processing 1 order-1</code></pre></div>
+      <p>Processing còn <code>order-1</code>, hàng đợi còn <code>order-2</code>. <code>LMOVE … RIGHT RIGHT</code> là việc của reaper: đưa order kẹt về đầu phải, đầu sẽ bị lấy tiếp, nên <code>BLMOVE</code> sau nhận lại <code>order-1</code>; xong thì <code>LREM</code>. App thật chỉ trả về order nằm processing quá lâu (ghi giờ lấy vào một ZSET bên cạnh).</p>
+    </div></details>
+  </div>
+
+  <h3>Kiểm chứng chặng 5</h3>
+  <p>Chạy sau các bước, với <code>incr</code> là kịch bản bộ đếm chạy sau cùng. Dán vào <code>redis-cli</code> trên main.</p>
+<!--@CMD 05-structures.redis#kiem-chung@-->
+  <div class="table-wrap">
+    <table class="expect">
+      <thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td><code>LLEN l06:q:orders</code></td><td><b class="m" data-run="05-structures.kiem-chung">(integer) 0</b></td><td>hai order đã có người nhận</td></tr>
+        <tr><td><code>LLEN l06:q:processing</code></td><td><b class="m" data-run="05-structures.kiem-chung">(integer) 0</b></td><td>job-1 đã ack</td></tr>
+        <tr><td><code>HGET l06:cart:u2 latte</code></td><td><b class="m" data-run="05-structures.kiem-chung">"2"</b></td><td>HINCRBY đã cộng</td></tr>
+        <tr><td><code>HLEN l06:cart:u1</code></td><td><b class="m" data-run="05-structures.kiem-chung">(integer) 3</b></td><td>giỏ seed không bị đụng</td></tr>
+        <tr><td><code>SCARD l06:followers:c</code></td><td><b class="m" data-run="05-structures.kiem-chung">(integer) 1</b></td><td>SADD trùng không tính</td></tr>
+        <tr><td><code>SINTER l06:followers:a l06:followers:b</code></td><td><b class="m" data-run="05-structures.kiem-chung">1) "u3"</b> <b class="m" data-run="05-structures.kiem-chung">2) "u4"</b></td><td>người theo dõi chung</td></tr>
+        <tr><td><code>ZSCORE l06:board:bestseller croissant</code></td><td><b class="m" data-run="05-structures.kiem-chung">"110"</b></td><td>ZINCRBY đã cộng</td></tr>
+        <tr><td><code>GET l06:cnt:views</code></td><td><b class="m" data-run="05-structures.kiem-chung">"2"</b></td><td>INCR không mất lượt</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quiz" data-quiz="5"></div>
+</section>

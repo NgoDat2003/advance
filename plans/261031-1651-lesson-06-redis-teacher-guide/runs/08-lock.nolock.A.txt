@@ -1,0 +1,9 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> RPUSH l06:barrier:lock-nolock go
+(integer) 1
+127.0.0.1:6379> GET l06:seat:FA634:A34_S012C
+(nil)
+127.0.0.1:6379> SET l06:seat:FA634:A34_S012C A
+OK
+127.0.0.1:6379> RPUSH l06:seat:FA634:log BOOKED:A
+(integer) 1

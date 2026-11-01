@@ -1,0 +1,20 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
+# lua delay-claim.lua sha256=688bd83fccb5acfdbaf7077befb0428bc897abcbdb7f020af68d59cdb4ff3e13
++     0 B > $ docker exec advance-be-redis redis-cli BLPOP l06:barrier:delay-lua 5
++   336 A > $ docker exec advance-be-redis redis-cli RPUSH l06:barrier:delay-lua go
++   521 A < 1
++   521 B < l06:barrier:delay-lua
++   521 B < go
++   533 B > $ set -u
++   533 B > $ sleep 0.2
++   545 A > $ set -u
++   545 A > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/delay-claim.lua l06:delay:orders l06:delay:done
++   726 A < o1
++   738 A > $ sleep 1
++   775 B > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/delay-claim.lua l06:delay:orders l06:delay:done
++   947 B <
++  1757 A > $ docker exec advance-be-redis redis-cli LRANGE l06:delay:done 0 -1
++  1927 A < o1
++  1939 A > $ docker exec advance-be-redis redis-cli ZRANGE l06:delay:orders 0 -1
++  2111 A < o2
++  2111 A < o3

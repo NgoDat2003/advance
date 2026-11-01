@@ -1,0 +1,19 @@
+<!-- Fixture fragment nhỏ cho --selftest (đủ các khối V12, một pre[data-cmd], một run, một b.m). -->
+<section id="chang-1" class="stage col">
+<p class="goal">Fixture: thấy một lệnh và kết quả của nó.</p>
+<dl class="wwh"><dt>LÀ GÌ</dt><dd>Fixture.</dd></dl>
+<div class="callout story">Câu chuyện fixture.</div>
+<figure class="slide-fig"><svg viewBox="0 0 10 10"></svg></figure>
+<table class="stats"><tr><td>HLEN</td><td><b class="m" data-run="x.a">7</b></td></tr></table>
+<div class="check30">Câu hỏi 30 giây.</div>
+<pre data-cmd="x.redis#a"><code>SET l06:fixture:x 1
+GET l06:fixture:x
+UNLINK l06:fixture:x</code></pre>
+<div class="run-label">Kết quả đã chạy trên máy bạn ngày 31/10/2026</div>
+<pre data-run="x.a">127.0.0.1:6379&gt; SET l06:fixture:x 1
+OK
+…</pre>
+<table class="expect"><tr><td>EXISTS l06:fixture:none</td><td><b class="m" data-run="x.a">0</b></td><td><input data-store="l06-c1-ghi"></td></tr></table>
+<div class="callout challenge">Tự làm · chặng 1.</div>
+<div class="quiz" data-quiz="1"></div>
+</section>

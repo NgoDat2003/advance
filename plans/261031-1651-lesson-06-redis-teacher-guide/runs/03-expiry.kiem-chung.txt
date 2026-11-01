@@ -1,0 +1,13 @@
+# chạy lúc 01/11/2026 09:40 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> TTL l06:exp:persist
+(integer) -1
+127.0.0.1:6379> EXISTS l06:exp:ttl
+(integer) 0
+127.0.0.1:6379> EXISTS l06:exp:p:1 l06:exp:a:1
+(integer) 0
+127.0.0.1:6379> CONFIG GET maxmemory
+1) "maxmemory"
+2) "0"
+127.0.0.1:6379> CONFIG GET maxmemory-policy
+1) "maxmemory-policy"
+2) "noeviction"

@@ -1,0 +1,11 @@
+# chạy lúc 01/11/2026 11:46 +0700 · Redis 7.2.3 · advance-be-redis
+# lua token-bucket.lua sha256=4387e1d485aad6a61f38ebb472e79ac97e92123dd73c72f02f2fedb0552fdc23
+$ docker exec advance-be-redis redis-cli BLPOP l06:barrier:bucket-lua 5
+l06:barrier:bucket-lua
+go
+$ set -u
+$ sleep 0.2
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/token-bucket.lua l06:tb:store:8 , 1 0.001
+0
+0
+1000000

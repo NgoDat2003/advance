@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 09:45 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:queue 5
++   233 A > RPUSH l06:barrier:queue go
++   234 A < (integer) 1
++   234 B < 1) "l06:barrier:queue"
++   234 B < 2) "go"
++   234 B > BRPOP l06:q:orders 10
++  1241 A > LPUSH l06:q:orders o1 o2
++  1242 A < (integer) 2
++  1243 B < 1) "l06:q:orders"
++  1243 B < 2) "o1"
++  1243 B < (1.09s)
++  1556 A > BRPOP l06:q:orders 5
++  1558 A < 1) "l06:q:orders"
++  1558 A < 2) "o2"

@@ -1,0 +1,33 @@
+{
+  "sources": [
+    "07-architecture.partition"
+  ],
+  "steps": [
+    {
+      "step": "main SET 100 + WAIT 1 1000 (cùng kết nối)",
+      "wait": 1,
+      "replica_get": 100
+    },
+    {
+      "step": "ngắt mạng replica; main SET 120 + WAIT 1 500 (cùng kết nối)",
+      "wait": 0
+    },
+    {
+      "step": "WAIT 1 500 ở kết nối mới (bẫy)",
+      "wait": 1
+    },
+    {
+      "step": "đọc trên replica khi mất mạng",
+      "replica_get": 100
+    },
+    {
+      "step": "nối mạng + restart replica, poll tới master_link_status:up",
+      "polls": 1,
+      "replica_get": 120
+    }
+  ],
+  "master_repl_offset": 15361,
+  "slave_repl_offset": 15361,
+  "sync_full": 3,
+  "sync_partial_ok": 3
+}

@@ -1,0 +1,14 @@
+# chạy lúc 01/11/2026 09:46 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:bucket-naive 5
++   195 A > RPUSH l06:barrier:bucket-naive go
++   196 A < (integer) 1
++   196 A > GET l06:tb:naive:7
++   196 B < 1) "l06:barrier:bucket-naive"
++   196 B < 2) "go"
++   196 B > GET l06:tb:naive:7
++   197 A < "1"
++   197 B < "1"
++   707 A > SET l06:tb:naive:7 0
++   709 A < OK
++   800 B > SET l06:tb:naive:7 0
++   802 B < OK

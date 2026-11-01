@@ -1,0 +1,8 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:counter-getset 5
+1) "l06:barrier:counter-getset"
+2) "go"
+127.0.0.1:6379> GET l06:cnt:views
+"0"
+127.0.0.1:6379> SET l06:cnt:views 1
+OK

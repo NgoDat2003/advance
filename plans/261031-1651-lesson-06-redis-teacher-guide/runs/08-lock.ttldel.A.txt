@@ -1,0 +1,7 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> RPUSH l06:barrier:lock-ttldel go
+(integer) 1
+127.0.0.1:6379> SET l06:lock:FA634:A34_S012C tokA NX PX 2000
+OK
+127.0.0.1:6379> DEL l06:lock:FA634:A34_S012C
+(integer) 1

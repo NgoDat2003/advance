@@ -1,0 +1,13 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> RPUSH l06:q:orders job-1
+(integer) 1
+127.0.0.1:6379> BLMOVE l06:q:orders l06:q:processing RIGHT LEFT 5
+"job-1"
+127.0.0.1:6379> LRANGE l06:q:processing 0 -1
+1) "job-1"
+127.0.0.1:6379> LLEN l06:q:orders
+(integer) 0
+127.0.0.1:6379> LREM l06:q:processing 1 job-1
+(integer) 1
+127.0.0.1:6379> LLEN l06:q:processing
+(integer) 0

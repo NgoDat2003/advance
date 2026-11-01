@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:49 +0700 · Redis 7.2.3 · advance-be-redis-replica
+$ echo "→ advance-be-redis-replica"
+→ advance-be-redis-replica
+$ set -u
+$ printf 'SET l06:rep:price 100\nWAIT 1 1000\n' | docker exec -i advance-be-redis redis-cli
+OK
+1
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:price
+100
+$ docker exec advance-be-redis redis-cli INFO replication | grep -E '^(role|master_repl_offset):'
+role:master
+master_repl_offset:15203
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep -E '^(role|master_link_status|slave_repl_offset):'
+role:slave
+master_link_status:up
+slave_repl_offset:15203

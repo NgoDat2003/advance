@@ -1,0 +1,6 @@
+[
+  { "q": "Fixture 1?", "opts": ["a", "b", "c", "d"], "ans": 0, "why": "Xem run x.a và 01-why-fast.threads." },
+  { "q": "Fixture 2?", "opts": ["a", "b", "c", "d"], "ans": 1, "why": "Run 01-block.sleep.timeline cho thấy B chờ." },
+  { "q": "Fixture 3?", "opts": ["a", "b", "c", "d"], "ans": 2, "why": "Run 01-bench.pipeline: -P 16 nhanh hơn." },
+  { "q": "Fixture 4?", "opts": ["a", "b", "c", "d"], "ans": 3, "why": "Run 01-why-fast.slowlog ghi DEBUG SLEEP." }
+]

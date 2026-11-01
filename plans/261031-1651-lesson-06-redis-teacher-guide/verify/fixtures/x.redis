@@ -1,0 +1,7 @@
+# Fixture cho runner và selftest (không phải bài học).
+# #region a · fixture một client (slide 1)
+#@ sleep 0.2
+SET l06:fixture:x 1
+GET l06:fixture:x
+UNLINK l06:fixture:x
+# #endregion

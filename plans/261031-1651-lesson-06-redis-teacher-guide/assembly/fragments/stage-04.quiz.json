@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Container RDB chạy BGSAVE khi có 1000 khóa, ghi thêm tới 1500 khóa rồi bị docker kill. Khởi động lại, DBSIZE là bao nhiêu?",
+    "opts": [
+      "1000",
+      "1500",
+      "0",
+      "Khoảng 1499, vì chỉ mất lệnh cuối"
+    ],
+    "ans": 0,
+    "why": "Run 04-persistence.rdb-loss: DBSIZE 1500 trước kill, 1000 sau khởi động. Redis chỉ đọc lại dump.rdb, mà snapshot đó có từ lúc BGSAVE; mọi khóa từ 1001 trở đi mất."
+  },
+  {
+    "q": "Container AOF appendfsync everysec bị docker kill sau khi ghi 1500 khóa và đợi sleep 2. Vì sao không mất khóa nào?",
+    "opts": [
+      "Redis (thường) đã write() lệnh vào file trước khi trả lời, dữ liệu nằm trong page cache của hệ điều hành; kill tiến trình không xóa page cache",
+      "docker kill cho Redis thời gian chạy SHUTDOWN SAVE trước khi tắt",
+      "everysec nghĩa là fsync sau mỗi lệnh ghi",
+      "Redis tự chụp RDB khi nhận SIGKILL"
+    ],
+    "ans": 0,
+    "why": "Run 04-persistence.aof-loss: ghi 1500, sau khởi động DBSIZE 1500. SIGKILL không cho Redis làm gì thêm, nhưng page cache thuộc nhân hệ điều hành. Đợi 2 s không phải để chờ fsync. Ngoại lệ: khi fsync nền trước còn chạy (đĩa chậm), 7.2 hoãn write() tối đa 2 s mà vẫn trả OK (aof.c), kill lúc đó thì mất. Cửa sổ mất thường gặp của everysec là hệ điều hành sập hoặc mất điện."
+  },
+  {
+    "q": "Lệnh nào giữ luồng chính suốt lúc ghi snapshot, làm mọi client phải chờ?",
+    "opts": [
+      "SAVE",
+      "BGSAVE",
+      "BGREWRITEAOF",
+      "CONFIG SET save \"\""
+    ],
+    "ans": 0,
+    "why": "Run 04-persistence.rdb-loss: SAVE nằm trong SLOWLOG với 7158 µs; BGSAVE trả ngay \"Background saving started\" và chỉ chặn lúc fork (latest_fork_usec:325). Số µs phụ thuộc máy."
+  },
+  {
+    "q": "Với aof-use-rdb-preamble yes, file nền appendonly.aof.N.base.rdb bắt đầu bằng gì?",
+    "opts": [
+      "REDIS (định dạng RDB nhị phân)",
+      "*2 rồi $ (lệnh RESP)",
+      "SELECT 0 dạng chữ",
+      "Một manifest JSON"
+    ],
+    "ans": 0,
+    "why": "Run 04-persistence.hybrid: head -c 5 của *.base.rdb in REDIS. Tắt preamble rồi BGREWRITEAOF thì file nền thành *.base.aof bắt đầu bằng *2  $ (lệnh RESP)."
+  }
+]

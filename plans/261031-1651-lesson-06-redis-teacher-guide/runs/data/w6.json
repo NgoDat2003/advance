@@ -1,0 +1,39 @@
+{
+  "sources": [
+    "07-cluster.keyslot"
+  ],
+  "pairs": [
+    {
+      "key": "foo",
+      "slot": 12182
+    },
+    {
+      "key": "l06:user_profile:{34}",
+      "slot": 9745
+    },
+    {
+      "key": "l06:user_session:{34}",
+      "slot": 9745
+    },
+    {
+      "key": "l06:a",
+      "slot": 8130
+    },
+    {
+      "key": "l06:b",
+      "slot": 12193
+    },
+    {
+      "key": "l06:{}x",
+      "slot": 8887
+    },
+    {
+      "key": "l06:{a}{b}",
+      "slot": 15495
+    },
+    {
+      "key": "a",
+      "slot": 15495
+    }
+  ]
+}

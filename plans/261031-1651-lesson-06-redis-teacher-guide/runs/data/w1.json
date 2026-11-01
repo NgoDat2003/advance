@@ -1,0 +1,28 @@
+{
+  "sources": [
+    "01-block.sleep.timeline"
+  ],
+  "unit": "ms host",
+  "events": [
+    {
+      "who": "A",
+      "what": "gửi DEBUG SLEEP 2",
+      "ms": 213
+    },
+    {
+      "who": "B",
+      "what": "gửi PING",
+      "ms": 716
+    },
+    {
+      "who": "A",
+      "what": "nhận OK",
+      "ms": 2215
+    },
+    {
+      "who": "B",
+      "what": "nhận PONG",
+      "ms": 2215
+    }
+  ]
+}

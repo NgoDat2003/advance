@@ -1,0 +1,46 @@
+[
+  {
+    "q": "A đang giữ khóa (SET … tokA NX PX 5000 trả OK). B gửi SET … tokB NX PX 5000. B nhận gì?",
+    "opts": [
+      "OK, và khóa đổi sang tokB",
+      "(nil): khóa đang có người giữ, B không được làm việc",
+      "(error) BUSY",
+      "B bị chặn cho tới khi A DEL"
+    ],
+    "ans": 1,
+    "why": "Run 08-lock.nx.timeline: A < OK, rồi B > SET … tokB NX PX 5000 → B < (nil). NX không chờ, không ghi đè; app của B phải trả HTTP 409 hoặc thử lại sau."
+  },
+  {
+    "q": "Kịch bản ttldel: khóa của A là PX 2000 nhưng A làm 3,3 s rồi gọi DEL và nhận (integer) 1. DEL đã xóa gì?",
+    "opts": [
+      "Khóa tokA của chính A",
+      "Không xóa gì, (integer) 1 chỉ là mã thành công",
+      "Khóa tokB của B, người đã lấy được khóa sau khi khóa A hết hạn",
+      "Cả tokA và tokB"
+    ],
+    "ans": 2,
+    "why": "Run 08-lock.ttldel.timeline: B lấy được khóa lúc +3058 ms, A gửi DEL lúc +3571 ms và nhận (integer) 1, rồi tokC lấy được ngay. DEL không hỏi khóa là của ai."
+  },
+  {
+    "q": "Cùng nhịp đó nhưng A trả khóa bằng lock-release.lua và nhận 0. Nghĩa là gì?",
+    "opts": [
+      "Khóa không còn là của A nên script không xóa; GET vẫn thấy tokB",
+      "Script lỗi vì khóa đã hết hạn",
+      "A đã xóa được khóa nhưng Redis trả 0 vì là Lua",
+      "Khóa không tồn tại nữa"
+    ],
+    "ans": 0,
+    "why": "Run 08-lock-lua.cad.timeline: A --eval lock-release.lua … , tokA → 0, dòng GET tiếp theo trả tokB; sau đó B tự trả khóa của mình và nhận 1."
+  },
+  {
+    "q": "Kịch bản fencing: A bị dừng 4 s, khóa hết hạn, B lấy khóa với token 2 và ghi trước. A tỉnh dậy ghi với token 1. Vì sao A bị chặn dù A vẫn tưởng mình giữ khóa?",
+    "opts": [
+      "Vì Redis tự hủy mọi lệnh của client có khóa hết hạn",
+      "Vì B đã DEL khóa của A",
+      "Vì A chưa gọi lại script lấy khóa",
+      "Vì nơi ghi nhớ token lớn nhất đã ghi (2) và chỉ nhận token lớn hơn: trả STALE 2"
+    ],
+    "ans": 3,
+    "why": "Run 08-lock-lua.fencing.timeline: lock-acquire-fenced.lua cấp token cùng lúc với khóa, A → 1, B → 2; B fenced-write → OK, A fenced-write lúc +4780 ms → STALE 2. Cùng ý với cột version của Bài 14 (kiểm tra ở chỗ ghi, không tin người cầm khóa), chỉ khác là fencing so lớn hơn chứ không so bằng."
+  }
+]

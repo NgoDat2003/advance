@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:counter-getset 5
++   206 A > RPUSH l06:barrier:counter-getset go
++   207 A < (integer) 1
++   207 B < 1) "l06:barrier:counter-getset"
++   207 B < 2) "go"
++   207 B > GET l06:cnt:views
++   208 A > GET l06:cnt:views
++   208 B < "0"
++   209 A < "0"
++   714 A > SET l06:cnt:views 1
++   716 A < OK
++   823 B > SET l06:cnt:views 1
++   825 B < OK
++  1228 A > GET l06:cnt:views
++  1229 A < "1"

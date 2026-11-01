@@ -1,0 +1,12 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:lock-nx 5
++   215 A > RPUSH l06:barrier:lock-nx go
++   216 A < (integer) 1
++   216 B < 1) "l06:barrier:lock-nx"
++   216 B < 2) "go"
++   217 A > SET l06:lock:FA634:A34_S012C tokA NX PX 5000
++   218 A < OK
++   519 B > SET l06:lock:FA634:A34_S012C tokB NX PX 5000
++   521 B < (nil)
++   818 A > DEL l06:lock:FA634:A34_S012C
++   820 A < (integer) 1

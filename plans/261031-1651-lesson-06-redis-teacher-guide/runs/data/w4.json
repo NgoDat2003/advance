@@ -1,0 +1,73 @@
+{
+  "sources": [
+    "03-eviction.noeviction",
+    "03-eviction.allkeys-lru",
+    "03-eviction.allkeys-lfu",
+    "03-eviction.volatile-ttl",
+    "03-eviction.allkeys-random"
+  ],
+  "policies": [
+    {
+      "policy": "noeviction",
+      "BASE": 978408,
+      "MAX": 3075560,
+      "evicted_after_fill": 0,
+      "evicted_keys": 0,
+      "hot": 300,
+      "hot_total": 300,
+      "cold": 600,
+      "cold_total": 600,
+      "oom": true
+    },
+    {
+      "policy": "allkeys-lru",
+      "BASE": 953720,
+      "MAX": 3050872,
+      "evicted_after_fill": 0,
+      "evicted_keys": 925,
+      "hot": 66,
+      "hot_total": 300,
+      "cold": 58,
+      "cold_total": 600,
+      "oom": false
+    },
+    {
+      "policy": "allkeys-lfu",
+      "BASE": 953720,
+      "MAX": 3050872,
+      "evicted_after_fill": 0,
+      "evicted_keys": 923,
+      "hot": 300,
+      "hot_total": 300,
+      "cold": 306,
+      "cold_total": 600,
+      "oom": false
+    },
+    {
+      "policy": "volatile-ttl",
+      "BASE": 953720,
+      "MAX": 3050872,
+      "evicted_after_fill": 0,
+      "evicted_keys": 200,
+      "hot": 300,
+      "hot_total": 300,
+      "cold": 600,
+      "cold_total": 600,
+      "oom": true,
+      "ttl": 0,
+      "ttl_total": 200
+    },
+    {
+      "policy": "allkeys-random",
+      "BASE": 953720,
+      "MAX": 3050872,
+      "evicted_after_fill": 0,
+      "evicted_keys": 924,
+      "hot": 167,
+      "hot_total": 300,
+      "cold": 326,
+      "cold_total": 600,
+      "oom": false
+    }
+  ]
+}

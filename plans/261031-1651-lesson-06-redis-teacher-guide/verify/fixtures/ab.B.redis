@@ -1,0 +1,6 @@
+# Fixture hai client: B chờ barrier, 0.5 s sau đọc khóa.
+# #region a · B chờ barrier (slide 1)
+BLPOP l06:barrier:fixture 5
+#@ sleep 0.5
+GET l06:fixture:ab
+# #endregion

@@ -1,0 +1,17 @@
+# chạy lúc 01/11/2026 11:46 +0700 · Redis 7.2.3 · advance-be-redis
+# lua idempotency-begin.lua sha256=de78323dc6ffcb7ed494df7d2750691f932abfda2451424394823b386e6b5b18
+$ set -u
+$ docker exec advance-be-redis redis-cli UNLINK l06:idem:pay-001 > /dev/null
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/idempotency-begin.lua l06:idem:pay-001 , 3f2a9c1e 86400
+NEW
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/idempotency-begin.lua l06:idem:pay-001 , 3f2a9c1e 86400
+IN_PROGRESS
+$ docker exec advance-be-redis redis-cli HSET l06:idem:pay-001 status DONE resp '{"orderId":"o1","total":120000}'
+1
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/idempotency-begin.lua l06:idem:pay-001 , 3f2a9c1e 86400
+DONE
+{"orderId":"o1","total":120000}
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/idempotency-begin.lua l06:idem:pay-001 , 9b7d00aa 86400
+MISMATCH
+$ docker exec advance-be-redis redis-cli TTL l06:idem:pay-001
+86399

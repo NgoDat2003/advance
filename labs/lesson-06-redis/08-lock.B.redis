@@ -1,0 +1,29 @@
+# Bài 06 · Chặng 8 — Terminal B: request thứ hai cho cùng ghế (slide 40). Dán ở B TRƯỚC khi dán ở A.
+
+# #region nolock · B cũng thấy ghế trống, ghi sau A → ghế thuộc B, sổ có 2 lần BOOKED (slide 40)
+BLPOP l06:barrier:lock-nolock 5
+GET l06:seat:FA634:A34_S012C
+#@ sleep 0.7
+SET l06:seat:FA634:A34_S012C B
+RPUSH l06:seat:FA634:log BOOKED:B
+#@ sleep 0.3
+GET l06:seat:FA634:A34_S012C
+LRANGE l06:seat:FA634:log 0 -1
+# #endregion
+
+# #region nx · B tới sau 0,3 s: SET NX trả nil = khóa đang có người giữ (slide 40)
+BLPOP l06:barrier:lock-nx 5
+#@ sleep 0.3
+SET l06:lock:FA634:A34_S012C tokB NX PX 5000
+# #endregion
+
+# #region ttldel · B lấy khóa lúc 2,8 s (khóa A đã hết hạn); request thứ ba (tokC) lấy được sau DEL của A (slide 40)
+BLPOP l06:barrier:lock-ttldel 5
+# 2,8 s chứ không sát 2 s: đồng hồ của Redis có thể bị chỉnh lùi, làm khóa sống lâu hơn PX một chút.
+#@ sleep 2.8
+SET l06:lock:FA634:A34_S012C tokB NX PX 2000
+#@ sleep 0.8
+# Terminal B đóng vai request thứ ba: khóa của B đã bị A xóa nên tokC cũng lấy được → B và C cùng "giữ khóa".
+SET l06:lock:FA634:A34_S012C tokC NX PX 2000
+GET l06:lock:FA634:A34_S012C
+# #endregion

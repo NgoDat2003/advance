@@ -1,0 +1,12 @@
+# chạy lúc 01/11/2026 09:29 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli SET l06:bench:small 0123456789abcdef
+OK
+$ docker exec advance-be-redis redis-cli SETRANGE l06:bench:big 102399 x
+102400
+$ docker exec advance-be-redis redis-cli STRLEN l06:bench:big
+102400
+$ docker exec advance-be-redis redis-benchmark -q -n 20000 GET l06:bench:small
+GET l06:bench:small: 169491.53 requests per second, p50=0.151 msec
+$ docker exec advance-be-redis redis-benchmark -q -n 20000 GET l06:bench:big
+GET l06:bench:big: 37807.18 requests per second, p50=0.287 msec

@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 12:03 +0700 · Redis 7.2.3 · advance-be-redis
+✔ C01 main advance-be-redis · redis:7.2.3, redis_version:7.2.3, debug local, network advance-be-l06, /lab ro
+– C02 advance-be-redis-replica · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up replica
+– C03 advance-be-redis-cluster · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up cluster
+– C04 advance-be-redis-evict · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up evict
+– C05 advance-be-redis-rdb · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up persist
+– C06 advance-be-redis-aof · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up persist
+✔ C07 khóa ngoài l06: · không có
+✔ C08 seed user · l06:user:1 listpack 4 trường, l06:user:1:json 51 ký tự
+✔ C09 seed cart · l06:cart:u1 có 3 món
+✔ C10 seed board · l06:board:bestseller có 5 món
+✔ C11 cấu hình mặc định · maxmemory 0, noeviction, lazyfree-lazy-user-del no, slowlog 10000, latency 0, appendonly no
+✔ C12 active expiry · khóa PX 50 tự hết hạn trong 1 s
+✔ C13 không còn lock/barrier · 0 khóa l06:lock:*, 0 khóa l06:barrier:*
+✔ C14 publish chỉ 127.0.0.1 · main 127.0.0.1:6379, container phụ không publish
+✔ C15 127.0.0.1:6379 là main · run_id khớp (07ae7fa0…)

@@ -1,0 +1,297 @@
+<section id="chang-1" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">01</span>
+    <div>
+      <div class="stage-meta"><span>Slide 4, 5, 10–14</span><span>35 phút + 10 tùy chọn</span><span>lõi</span></div>
+      <h2>Vì sao Redis nhanh, và vì sao một lệnh chậm làm đứng cả server</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> tự thấy Redis chạy mọi lệnh trên một luồng (I/O threads đang tắt), thấy một lệnh 2 giây bắt client khác đứng chờ, rồi đo thứ gì thật sự làm chậm: số vòng mạng, kích thước value, hay số lệnh.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Redis là kho dữ liệu trong RAM. Một vòng lặp epoll theo dõi mọi socket, còn <b>một luồng chính</b> chạy lần lượt từng lệnh của mọi client.</dd>
+    <dt>TẠI SAO?</dt><dd>Một luồng nên mỗi lệnh đã nguyên tử, không cần khóa bên trong. Cái giá: một lệnh chậm (<code>KEYS *</code>, xóa big key, Lua chạy lâu) chặn tất cả, kể cả kết nối mới.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng nghĩ "Redis nhanh nên gọi bao nhiêu cũng được": mười lệnh gửi lần lượt tốn mười vòng mạng, gộp lại (pipeline, <code>MGET</code>) mới nhanh. Không bao giờ quét cả keyspace trên production.</dd>
+  </dl>
+
+  <div class="story">
+    <span class="tag">Tình huống · tối thứ sáu ở chuỗi F&amp;B</span>
+    <p>7 giờ tối, 40 máy POS đang gọi Redis lấy giỏ hàng và giá món. Một bạn admin gõ <code>KEYS *</code> trên production "để xem có bao nhiêu khóa". Mọi máy POS đứng hình vài giây, log không có lỗi, CPU của app vẫn thấp. Lý do: Redis chỉ có một luồng chạy lệnh, và luồng đó đang bận với <code>KEYS</code>. Chặng này dựng lại cảnh đó, an toàn hơn, bằng <code>DEBUG SLEEP</code>.</p>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_12_img_01.png" alt="Slide 12: ba hàng hạt màu dồn vào một cổ chai hẹp có chữ Bottleneck" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 12 · nút cổ chai</figcaption></figure>
+
+  <figure style="margin:16px 0">
+    <svg viewBox="0 0 360 290" role="img" aria-labelledby="c1-loop-title" style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto">
+      <title id="c1-loop-title">Ba client gửi lệnh, epoll gom lại, một luồng chính chạy từng lệnh; luồng nền bio chỉ làm việc phụ</title>
+      <g text-anchor="middle" style="font:600 12px var(--font-body);fill:var(--fg)">
+        <rect x="8" y="8" width="108" height="52" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+        <text x="62" y="30">POS 1 (B)</text>
+        <rect x="126" y="8" width="108" height="52" rx="8" style="fill:var(--bad-soft);stroke:var(--bad)"/>
+        <text x="180" y="30">Admin (A)</text>
+        <rect x="244" y="8" width="108" height="52" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+        <text x="298" y="30">POS 2</text>
+        <rect x="8" y="88" width="344" height="44" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+        <text x="180" y="108">epoll: một vòng lặp theo dõi mọi socket</text>
+        <rect x="8" y="156" width="344" height="58" rx="8" style="fill:var(--accent-soft);stroke:var(--accent);stroke-width:2"/>
+        <text x="180" y="178" style="fill:var(--accent);font-weight:700">Luồng chính: chạy TỪNG lệnh một</text>
+        <rect x="8" y="232" width="344" height="48" rx="8" style="fill:var(--surface);stroke:var(--line);stroke-dasharray:5 4"/>
+        <text x="180" y="252" style="fill:var(--muted)">Luồng nền bio_*: đóng file, fsync AOF, lazy free</text>
+      </g>
+      <g text-anchor="middle" style="font:500 11px var(--font-mono);fill:var(--muted)">
+        <text x="62" y="48">PING</text>
+        <text x="180" y="48" style="fill:var(--bad)">DEBUG SLEEP 2</text>
+        <text x="298" y="48">GET giỏ hàng</text>
+        <text x="180" y="124">multiplexing_api:epoll</text>
+        <text x="180" y="198" style="fill:var(--fg)">SLEEP 2 xong → mới tới PING → GET</text>
+        <text x="180" y="270">không chạy lệnh của client</text>
+      </g>
+      <path d="M62 60V88M180 60V88M298 60V88M180 132V156" style="stroke:var(--muted);stroke-width:2;fill:none"/>
+    </svg>
+    <figcaption class="muted" style="font-size:0.8rem">Sơ đồ tự vẽ: lệnh của A chiếm luồng chính, PING của B chờ phía sau dù chỉ tốn vài micro giây.</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table class="stats">
+    <caption>Đo trên máy bạn ngày 01/11/2026 · thời gian và req/s phụ thuộc máy: so tỉ lệ giữa hai dòng, đừng so với máy khác</caption>
+    <thead><tr><th>Thí nghiệm</th><th>Kết quả đã ghi</th><th>Nói lên điều gì</th></tr></thead>
+    <tbody>
+      <tr><td>Luồng chạy lệnh</td><td><b class="m" data-run="01-why-fast.threads">multiplexing_api:epoll</b> · <b class="m" data-run="01-why-fast.threads">io_threads_active:0</b></td><td>Một vòng lặp epoll, I/O threads tắt</td></tr>
+      <tr><td>Số luồng của redis-server</td><td><b class="m" data-run="01-bench.threads">6</b></td><td>1 luồng chính (<code>redis-server</code>) + 5 luồng nền (<code>bio_*</code>, <code>jemalloc_bg_thd</code>); không có I/O thread</td></tr>
+      <tr><td>A <code>DEBUG SLEEP 2</code>, B <code>PING</code> (ms host)</td><td>A gửi +<b class="m" data-run="01-block.sleep.timeline">213</b>, B gửi +<b class="m" data-run="01-block.sleep.timeline">716</b>, PONG +<b class="m" data-run="01-block.sleep.timeline">2215</b>; B tự đo <b class="m" data-run="01-block.sleep.B">(1.50s)</b></td><td>PING chờ hết lệnh của A</td></tr>
+      <tr><td><code>GET</code> từng lệnh (<code>-P 1</code>) và lô 16 (<code>-P 16</code>), req/s</td><td><b class="m" data-run="01-bench.pipeline">166944.92</b> → <b class="m" data-run="01-bench.pipeline">2083333.38</b> (× <b class="m" data-derived="r04_pipeline_ratio">12.5</b>)</td><td>Vòng mạng mới đắt, không phải CPU</td></tr>
+      <tr><td>Value 16 byte và 100 KB, req/s</td><td><b class="m" data-run="01-bench.size">169491.53</b> và <b class="m" data-run="01-bench.size">37807.18</b> (chậm × <b class="m" data-derived="r05_rps_ratio">4.5</b>)</td><td>Value lớn: băng thông thành cổ chai</td></tr>
+      <tr><td>Cùng phép đo ra MB/s</td><td><b class="m" data-derived="r05_small_mb_s">2.59</b> và <b class="m" data-derived="r05_big_mb_s">3692.1</b> MB/s</td><td>Nhiều byte hơn, ít lệnh hơn</td></tr>
+      <tr><td><code>-c 1</code>: <code>GET</code> và <code>MGET</code> 10 khóa, khóa/s</td><td><b class="m" data-derived="r06_get_keys_s">21953.9</b> và <b class="m" data-derived="r06_mget_keys_s">205761.3</b> (× <b class="m" data-derived="r06_keys_ratio">9.4</b>)</td><td>Một vòng mạng chở 10 khóa</td></tr>
+      <tr><td>SLOWLOG của <code>DEBUG SLEEP 0.5</code></td><td><b class="m" data-run="01-why-fast.slowlog">500094</b> µs · LATENCY <b class="m" data-run="01-why-fast.slowlog">500</b> ms</td><td>Redis tự ghi lệnh đã chặn luồng</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="check30">
+    <span class="tag">Câu hỏi 30 giây</span>
+    <p>Terminal A đang chạy <code>DEBUG SLEEP 2</code>. Bạn mở một kết nối <code>redis-cli</code> mới tinh và gõ <code>PING</code>. Bao lâu thì có <code>PONG</code>?</p>
+    <details><summary>Xem đáp án</summary>
+      <p>Khi lệnh của A xong. Kết nối mới không có luồng riêng. Lần chạy đã ghi: B gửi lúc +<b class="m" data-run="01-block.sleep.timeline">716</b> ms, nhận PONG lúc +<b class="m" data-run="01-block.sleep.timeline">2215</b> ms, đúng lúc A nhận <code>OK</code>.</p>
+    </details>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_04_img_01.png" alt="Slide 4: logo Redis, ba tầng khối màu đỏ" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 4 · Redis</figcaption></figure>
+  <div class="callout key">
+    <span class="tag">Slide 4 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Redis là database mã nguồn mở trong bộ nhớ, nhiều cấu trúc dữ liệu; có transaction, persistence, Lua, cluster, pub/sub, eviction. Dùng làm cache, key-value DB, hàng đợi.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Định nghĩa khớp redis.io ("in-memory data structure store"). Bài đo từng tính năng ở chặng của nó: cấu trúc dữ liệu (2, 5), eviction (3), persistence (4), Lua (6, 8, 9), cluster (7).</p></div>
+    </div>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_05_img_01.png" alt="Slide 5: logo Memcached, chữ M màu xanh trên nền nâu" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 5 · Memcached</figcaption></figure>
+  <div class="callout" id="sl-05">
+    <span class="tag">Slide 5 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Cả hai là cache trong RAM, có hết hạn khóa. Redis đơn luồng một core, Memcached đa core; Redis đọc tốt hơn, Memcached ghi tốt hơn; trên 16 GB thì Redis chậm đi; chỉ Redis có persistence, cluster, transaction, pub/sub, Lua.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Phần về Redis đúng: lệnh chạy trên một luồng (<b class="m" data-run="01-why-fast.threads">io_threads_active:0</b>), có persistence, Lua, cluster. Phần so hiệu năng (đọc/ghi, mốc 16 GB) <b>chưa đo trực tiếp</b>: máy này không chạy Memcached. Và tiến trình có <b class="m" data-run="01-bench.threads">6</b> luồng, chỉ luồng chạy lệnh là một (slide 14).</p></div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 10, 11 · slide tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>2. How Redis Works? → 2.1 Why is Redis So Fast?</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định để đo. Ba làm mẫu dưới đây trả lời slide 11 bằng số đo.</p></div>
+    </div>
+  </div>
+
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu 1 · một luồng chạy lệnh, I/O threads đang tắt</span>
+    <p>Mở <code>redis-cli</code> trong container (PowerShell: <code>docker exec -it advance-be-redis redis-cli</code>; Git Bash thêm <code>winpty</code> phía trước), dán khối dưới, nhìn <code>multiplexing_api</code> và <code>io_threads_active</code>.</p>
+  </div>
+  <div class="code"><pre data-cmd="01-why-fast.redis#threads"><code>INFO server
+CONFIG GET io-threads</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>01-why-fast.threads</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="01-why-fast.threads">127.0.0.1:6379&gt; INFO server
+# Server
+redis_version:7.2.3
+…
+multiplexing_api:epoll
+…
+hz:10
+…
+io_threads_active:0
+…
+127.0.0.1:6379&gt; CONFIG GET io-threads
+1) "io-threads"
+2) "1"</pre></div>
+  <p>Giờ đếm luồng của tiến trình. Đây là file <code>.sh</code>: dán từng dòng vào Git Bash.</p>
+  <div class="code"><pre data-cmd="01-bench.sh#threads"><code># #region threads · Đếm luồng của tiến trình redis-server (slide 14)
+set -u
+# /proc/1/task = các luồng của tiến trình số 1 trong container (redis-server).
+docker exec advance-be-redis sh -c 'ls /proc/1/task | wc -l'
+# Tên từng luồng: bio_* là luồng nền (đóng file, fsync AOF, lazy free), không phải I/O threads.
+docker exec advance-be-redis sh -c 'cat /proc/1/task/*/comm'
+docker exec advance-be-redis redis-cli CONFIG GET io-threads
+# #endregion</code></pre></div>
+<!--@RUN 01-bench.threads@-->
+  <p>Tên luồng nói hết: <code>bio_close_file</code>, <code>bio_aof</code>, <code>bio_lazy_free</code> (đóng file, fsync AOF, giải phóng bộ nhớ) và <code>jemalloc_bg_thd</code>. Không có luồng I/O nào, vì <code>io-threads</code> đang là <code>1</code>.</p>
+
+  <div class="callout key">
+    <span class="tag">Slide 13 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Nhanh vì: chạy trong RAM; một luồng (CPU không phải cổ chai, không context switch, không cần khóa); I/O multiplexing; cấu trúc dữ liệu hiệu quả.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Đúng: <b class="m" data-run="01-why-fast.threads">multiplexing_api:epoll</b> là phần multiplexing, <b class="m" data-run="01-why-fast.threads">io_threads_active:0</b> là phần một luồng. Làm mẫu 2 cho thấy mặt trái: một lệnh chậm chặn mọi client.</p></div>
+    </div>
+  </div>
+  <div class="callout" id="sl-14">
+    <span class="tag">Slide 14 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Muốn dùng hết CPU thì chạy nhiều instance. Từ 6.0 Redis không còn đơn luồng: luồng chính chạy lệnh, luồng khác lo persistence và network I/O.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Luồng nền lo persistence: đúng (<code>bio_aof</code>, <code>bio_close_file</code>). "Luồng lo network I/O" chỉ có khi bật <code>io-threads</code> lớn hơn 1; mặc định là <b class="m" data-run="01-bench.threads">1</b>. Kể cả khi bật, I/O threads chỉ đọc/ghi socket, lệnh vẫn chạy trên một luồng. "Nhiều instance" vẫn đúng; cluster (chặng 7) là cách làm có tổ chức.</p></div>
+    </div>
+  </div>
+
+  <h3>Làm mẫu 2 · hai terminal: một lệnh chậm chặn mọi người</h3>
+  <p>Mở hai tab <code>redis-cli</code>, đặt tên A và B, làm đúng thứ tự trong bảng.</p>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td data-label="#">1</td><td data-label="Terminal A">Region <code>sleep-reset</code> của <code>01-block.A.redis</code>: xóa barrier cũ.</td><td></td><td data-label="Ghi lại"><input class="field" data-store="l06-c1-reset" placeholder="UNLINK trả 0 hay 1?"></td></tr>
+      <tr><td data-label="#">2</td><td></td><td data-label="Terminal B">Region <code>sleep</code> của <code>01-block.B.redis</code>: <b>chỉ dán dòng</b> <code>BLPOP l06:barrier:block-sleep 5</code>. B đứng chờ.</td><td data-label="Ghi lại"><input class="field" data-store="l06-c1-b-wait" placeholder="B đang chờ, chưa in gì"></td></tr>
+      <tr><td data-label="#">3</td><td data-label="Terminal A">Trong 5 giây đó, dán cả 2 dòng của A: <code>RPUSH</code> thả B, rồi <code>DEBUG SLEEP 2</code>.</td><td data-label="Terminal B">BLPOP vừa trả về thì đếm khoảng nửa giây, rồi mới dán dòng <code>PING</code> và đứng im.</td><td data-label="Ghi lại"><input class="field" data-store="l06-c1-pong" placeholder="redis-cli của B in (…s) bao nhiêu?"></td></tr>
+    </tbody>
+  </table></div>
+  <div class="code"><pre data-cmd="01-block.A.redis#sleep-reset"><code>UNLINK l06:barrier:block-sleep</code></pre></div>
+  <div class="code"><pre data-cmd="01-block.B.redis#sleep"><code>BLPOP l06:barrier:block-sleep 5
+PING</code></pre></div>
+  <div class="code"><pre data-cmd="01-block.A.redis#sleep"><code>RPUSH l06:barrier:block-sleep go
+DEBUG SLEEP 2</code></pre></div>
+  <p class="muted">Guide đã bỏ dòng <code>#@ sleep 0.5</code> của file lab, nên khối B có hai dòng mà bạn dán làm hai lần: dòng BLPOP ở bước 2, dòng <code>PING</code> ở bước 3. Dán cả hai một lúc thì PING xếp hàng sau BLPOP và chạy ngay khi B được thả, có thể trước cả <code>DEBUG SLEEP</code> của A, và B nhận PONG liền.</p>
+<!--@RUN 01-block.sleep.timeline@-->
+  <p>Timeline (ms host, phụ thuộc máy): PING gửi lúc +<b class="m" data-run="01-block.sleep.timeline">716</b> nhưng chỉ được trả lời lúc +<b class="m" data-run="01-block.sleep.timeline">2215</b>, cùng lúc A. Một lệnh tốn vài micro giây đã chờ <b class="m" data-run="01-block.sleep.B">(1.50s)</b>: đó là cảnh 40 máy POS đứng hình.</p>
+
+  <div class="widget" id="w1">
+    <div class="widget-head"><h4>W1 · Một luồng, hai client</h4><span class="eyebrow">run-w1 · 01-block.sleep.timeline</span></div>
+    <div class="widget-body">
+      <p>Đoạn đỏ: luồng chính bận với lệnh của A. Đoạn vàng: B đã gửi PING nhưng chưa được chạy. "Phát lại" chạy đúng tốc độ thật (khoảng 2 giây).</p>
+      <div class="lanes" id="w1-lanes"></div>
+      <div class="btns"><button type="button" class="btn primary" id="w1-play">Phát lại đúng tốc độ</button><button type="button" class="btn" id="w1-step">Từng sự kiện</button></div>
+      <div class="out" id="w1-out" aria-live="polite"></div>
+      <label class="toggle"><input type="checkbox" id="w1-slowlog"> Xem ca 0,5 s mà SLOWLOG ghi lại</label>
+      <div class="out" id="w1-slow">
+        <p>Region <code>slowlog</code> chạy <code>DEBUG SLEEP 0.5</code> một mình: SLOWLOG ghi <b class="m" data-run="01-why-fast.slowlog">500094</b> µs, LATENCY ghi sự kiện <code>command</code> <b class="m" data-run="01-why-fast.slowlog">500</b> ms. Ở production, "Redis tự nhiên chậm" thì nhìn <code>SLOWLOG GET 10</code> trước tiên.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>Bắt quả tang lệnh chậm không cần hai terminal: region <code>slowlog</code> bật LATENCY, xóa SLOWLOG, giả một lệnh 0,5 s, đọc cả hai, rồi trả ngưỡng LATENCY về 0.</p>
+  <div class="code"><pre data-cmd="01-why-fast.redis#slowlog"><code>CONFIG SET latency-monitor-threshold 100
+LATENCY RESET
+SLOWLOG RESET
+DEBUG SLEEP 0.5
+SLOWLOG GET 1
+LATENCY LATEST
+CONFIG SET latency-monitor-threshold 0</code></pre></div>
+<!--@RUN 01-why-fast.slowlog@-->
+  <p>Trong <code>SLOWLOG GET 1</code>: dòng <code>3)</code> là thời gian chạy (µs), <code>4)</code> là lệnh, <code>5)</code> là địa chỉ client. Từ đó biết ai đã chặn server.</p>
+
+  <details class="fold"><summary>Tùy chọn (10 phút) · xem trước Lua — học kỹ ở chặng 8: script 6 giây, BUSY và SCRIPT KILL</summary><div class="fold-body">
+    <p>Lua cũng chạy trên luồng chính. Script dưới lặp tới khi đồng hồ Redis qua 6 giây. Quá <code>busy-reply-threshold</code> (mặc định 5 giây, đồng hồ server), mọi lệnh khác nhận <code>BUSY</code>, trừ <code>SCRIPT KILL</code> và <code>SHUTDOWN NOSAVE</code>. B chạy trong Git Bash (<code>01-block.B.sh</code>), mỗi dòng mở một kết nối mới, và kết nối mới cũng nhận BUSY. Thứ tự: <code>busy-reset</code> ở A, <code>busy</code> của B (dòng đầu chờ barrier), rồi <code>busy</code> ở A.</p>
+    <div class="code"><pre data-cmd="01-block.A.redis#busy-reset"><code>UNLINK l06:barrier:block-busy</code></pre></div>
+    <div class="code"><pre data-cmd="01-block.B.sh#busy"><code># #region busy · B gặp BUSY rồi dừng script của A bằng SCRIPT KILL (slide 13)
+docker exec advance-be-redis redis-cli BLPOP l06:barrier:block-busy 5
+set -u
+sleep 0.5
+# --no-raw để redis-cli in "(error) …" giống terminal tương tác. Câu trả lời tới sau khoảng 5 s (busy-reply-threshold).
+docker exec advance-be-redis redis-cli --no-raw PING
+docker exec advance-be-redis redis-cli --no-raw SCRIPT KILL
+# #endregion</code></pre></div>
+    <div class="code"><pre data-cmd="01-block.A.redis#busy"><code>RPUSH l06:barrier:block-busy go
+EVAL "local function now() local t = redis.call('TIME') return t[1] * 1000000 + t[2] end local s = now() while now() - s &lt; 6000000 do end return 'xong'" 0</code></pre></div>
+<!--@RUN 01-block.busy.timeline@-->
+    <p>Đồng hồ host: A gửi <code>EVAL</code> lúc +<b class="m" data-run="01-block.busy.timeline">398</b>, BUSY về B lúc +<b class="m" data-run="01-block.busy.timeline">5017</b>; redis-cli trong container đo EVAL <b class="m" data-run="01-block.busy.A">(5.79s)</b>. Hai đồng hồ lệch vì đồng hồ máy ảo Docker chạy nhanh hơn Windows (chặng 8 dùng chuyện này khi nói về Redlock), nên chỉ nói: BUSY bắt đầu khoảng 5 giây sau khi script chạy, phụ thuộc máy. <code>SCRIPT KILL</code> dừng được vì script chưa ghi gì; đã ghi thì chỉ còn <code>SHUTDOWN NOSAVE</code>.</p>
+  </div></details>
+
+  <h3>Làm mẫu 3 · đo nút cổ chai: vòng mạng, kích thước value, số lệnh</h3>
+  <p><code>redis-benchmark</code> có sẵn trong container. Dán từng dòng vào Git Bash, mỗi dòng vài giây.</p>
+  <div class="code"><pre data-cmd="01-bench.sh#pipeline"><code># #region pipeline · Cùng 100000 lệnh GET: gửi từng lệnh (-P 1) và gửi lô 16 lệnh (-P 16) (slide 12)
+set -u
+docker exec advance-be-redis redis-benchmark -q -n 100000 -t get -P 1
+docker exec advance-be-redis redis-benchmark -q -n 100000 -t get -P 16
+# -t get chỉ ĐỌC khóa key:__rand_int__, không ghi gì: dòng dưới phải in ra rỗng.
+docker exec advance-be-redis redis-cli --scan --pattern 'key:*'
+# #endregion</code></pre></div>
+<!--@RUN 01-bench.pipeline@-->
+  <p>Cùng 100000 lệnh GET, gửi lô 16 nhanh × <b class="m" data-derived="r04_pipeline_ratio">12.5</b>. Server vẫn chạy đủ từng lệnh; thứ được bớt là số vòng đi về và số lần đọc/ghi socket. Dòng <code>--scan</code> in rỗng: <code>-t get</code> không để lại khóa rác.</p>
+  <div class="code"><pre data-cmd="01-bench.sh#size"><code># #region size · Giá trị 16 byte và 100 KB: băng thông mới là nút cổ chai (slide 12)
+set -u
+docker exec advance-be-redis redis-cli SET l06:bench:small 0123456789abcdef
+# SETRANGE tại vị trí 102399 tạo chuỗi dài đúng 102400 byte (phần trước là byte 0). Đừng GET khóa này trong redis-cli.
+docker exec advance-be-redis redis-cli SETRANGE l06:bench:big 102399 x
+docker exec advance-be-redis redis-cli STRLEN l06:bench:big
+docker exec advance-be-redis redis-benchmark -q -n 20000 GET l06:bench:small
+docker exec advance-be-redis redis-benchmark -q -n 20000 GET l06:bench:big
+# #endregion</code></pre></div>
+<!--@RUN 01-bench.size@-->
+  <p class="muted">Đo kích thước value là mục "nếu còn sức" (5 phút).</p>
+  <div class="code"><pre data-cmd="01-bench.sh#mget"><code># #region mget · Một client (-c 1): 10 lệnh GET hay 1 lệnh MGET 10 khóa (slide 41)
+set -u
+docker exec advance-be-redis redis-cli MSET l06:bench:1 v1 l06:bench:2 v2 l06:bench:3 v3 l06:bench:4 v4 l06:bench:5 v5 l06:bench:6 v6 l06:bench:7 v7 l06:bench:8 v8 l06:bench:9 v9 l06:bench:10 v10
+docker exec advance-be-redis redis-benchmark -q -c 1 -n 20000 GET l06:bench:1
+docker exec advance-be-redis redis-benchmark -q -c 1 -n 20000 MGET l06:bench:1 l06:bench:2 l06:bench:3 l06:bench:4 l06:bench:5 l06:bench:6 l06:bench:7 l06:bench:8 l06:bench:9 l06:bench:10
+# #endregion</code></pre></div>
+<!--@RUN 01-bench.mget@-->
+  <p>Một <code>MGET</code> 10 khóa chạy gần bằng tốc độ một <code>GET</code> (<b class="m" data-run="01-bench.mget">20576.13</b> và <b class="m" data-run="01-bench.mget">21953.90</b> req/s), nên tính theo khóa thì gấp × <b class="m" data-derived="r06_keys_ratio">9.4</b>: lời khuyên "gộp lệnh" của slide 41, đo trước ở đây.</p>
+
+  <div class="callout" id="sl-12">
+    <span class="tag">Slide 12 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Nút cổ chai của Redis là bộ nhớ và băng thông mạng, không phải CPU.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Băng thông: đúng khi value lớn (100 KB còn <b class="m" data-run="01-bench.size">37807.18</b> req/s dù chở <b class="m" data-derived="r05_big_mb_s">3692.1</b> MB/s). Với value nhỏ, thứ đắt nhất là <b>số vòng đi về</b>: gộp lô 16 đã nhanh × <b class="m" data-derived="r04_pipeline_ratio">12.5</b>. "Không phải CPU" chỉ đúng khi lệnh nào cũng ngắn: một lệnh tốn CPU lâu chiếm trọn luồng duy nhất. Bộ nhớ thì chặng 3 đo khi nó đầy.</p></div>
+    </div>
+  </div>
+
+  <h3>Kiểm chứng chặng 1</h3>
+  <p>Dán vào <code>redis-cli</code>, so từng câu trả lời với bảng.</p>
+  <div class="code"><pre data-cmd="01-why-fast.redis#kiem-chung"><code>CONFIG GET io-threads
+CONFIG GET latency-monitor-threshold
+CONFIG GET slowlog-log-slower-than
+EXISTS l06:bench:small l06:bench:big
+STRLEN l06:bench:big</code></pre></div>
+  <div class="table-wrap"><table class="expect">
+    <thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Lệnh"><code>CONFIG GET io-threads</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="01-why-fast.kiem-chung">2) "1"</b></td><td data-label="Ý nghĩa">I/O threads vẫn tắt</td></tr>
+      <tr><td data-label="Lệnh"><code>CONFIG GET latency-monitor-threshold</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="01-why-fast.kiem-chung">2) "0"</b></td><td data-label="Ý nghĩa">Region slowlog đã trả ngưỡng về mặc định</td></tr>
+      <tr><td data-label="Lệnh"><code>CONFIG GET slowlog-log-slower-than</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="01-why-fast.kiem-chung">2) "10000"</b></td><td data-label="Ý nghĩa">Ngưỡng SLOWLOG vẫn 10 ms (đơn vị µs)</td></tr>
+      <tr><td data-label="Lệnh"><code>EXISTS l06:bench:small l06:bench:big</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="01-why-fast.kiem-chung">(integer) 2</b></td><td data-label="Ý nghĩa">Đã chạy region size</td></tr>
+      <tr><td data-label="Lệnh"><code>STRLEN l06:bench:big</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="01-why-fast.kiem-chung">(integer) 102400</b></td><td data-label="Ý nghĩa">Value lớn đúng 100 KB</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout challenge" id="chang-1-tu-lam">
+    <span class="tag">Tự làm · chặng 1</span>
+    <p><b>Đề:</b> dựng lại sự cố <code>KEYS *</code>. Tạo 200000 khóa giả trong vùng riêng <code>l06:my:*</code>, rồi so <code>KEYS</code> với <code>SCAN</code> trong khi terminal B đo độ trễ liên tục (mỗi giây một dòng <code>min, max, avg</code>). Dọn khóa giả khi xong.</p>
+    <div class="code"><pre><code># Terminal A (Git Bash)
+docker exec advance-be-redis redis-cli DEBUG POPULATE 200000 l06:my:pop
+docker exec advance-be-redis redis-cli DBSIZE
+docker exec advance-be-redis redis-cli SLOWLOG RESET
+
+# Terminal B (PowerShell; Git Bash thêm winpty phía trước), để chạy, Ctrl+C để dừng
+docker exec -it advance-be-redis redis-cli --latency-history -i 1
+
+# Terminal A, trong lúc B đang in
+time docker exec advance-be-redis redis-cli KEYS 'l06:my:*' | wc -l
+sleep 3
+time docker exec advance-be-redis redis-cli --scan --pattern 'l06:my:*' | wc -l
+docker exec advance-be-redis redis-cli --no-raw SLOWLOG GET 5
+
+# Dọn khóa giả (chỉ đụng l06:my:pop:*)
+docker exec advance-be-redis sh -c "redis-cli --scan --pattern 'l06:my:pop:*' | xargs -r -n 1000 redis-cli UNLINK" | tail -1</code></pre></div>
+    <label class="fields"><span class="muted">Ghi lại: KEYS tốn bao nhiêu µs trong SLOWLOG? max của B lúc đó? Lúc --scan?</span>
+      <textarea class="field" data-store="l06-c1-keys" placeholder="KEYS … µs; B max … ms; --scan: B max … ms"></textarea>
+    </label>
+    <p><b>PASS khi:</b> (1) <code>SLOWLOG GET 5</code> có mục <code>KEYS l06:my:*</code> (thời gian ở dòng <code>3)</code>) và không có mục <code>SCAN</code>; (2) ở cửa sổ chứa KEYS, <code>max</code> của B xấp xỉ thời gian KEYS đổi ra ms, còn lúc <code>--scan</code> thì <code>max</code> vẫn nhỏ như bình thường; (3) hai lệnh đếm cùng số dòng (ít nhất 200000).</p>
+    <details class="fold"><summary>Đáp án và giải thích</summary><div class="fold-body">
+      <p><code>KEYS</code> là một lệnh duyệt hết keyspace rồi mới trả lời, nên suốt lúc đó luồng chính không làm gì khác và <code>max</code> của B nhảy lên đúng khoảng đó. <code>--scan</code> gọi <code>SCAN</code> nhiều lần, mỗi lần một ít khóa, nên PING của B chen vào được giữa hai lần gọi. Tổng thời gian có thể dài hơn, nhưng không lần nào chặn lâu hay đủ chậm để vào SLOWLOG.</p>
+      <p>Nếu KEYS dưới 10 ms trên máy bạn, tạo thêm <code>DEBUG POPULATE 200000 l06:my:pop2</code> rồi chạy lại (nhớ dọn cả <code>l06:my:pop2:*</code>). Ở production: cấm <code>KEYS</code> bằng ACL, duyệt khóa bằng <code>SCAN</code>.</p>
+    </div></details>
+  </div>
+
+  <div class="quiz" data-quiz="1"></div>
+</section>

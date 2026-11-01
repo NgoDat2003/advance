@@ -1,0 +1,21 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli --bigkeys | sed -n '/summary/,$p'
+-------- summary -------
+
+Sampled 35 keys in the keyspace!
+Total key length in bytes is 420 (avg len 12.00)
+
+Biggest   list found '"l06:enc:l"' has 3000 items
+Biggest   hash found '"l06:enc:h"' has 513 fields
+Biggest string found '"l06:bench:big"' has 102400 bytes
+Biggest stream found '"l06:q:stream"' has 2 entries
+Biggest    set found '"l06:enc:si"' has 513 members
+Biggest   zset found '"l06:enc:z"' has 129 members
+
+2 lists with 3001 items (05.71% of keys, avg size 1500.50)
+5 hashs with 522 fields (14.29% of keys, avg size 104.40)
+19 strings with 102587 bytes (54.29% of keys, avg size 5399.32)
+1 streams with 2 entries (02.86% of keys, avg size 2.00)
+5 sets with 650 members (14.29% of keys, avg size 130.00)
+3 zsets with 136 members (08.57% of keys, avg size 45.33)

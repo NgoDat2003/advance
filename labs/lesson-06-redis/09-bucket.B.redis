@@ -1,0 +1,8 @@
+# Bài 06 · Chặng 9 — Terminal B: request thứ hai cùng lúc (slide 41). Dán ở B TRƯỚC khi dán ở A.
+
+# #region naive · B cũng đọc 1 token trước khi A kịp ghi 0 → 2 request qua từ 1 token (slide 41)
+BLPOP l06:barrier:bucket-naive 5
+GET l06:tb:naive:7
+#@ sleep 0.6
+SET l06:tb:naive:7 0
+# #endregion

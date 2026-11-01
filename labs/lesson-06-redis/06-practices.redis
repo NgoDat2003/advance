@@ -1,0 +1,11 @@
+# Bài 06 · Chặng 6 — Kiểm chứng sau delay task và big key. Dán trong redis-cli.
+#   PowerShell: docker exec -it advance-be-redis redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis redis-cli
+# Thí nghiệm nằm ở 06-delay.{A,B}.redis, 06-delay-lua.{A,B}.sh và 06-practices.sh.
+
+# #region kiem-chung · Kiểm chứng chặng 6 (slide 37, 38)
+ZRANGE l06:delay:orders 0 -1 WITHSCORES
+LRANGE l06:delay:done 0 -1
+EXISTS l06:big:h l06:big:h2 l06:big:h3
+CONFIG GET lazyfree-lazy-user-del
+CONFIG GET slowlog-log-slower-than
+# #endregion

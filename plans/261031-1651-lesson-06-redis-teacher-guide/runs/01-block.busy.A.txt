@@ -1,0 +1,6 @@
+# chạy lúc 01/11/2026 09:33 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> RPUSH l06:barrier:block-busy go
+(integer) 1
+127.0.0.1:6379> EVAL "local function now() local t = redis.call('TIME') return t[1] * 1000000 + t[2] end local s = now() while now() - s < 6000000 do end return 'xong'" 0
+(error) ERR Script killed by user with SCRIPT KILL... script: 7cd89da9eaaa9da0250cd9c7e0157dea6ac4bb0a, on @user_script:1.
+(5.79s)

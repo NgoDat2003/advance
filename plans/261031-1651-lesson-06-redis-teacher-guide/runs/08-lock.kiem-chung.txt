@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 10:07 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> EXISTS l06:lock:FA634:A34_S012C
+(integer) 0
+127.0.0.1:6379> GET l06:seat:FA634:A34_S012C
+"B"
+127.0.0.1:6379> LRANGE l06:seat:FA634:log 0 -1
+1) "BOOKED:A"
+2) "BOOKED:B"
+127.0.0.1:6379> GET l06:fence:A34_S012C
+"2"
+127.0.0.1:6379> HGETALL l06:seat:FA634:A34_S012C:row
+1) "owner"
+2) "B"
+3) "token"
+4) "2"

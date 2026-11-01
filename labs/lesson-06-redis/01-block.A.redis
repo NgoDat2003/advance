@@ -1,0 +1,23 @@
+# Bài 06 · Chặng 1 — Terminal A: một lệnh chậm chặn cả server (slide 13).
+# Thứ tự: (1) dán region *-reset ở A, (2) dán region cùng tên ở B (B đứng chờ ở BLPOP),
+#         (3) dán region ở A. Dòng "#@ sleep" = bạn tự đợi chừng đó giây rồi mới gõ lệnh kế.
+
+# #region sleep-reset · Chuẩn bị: xóa barrier cũ (slide 13)
+UNLINK l06:barrier:block-sleep
+# #endregion
+
+# #region sleep · A chạy DEBUG SLEEP 2: server đứng 2 s (slide 13)
+# RPUSH thả B ra khỏi BLPOP (barrier), ngay sau đó A chặn server 2 giây.
+RPUSH l06:barrier:block-sleep go
+DEBUG SLEEP 2
+# #endregion
+
+# #region busy-reset · Chuẩn bị: xóa barrier cũ (slide 13)
+UNLINK l06:barrier:block-busy
+# #endregion
+
+# #region busy · Tùy chọn, xem trước Lua (học kỹ ở chặng 8): script chạy 6 s (slide 13)
+# Script lặp đến khi đồng hồ Redis (TIME) qua 6 s. Sau busy-reply-threshold 5 s, client khác nhận lỗi BUSY.
+RPUSH l06:barrier:block-busy go
+EVAL "local function now() local t = redis.call('TIME') return t[1] * 1000000 + t[2] end local s = now() while now() - s < 6000000 do end return 'xong'" 0
+# #endregion

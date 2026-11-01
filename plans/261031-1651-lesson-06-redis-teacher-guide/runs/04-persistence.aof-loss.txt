@@ -1,0 +1,21 @@
+# chạy lúc 01/11/2026 09:40 +0700 · Redis 7.2.3 · advance-be-redis-aof
+$ echo "→ advance-be-redis-aof"
+→ advance-be-redis-aof
+$ set -u
+$ docker exec advance-be-redis-aof redis-cli FLUSHALL
+OK
+$ docker exec advance-be-redis-aof redis-cli CONFIG GET appendonly
+appendonly
+yes
+$ docker exec advance-be-redis-aof redis-cli CONFIG GET appendfsync
+appendfsync
+everysec
+$ seq 1 1500 | awk '{print "SET l06:p:"$1" v"$1}' | docker exec -i advance-be-redis-aof redis-cli > /dev/null
+$ sleep 2
+$ docker kill advance-be-redis-aof
+advance-be-redis-aof
+$ docker start advance-be-redis-aof
+advance-be-redis-aof
+$ for i in $(seq 50); do docker exec advance-be-redis-aof redis-cli PING 2>/dev/null | grep -q PONG && break; sleep 0.2; done
+$ docker exec advance-be-redis-aof redis-cli DBSIZE
+1500

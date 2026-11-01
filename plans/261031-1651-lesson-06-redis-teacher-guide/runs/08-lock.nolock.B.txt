@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:lock-nolock 5
+1) "l06:barrier:lock-nolock"
+2) "go"
+127.0.0.1:6379> GET l06:seat:FA634:A34_S012C
+(nil)
+127.0.0.1:6379> SET l06:seat:FA634:A34_S012C B
+OK
+127.0.0.1:6379> RPUSH l06:seat:FA634:log BOOKED:B
+(integer) 2
+127.0.0.1:6379> GET l06:seat:FA634:A34_S012C
+"B"
+127.0.0.1:6379> LRANGE l06:seat:FA634:log 0 -1
+1) "BOOKED:A"
+2) "BOOKED:B"

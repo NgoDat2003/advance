@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Bucket còn 1 token. Hai request cùng làm GET → \"còn ≥ 1 thì cho qua\" → SET 0 từ app. Kết quả đã đo?",
+    "opts": [
+      "1 request qua, 1 request bị chặn",
+      "Cả 2 request qua, vì cả hai đọc được \"1\" trước khi ai kịp SET",
+      "Cả 2 bị chặn",
+      "Redis báo lỗi vì hai client cùng SET một khóa"
+    ],
+    "ans": 1,
+    "why": "Run 09-bucket.naive.timeline: A < \"1\" và B < \"1\" cùng lúc, rồi cả hai SET l06:tb:naive:7 0. Đọc → quyết định → ghi bằng nhiều lệnh là lost update."
+  },
+  {
+    "q": "Bucket Lua sức chứa 1, nạp 0.001 token/giây. Request thứ hai nhận allowed 0 và retry_after_ms 1000000. Con số đó từ đâu ra?",
+    "opts": [
+      "Thời gian chờ cố định của Redis",
+      "TTL của khóa bucket",
+      "Thời gian để nạp đủ 1 token: 1 / 0.001 = 1000 giây, đổi ra ms",
+      "Số ngẫu nhiên để các client không thử lại cùng lúc"
+    ],
+    "ans": 2,
+    "why": "Run 09-bucket-lua.claim.timeline: B < 0, 0, 1000000. token-bucket.lua tính math.ceil((1 - tokens) / rate) giây rồi đổi ra mili giây, làm tròn lên cả giây cho header Retry-After."
+  },
+  {
+    "q": "FR-M2-05 bắn 30 request vào bucket sức chứa 10, nạp rất chậm. API phải trả gì cho các request bị từ chối?",
+    "opts": [
+      "429 kèm Retry-After = retry_after_ms / 1000 giây; đã đo 10 cho qua, 20 bị từ chối",
+      "503 vì Redis quá tải",
+      "409 vì trùng request",
+      "200 nhưng body rỗng"
+    ],
+    "ans": 0,
+    "why": "Run 09-bridge.bucket30: dòng tổng allowed=10 denied=20 min_retry_after_ms=100000. Mỗi dòng bị từ chối có retry_after_ms > 0 để đặt header Retry-After."
+  },
+  {
+    "q": "Cùng Idempotency-Key pay-001 nhưng body khác (hash 9b7d00aa thay vì 3f2a9c1e). Script trả gì và API làm gì?",
+    "opts": [
+      "NEW, xử lý như request mới",
+      "DONE, trả response cũ",
+      "IN_PROGRESS, trả 409",
+      "MISMATCH, trả 422 và không xử lý"
+    ],
+    "ans": 3,
+    "why": "Run 09-bridge.idempotency: thứ tự NEW → IN_PROGRESS → DONE + {\"orderId\":\"o1\",\"total\":120000} → với hash khác là MISMATCH; TTL còn 86399."
+  }
+]

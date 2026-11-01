@@ -3332,7 +3332,7 @@ WHERE w.balance &lt;&gt; (SELECT coalesce(sum(amount), 0) FROM ledger_entries e 
   <div class="callout key">
     <span class="tag">Tiếp theo · Mốc Cụm 1 → Pha B</span>
     <h3 style="margin-top:4px">Đắp sổ cái kép vào OmniPOS</h3>
-    <p>Bài 07 khép lại phần lý thuyết của Cụm 1 (Bài 03 → 12 → 14 → 07). Bước kế tiếp theo lộ trình là Pha B: đưa <code>wallets</code> + <code>transfers</code> + <code>ledger_entries</code> của chặng 9 vào repo <code>create-template-project</code> bằng Prisma 7.9, với đúng những sửa ở Prisma drill (Decimal, Timestamptz, @@index, idempotency key @unique, CHECK trong migration.sql), rồi làm Boss Challenge 1 trên <code>quan-ly-hop-dong</code>. Sau đó sang Cụm 2 với Bài 06 Redis.</p>
+    <p>Bài 07 khép lại phần lý thuyết của Cụm 1 (Bài 03 → 12 → 14 → 07). Bước kế tiếp theo lộ trình là Pha B: đưa <code>wallets</code> + <code>transfers</code> + <code>ledger_entries</code> của chặng 9 vào repo <code>create-template-project</code> bằng Prisma 7.9, với đúng những sửa ở Prisma drill (Decimal, Timestamptz, @@index, idempotency key @unique, CHECK trong migration.sql), rồi làm Boss Challenge 1 trên <code>quan-ly-hop-dong</code>. Sau đó sang Cụm 2 với <a href="lesson_06_redis_teacher_guide.html">Bài 06 Redis</a>.</p>
     <p>Nếu Bài 14 còn dở chặng 3–8, học nốt bên đó trước Pha B: <code>post_transfer()</code> của chặng 9 chính là "khóa theo thứ tự id" của <a href="lesson_14_locking_teacher_guide.html#chang-5">Bài 14 chặng 5</a>.</p>
   </div>
 </section>

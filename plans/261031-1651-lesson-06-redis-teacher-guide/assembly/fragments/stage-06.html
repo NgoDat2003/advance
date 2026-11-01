@@ -1,0 +1,245 @@
+<section id="chang-6" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">06</span>
+    <div>
+      <div class="stage-meta"><span>Slide 36–38</span><span>30 phút + 5 tùy chọn</span><span>Lõi</span></div>
+      <h2>Delay task không xử lý trùng, xóa big key không làm Redis đứng</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> dựng hàng chờ trễ bằng ZSET, thấy hai poller ngây thơ cùng xử lý một đơn, sửa bằng script Lua nhận việc nguyên tử, rồi đo <code>DEL</code> và <code>UNLINK</code> trên hash một triệu field.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd><b>Delay task</b>: ZSET, member là mã đơn, score là giờ đến hạn; poller lấy việc có score ≤ bây giờ. <b>Big key</b>: một khóa quá lớn, chuỗi dài hoặc collection rất nhiều phần tử.</dd>
+    <dt>TẠI SAO?</dt><dd>Hai instance hub là hai poller; đọc rồi mới xóa thì cả hai cùng thấy một đơn. <code>DEL</code> big key bắt luồng chính giải phóng bộ nhớ, mọi POS phải chờ.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Cần retry có backoff, dead-letter thì dùng thư viện hàng đợi (BullMQ cũng chạy trên Redis). Đừng thay delay queue bằng TTL + keyspace notification: thông báo không được lưu, client rớt kết nối là mất.</dd>
+  </dl>
+
+  <div class="story">
+    <span class="tag">Tình huống</span>
+    <p>Khách đặt món qua app, chọn chuyển khoản. Quá 10 phút chưa trả thì hệ thống tự hủy đơn và nhả món đã giữ (slide 37 kể cùng chuyện với taxi). OmniPOS chạy hai instance hub, mỗi instance có một poller hỏi "đơn nào hết hạn rồi?". Hôm qua một khách nhận hai tin "Đơn của bạn đã bị hủy". Chặng này tìm ra vì sao.</p>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 36 · trang tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>3.2 Practices.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định để đo. Slide 37–38 ở đây; hashtag ở <a href="#chang-7">chặng 7</a>, khóa ở <a href="#chang-8">chặng 8</a>.</p></div>
+    </div>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 660 240" role="img" aria-labelledby="c6-z-title" style="width:100%;height:auto;display:block">
+      <title id="c6-z-title">ZSET l06:delay:orders trên trục thời gian: o1 đã đến hạn bên trái mốc bây giờ, o2 và o3 chưa đến hạn; script lấy o1, ZREM và RPUSH vào l06:delay:done trong một bước</title>
+      <defs><marker id="c6-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"></path></marker></defs>
+      <g style="font:500 13px var(--font-mono);fill:var(--fg)">
+        <text x="20" y="24">l06:delay:orders (score = giờ đến hạn)</text>
+        <rect x="20" y="62" width="330" height="56" rx="6" style="fill:var(--ok-soft)"></rect>
+        <line x1="20" y1="90" x2="640" y2="90" style="stroke:var(--muted);stroke-width:2" marker-end="url(#c6-arrow)"></line>
+        <text x="630" y="115" text-anchor="end" style="fill:var(--muted)">thời gian</text>
+        <text x="185" y="52" text-anchor="middle" style="fill:var(--ok)">-inf … now: đã đến hạn</text>
+        <line x1="350" y1="40" x2="350" y2="140" style="stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4"></line>
+        <text x="350" y="156" text-anchor="middle" style="fill:var(--accent)">now = redis.call('TIME')</text>
+        <circle cx="130" cy="90" r="12" style="fill:var(--ok)"></circle>
+        <text x="130" y="72" text-anchor="middle">o1</text>
+        <circle cx="540" cy="90" r="12" style="fill:var(--surface-2);stroke:var(--muted)"></circle>
+        <text x="540" y="72" text-anchor="middle">o2</text>
+        <circle cx="580" cy="90" r="12" style="fill:var(--surface-2);stroke:var(--muted)"></circle>
+        <text x="580" y="72" text-anchor="middle">o3</text>
+        <text x="560" y="135" text-anchor="middle" style="fill:var(--muted)">chưa đến hạn</text>
+        <path d="M130,104 C130,170 150,190 200,196" style="fill:none;stroke:var(--accent);stroke-width:2" marker-end="url(#c6-arrow)"></path>
+        <rect x="205" y="178" width="430" height="44" rx="8" style="fill:var(--surface);stroke:var(--accent)"></rect>
+        <text x="420" y="205" text-anchor="middle">ZRANGE … LIMIT 0 1 → ZREM → RPUSH l06:delay:done</text>
+      </g>
+    </svg>
+    <figcaption class="muted">Đọc, xóa, ghi phải là một bước nguyên tử; nếu không, hai poller cùng lấy được o1.</figcaption>
+  </figure>
+
+  <div class="table-wrap">
+    <table class="stats">
+      <caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · main advance-be-redis · ms host và µs phụ thuộc máy</caption>
+      <thead><tr><th>Đo gì</th><th>Kết quả</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td>Poller ngây thơ A và B đọc việc đến hạn</td><td>A <b class="m" data-run="06-delay.naive.A">1) "o1"</b> · B <b class="m" data-run="06-delay.naive.B">1) "o1"</b></td><td>cả hai thấy o1</td></tr>
+        <tr><td>B ghi o1 vào danh sách đã xử lý / <code>ZREM</code> của B</td><td><b class="m" data-run="06-delay.naive.B">(integer) 2</b> / <b class="m" data-run="06-delay.naive.B">(integer) 0</b></td><td>o1 xử lý hai lần; ZREM 0 là dấu hiệu bị bỏ qua</td></tr>
+        <tr><td>Lua <code>delay-claim.lua</code>: A / B</td><td>A <b class="m" data-run="06-delay-lua.claim.timeline">o1</b> ở +<b class="m" data-run="06-delay-lua.claim.timeline">726</b> ms · B dòng trống (nil) ở +<b class="m" data-run="06-delay-lua.claim.timeline">947</b> ms</td><td>chỉ một người nhận</td></tr>
+        <tr><td>Sau Lua: done / còn chờ</td><td><b class="m" data-run="06-delay-lua.claim.A">o1</b> · <b class="m" data-run="06-delay-lua.claim.A">o2</b>, <b class="m" data-run="06-delay-lua.claim.A">o3</b></td><td>việc chưa đến hạn không bị đụng</td></tr>
+        <tr><td>Big key: <code>HLEN</code> / <code>MEMORY USAGE</code> (byte)</td><td><b class="m" data-run="06-practices.bigkey">1000000</b> · <b class="m" data-run="06-practices.bigkey">55588728</b></td><td>một khóa, vài chục MB</td></tr>
+        <tr><td><code>DEL</code> / <code>UNLINK</code> (SLOWLOG, µs)</td><td><b class="m" data-run="06-practices.bigkey">165363</b> / <b class="m" data-run="06-practices.bigkey">22</b> · × <b class="m" data-derived="r32_del_unlink_ratio">7517</b></td><td>DEL chặn mọi client</td></tr>
+        <tr><td><code>lazyfreed_objects</code> trước / sau UNLINK</td><td><b class="m" data-run="06-practices.bigkey">lazyfreed_objects:2</b> → <b class="m" data-run="06-practices.bigkey">lazyfreed_objects:3</b></td><td>luồng nền giải phóng đúng một khóa</td></tr>
+        <tr><td>Tùy chọn: <code>DEL</code> với <code>lazyfree-lazy-user-del yes</code> (µs)</td><td><b class="m" data-run="06-practices.lazyfree">20</b></td><td>DEL chạy như UNLINK</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="check30">
+    <span class="tag">Câu hỏi 30 giây</span>
+    <p>Poller B chạy <code>ZREM l06:delay:orders o1</code> và nhận <code>(integer) 0</code>. Con số đó nói gì? B có nên hủy đơn o1?</p>
+    <details><summary>Xem đáp án</summary>
+      <p><code>ZREM</code> trả số phần tử nó thực sự xóa. <code>0</code> nghĩa là người khác đã xóa trước, tức đã nhận việc; B không được hủy đơn. Code ngây thơ bỏ qua giá trị này nên xử lý trùng (B ghi o1 lần hai, <b class="m" data-run="06-delay.naive.B">(integer) 2</b>). Sửa nhỏ nhất: chỉ xử lý khi <code>ZREM</code> trả <code>1</code>. Gọn hơn: gộp đọc + xóa + ghi vào Lua.</p>
+    </details>
+  </div>
+
+  <h3>Làm mẫu</h3>
+  <h4>Bước 1 · Hai poller ngây thơ cùng lấy o1</h4>
+  <p>Reset đặt <code>o1</code> đã đến hạn (giờ trên slide 37) và <code>o2</code>, <code>o3</code> năm 2100. Hai tab <code>redis-cli</code>:</p>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>06-delay.A.redis</code> · <code>naive-reset</code></td><td></td><td><input class="field" data-store="l06-c6-naive-reset" placeholder="ZADD trả gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>06-delay.B.redis</code> · <code>naive</code>: <b>chỉ dán dòng</b> <code>BLPOP l06:barrier:delay-naive 5</code>. B đứng chờ.</td><td></td></tr>
+      <tr><td>3</td><td><code>06-delay.A.redis</code> · <code>naive</code>: trong 5 giây, dán <code>RPUSH … go</code> và dòng <code>ZRANGE …</code>.</td><td>BLPOP vừa trả về: dán dòng <code>ZRANGE …</code>.</td><td><input class="field" data-store="l06-c6-naive-read" placeholder="A và B đọc thấy gì?"></td></tr>
+      <tr><td>4</td><td>Khoảng 0,5 s sau ("đang gọi API hủy đơn"): dán <code>RPUSH l06:delay:done o1</code> và <code>ZREM l06:delay:orders o1</code>.</td><td></td><td><input class="field" data-store="l06-c6-naive-a" placeholder="ZREM của A ra gì?"></td></tr>
+      <tr><td>5</td><td></td><td>Khoảng 0,7 s sau bước 3: dán <code>RPUSH l06:delay:done o1</code> và <code>ZREM l06:delay:orders o1</code>.</td><td><input class="field" data-store="l06-c6-naive-b" placeholder="RPUSH và ZREM của B ra gì?"></td></tr>
+    </tbody>
+  </table></div>
+<!--@CMD 06-delay.A.redis#naive-reset@-->
+<!--@CMD 06-delay.B.redis#naive@-->
+<!--@CMD 06-delay.A.redis#naive@-->
+  <p><b>Kiểm lại lần chạy của bạn:</b> <code>ZRANGE</code> của B ở bước 3 phải in <code>1) "o1"</code>. Nếu B in <code>(empty array)</code> thì A đã <code>ZREM</code> trước khi B đọc, chưa có race (dòng <code>RPUSH … o1</code> của B được gõ sẵn nên danh sách done vẫn có hai o1, nhưng không phải vì hai poller cùng thấy việc): chạy lại <code>naive-reset</code>.</p>
+<!--@RUN 06-delay.naive.timeline@-->
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc timeline poller ngây thơ</span>
+    <ol>
+      <li>Ở +<b class="m" data-run="06-delay.naive.timeline">217</b> ms cả A và B nhận <b class="m" data-run="06-delay.naive.timeline">1) "o1"</b>. <code>ZRANGE … BYSCORE</code> chỉ <b>đọc</b>; o1 còn trong ZSET tới khi ai đó <code>ZREM</code>. Mốc <code>2000000000</code> là "bây giờ" cố định cho dễ đọc.</li>
+      <li>Khoảng ngủ giữa đọc và xóa đóng vai "đang gọi API hủy đơn"; trong lúc đó o1 vẫn hiện ra cho mọi poller.</li>
+      <li>A <code>ZREM</code> được <b class="m" data-run="06-delay.naive.timeline">(integer) 1</b>. B tới sau vẫn <code>RPUSH</code> o1 (danh sách thành <b class="m" data-run="06-delay.naive.timeline">(integer) 2</b>) và <code>ZREM</code> trả <b class="m" data-run="06-delay.naive.timeline">(integer) 0</b>. Khách nhận hai tin hủy.</li>
+    </ol>
+  </div>
+
+  <h4>Bước 2 · Nhận việc nguyên tử bằng Lua</h4>
+  <p>Lua là phần mới của chặng này. Redis chạy cả script <b>liền một mạch</b> trên luồng chính, không lệnh nào của client khác chen vào giữa các <code>redis.call</code>. Chạy bằng <code>redis-cli --eval /lab/lua/delay-claim.lua &lt;khóa…&gt;</code> từ mount <code>/lab</code> chỉ đọc, nên chữ chạy chính là file bạn đọc. Dán từng dòng vào Git Bash, giữ tiền tố <code>MSYS_NO_PATHCONV=1</code>.</p>
+  <div class="table-wrap"><table class="walk">
+    <thead><tr><th>#</th><th>Terminal A (Git Bash)</th><th>Terminal B (Git Bash)</th><th>Ghi lại</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>06-delay-lua.A.sh</code> · <code>claim-reset</code></td><td></td><td><input class="field" data-store="l06-c6-claim-reset" placeholder="ZADD in gì?"></td></tr>
+      <tr><td>2</td><td></td><td><code>06-delay-lua.B.sh</code> · <code>claim</code> (chờ <code>BLPOP l06:barrier:delay-lua 5</code>)</td><td><input class="field" data-store="l06-c6-claim-b" placeholder="Script của B in gì?"></td></tr>
+      <tr><td>3</td><td><code>06-delay-lua.A.sh</code> · <code>claim</code> (<code>RPUSH</code> thả B)</td><td></td><td><input class="field" data-store="l06-c6-claim-a" placeholder="A in gì? done còn gì?"></td></tr>
+    </tbody>
+  </table></div>
+<!--@CMD 06-delay-lua.A.sh#claim-reset@-->
+<!--@CMD 06-delay-lua.B.sh#claim@-->
+<!--@CMD 06-delay-lua.A.sh#claim@-->
+  <details class="fold">
+    <summary>Đọc file lua/delay-claim.lua (script đã chạy)</summary>
+    <div class="fold-body">
+<!--@CMD lua/delay-claim.lua@-->
+      <ul>
+        <li><code>redis.call('TIME')</code>: "bây giờ" lấy từ đồng hồ của Redis; hai instance hub lệch giờ cũng không sao.</li>
+        <li>Script chỉ chạm khóa qua <code>KEYS[1]</code>, <code>KEYS[2]</code>, để Redis Cluster biết cần slot nào (hai khóa phải chung slot, hashtag ở <a href="#chang-7">chặng 7</a>).</li>
+        <li>Hết việc thì <code>return nil</code>; <code>redis-cli</code> trong <code>docker exec</code> không TTY in nil thành dòng trống.</li>
+      </ul>
+    </div>
+  </details>
+<!--@RUN 06-delay-lua.claim.timeline@-->
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc timeline Lua</span>
+    <ol>
+      <li>A nhận <b class="m" data-run="06-delay-lua.claim.timeline">o1</b> ở +<b class="m" data-run="06-delay-lua.claim.timeline">726</b> ms. B gọi cùng script và nhận dòng trống ở +<b class="m" data-run="06-delay-lua.claim.timeline">947</b> ms: nil, B không làm gì.</li>
+      <li><code>l06:delay:done</code> có <b class="m" data-run="06-delay-lua.claim.A">o1</b> đúng một lần; ZSET còn <b class="m" data-run="06-delay-lua.claim.A">o2</b>, <b class="m" data-run="06-delay-lua.claim.A">o3</b>.</li>
+      <li>B ngủ một nhịp để lần nào cũng cùng người thắng. Bỏ <code>sleep</code> thì người thắng đổi ngẫu nhiên, nhưng vẫn chỉ <b>một</b> người nhận o1.</li>
+    </ol>
+    <p>Cách khác cũng đúng: <code>ZRANGE</code> rồi <code>ZREM</code>, chỉ xử lý khi <code>ZREM</code> trả <code>1</code> (hai vòng mạng); hoặc <code>ZPOPMIN</code> (nguyên tử nhưng lấy cả việc chưa đến hạn, phải đẩy trả lại). Lua gọn nhất: kiểm tra hạn và nhận việc trong một bước.</p>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 37 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Delay task dùng ZSET: value là order_id, score là giờ hết hạn, poll để lấy đơn hết hạn.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Đúng: <code>ZRANGE … BYSCORE</code> lấy đúng việc đến hạn, việc năm 2100 (<b class="m" data-run="06-practices.kiem-chung">"4102444800"</b>) nằm yên. Slide bỏ qua chi tiết quan trọng: poll phải nhận việc nguyên tử. Đọc rồi xóa thì o1 bị xử lý hai lần (<b class="m" data-run="06-delay.naive.B">(integer) 2</b>); Lua thì một người nhận <b class="m" data-run="06-delay-lua.claim.timeline">o1</b>, người kia nil.</p></div>
+    </div>
+  </div>
+
+  <h4>Bước 3 · Big key: DEL và UNLINK trên hash một triệu field</h4>
+  <p>Dán từng dòng vào Git Bash; hai dòng <code>seq … | awk … | redis-cli --pipe</code> dựng hai hash giống nhau. Làm bước này <b>trước</b> khi bật replica ở chặng 7: ngưỡng SLOWLOG 0 sẽ ghi cả <code>REPLCONF ACK</code> replica gửi mỗi giây, và <code>SLOWLOG GET 1</code> có thể trả <code>REPLCONF</code>. Replica đang bật thì tắt trước: <code>bash labs/lesson-06-redis/00-containers.sh down replica</code>.</p>
+<!--@CMD 06-practices.sh#bigkey@-->
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>06-practices.bigkey</code> (trích)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="06-practices.bigkey">$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:big:h SAMPLES 0
+55588728
+$ docker exec advance-be-redis redis-cli INFO memory | grep ^lazyfreed_objects
+lazyfreed_objects:2
+…
+$ docker exec advance-be-redis redis-cli DEL l06:big:h
+1
+$ docker exec advance-be-redis redis-cli SLOWLOG GET 1
+32
+1793501078
+165363
+DEL
+…
+$ docker exec advance-be-redis redis-cli UNLINK l06:big:h2
+1
+$ docker exec advance-be-redis redis-cli SLOWLOG GET 1
+35
+1793501078
+22
+UNLINK
+…
+lazyfreed_objects:3</pre></div>
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc SLOWLOG GET 1</span>
+    <ol>
+      <li>Không TTY, mỗi mục SLOWLOG in thành các dòng: mã mục, giờ Unix, <b>thời gian chạy (µs)</b>, lệnh và tham số, địa chỉ client. Ngưỡng 0 để ghi cả <code>UNLINK</code> rất nhanh; region trả ngưỡng về như cũ ngay sau đó.</li>
+      <li><code>DEL</code> mất <b class="m" data-run="06-practices.bigkey">165363</b> µs trên luồng chính; suốt lúc đó Redis không trả lời ai, như <code>DEBUG SLEEP</code> ở <a href="#chang-1">chặng 1</a>.</li>
+      <li><code>UNLINK</code> mất <b class="m" data-run="06-practices.bigkey">22</b> µs: luồng chính chỉ gỡ khóa khỏi keyspace, giải phóng bộ nhớ giao cho luồng nền <code>bio_lazy_free</code> (đã đếm ở chặng 1). Bằng chứng: <b class="m" data-run="06-practices.bigkey">lazyfreed_objects:2</b> → <b class="m" data-run="06-practices.bigkey">lazyfreed_objects:3</b>.</li>
+      <li>Khóa nhỏ thì <code>UNLINK</code> vẫn giải phóng ngay tại chỗ (giao cho luồng nền còn tốn hơn). Nên cứ dùng <code>UNLINK</code> thay <code>DEL</code>, không thiệt gì.</li>
+    </ol>
+  </div>
+
+  <p>Tìm big key mà không chặn Redis: <code>redis-cli --bigkeys</code> quét bằng <code>SCAN</code>, in khóa lớn nhất mỗi kiểu.</p>
+<!--@CMD 06-practices.sh#bigkeys@-->
+<!--@RUN 06-practices.bigkeys@-->
+  <p>Hai hash lớn đã xóa ở trên, nên lớn nhất giờ là khóa thử ngưỡng của chặng 2, ví dụ <b class="m" data-run="06-practices.bigkeys">'"l06:enc:h"' has 513 fields</b>.</p>
+
+  <details class="fold">
+    <summary>Tùy chọn 5 phút · <code>lazyfree-lazy-user-del yes</code>: DEL tự chạy như UNLINK</summary>
+    <div class="fold-body">
+<!--@CMD 06-practices.sh#lazyfree@-->
+<!--@RUN 06-practices.lazyfree@-->
+      <p><code>DEL</code> hash một triệu field còn <b class="m" data-run="06-practices.lazyfree">20</b> µs. Có ích khi không sửa được thư viện đang gọi <code>DEL</code>; đây là "Unlink + configure" của slide 38. Dòng cuối region trả cấu hình về <code>no</code>.</p>
+    </div>
+  </details>
+
+  <div class="callout">
+    <span class="tag">Slide 38 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Big key: String hơn 10 KB, hoặc Hash/List/Set/ZSet hơn 5000 phần tử. Tác hại: timeout, nghẽn mạng, chặn luồng khi xóa, bộ nhớ lệch. Tìm bằng SCAN, HLEN, SCARD, MEMORY USAGE; đừng dùng DEL; dùng UNLINK và cấu hình.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Đúng. <code>DEL</code> <b class="m" data-run="06-practices.bigkey">165363</b> µs, <code>UNLINK</code> <b class="m" data-run="06-practices.bigkey">22</b> µs, <code>DEL</code> với lazyfree <b class="m" data-run="06-practices.lazyfree">20</b> µs. Ngưỡng 10 KB / 5000 là quy ước kinh nghiệm, không phải giới hạn của Redis. <code>--bigkeys</code> chính là "tìm bằng SCAN".</p></div>
+    </div>
+  </div>
+
+  <div class="callout challenge" id="chang-6-tu-lam">
+    <span class="tag">Tự làm · chặng 6</span>
+    <p><b>Đề:</b> đặt 20 việc đã đến hạn vào <code>l06:my:delay</code>. Mở hai tab Git Bash, mỗi tab chạy một poller gọi <code>delay-claim.lua</code> nhiều lần liên tiếp, ghi việc nhận được vào <code>l06:my:done</code>. Chạy hai poller cùng lúc.</p>
+    <p><b>PASS khi:</b> mỗi mã việc có trong <code>l06:my:done</code> <b>đúng một lần</b>: số phần tử bằng số việc đã đặt, không mã nào lặp, <code>l06:my:delay</code> rỗng.</p>
+    <p><b>Tự kiểm (Git Bash):</b> dòng giữa in mã bị lặp, không in gì là đạt.</p>
+    <div class="code"><pre><code>docker exec advance-be-redis redis-cli LLEN l06:my:done
+docker exec advance-be-redis redis-cli LRANGE l06:my:done 0 -1 | sort | uniq -d
+docker exec advance-be-redis redis-cli ZCARD l06:my:delay</code></pre></div>
+    <label class="fields"><span class="muted">Dán kết quả ba lệnh tự kiểm</span><textarea class="field" data-store="l06-c6-claim20" placeholder="LLEN · uniq -d (trống) · ZCARD"></textarea></label>
+    <details class="fold"><summary>Lời giải mẫu</summary><div class="fold-body">
+      <p>Chuẩn bị (một tab):</p>
+      <div class="code"><pre><code>docker exec advance-be-redis redis-cli UNLINK l06:my:delay l06:my:done
+seq 1 20 | awk '{print "ZADD l06:my:delay 1704790435 job-"$1}' | docker exec -i advance-be-redis redis-cli &gt; /dev/null</code></pre></div>
+      <p>Dán dòng này vào cả hai tab, càng sát nhau càng tốt. Tổng số lần gọi nhiều hơn số việc, nên vài lần cuối in dòng trống:</p>
+      <div class="code"><pre><code>for i in $(seq 15); do MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/delay-claim.lua l06:my:delay l06:my:done; done</code></pre></div>
+      <p>Hai tab in xen kẽ các <code>job-…</code> khác nhau; <code>LLEN</code> đúng số việc, <code>uniq -d</code> trống, <code>ZCARD</code> là <code>0</code>. Muốn thấy trùng, viết poller kiểu bước 1 (<code>ZRANGE</code> rồi mới <code>ZREM</code>, bỏ qua giá trị trả về) và chạy lại.</p>
+    </div></details>
+  </div>
+
+  <h3>Kiểm chứng chặng 6</h3>
+  <p>Chạy sau bước 2 và 3. Dán vào <code>redis-cli</code> trên main.</p>
+<!--@CMD 06-practices.redis#kiem-chung@-->
+  <div class="table-wrap">
+    <table class="expect">
+      <thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td><code>ZRANGE l06:delay:orders 0 -1 WITHSCORES</code></td><td><b class="m" data-run="06-practices.kiem-chung">1) "o2"</b> <b class="m" data-run="06-practices.kiem-chung">2) "4102444800"</b> <b class="m" data-run="06-practices.kiem-chung">3) "o3"</b> <b class="m" data-run="06-practices.kiem-chung">4) "4102444800"</b></td><td>chỉ còn hai việc năm 2100</td></tr>
+        <tr><td><code>LRANGE l06:delay:done 0 -1</code></td><td><b class="m" data-run="06-practices.kiem-chung">1) "o1"</b></td><td>o1 nhận đúng một lần</td></tr>
+        <tr><td><code>EXISTS l06:big:h l06:big:h2 l06:big:h3</code></td><td><b class="m" data-run="06-practices.kiem-chung">(integer) 0</b></td><td>không còn big key</td></tr>
+        <tr><td><code>CONFIG GET lazyfree-lazy-user-del</code></td><td><b class="m" data-run="06-practices.kiem-chung">2) "no"</b></td><td>cấu hình tùy chọn đã trả về</td></tr>
+        <tr><td><code>CONFIG GET slowlog-log-slower-than</code></td><td><b class="m" data-run="06-practices.kiem-chung">2) "10000"</b></td><td>ngưỡng SLOWLOG đã trả về</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quiz" data-quiz="6"></div>
+</section>

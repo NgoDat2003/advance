@@ -1,0 +1,233 @@
+<section id="chang-9" class="stage col">
+<div class="stage-head">
+<span class="stage-no">09</span>
+<div>
+<div class="stage-meta"><span>Slide 41</span><span>25 phút</span><span>lõi · cầu sang OmniPOS M2</span></div>
+<h2>Token bucket, Idempotency-Key và checklist slide 41</h2>
+</div>
+</div>
+<p class="goal"><b>Mục tiêu:</b> đo vì sao token bucket kiểu "GET, tính trong code, SET" cho lọt hai request từ một token, rồi chạy bản Lua nguyên tử đúng như FR-M2-05 cần (30 request, sức chứa 10 → 20 bị từ chối kèm thời gian chờ). Sau đó chạy bốn trạng thái của Idempotency-Key cho FR-M2-02 và Boss Challenge 2, và đi lại checklist slide 41 với số đã đo ở các chặng trước.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>Token bucket: mỗi <code>storeId</code> có một xô chứa tối đa <i>capacity</i> token, được nạp lại <i>rate</i> token mỗi giây; mỗi request lấy 1 token, hết token thì trả 429. Idempotency-Key: client gửi kèm một khóa; server nhớ khóa đó cùng hash của body để request gửi lại không bị xử lý hai lần.</dd>
+<dt>TẠI SAO?</dt><dd>Cả hai là "đọc → quyết định → ghi" trên dữ liệu dùng chung. Làm bằng nhiều lệnh từ app thì hai request chen vào giữa nhau. Gói vào một script Lua thì Redis chạy liền một mạch, không ai chen vào được.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Giới hạn tốc độ chỉ cần gần đúng trên một instance thì bộ đếm trong bộ nhớ là đủ. Idempotency-Key không thay được khóa dòng: hai request <i>khác khóa</i> cùng hủy một hợp đồng vẫn tranh nhau, phần đó là việc của <code>FOR UPDATE</code> hoặc <code>UPDATE … WHERE</code> có điều kiện (Bài 14).</dd>
+</dl>
+
+<div class="story">
+<span class="tag">Tình huống</span>
+<p>Quán số 7 có một máy POS bị kẹt nút, cứ vài trăm mili giây lại gửi một lệnh "claim voucher". Hub OmniPOS phải chặn riêng quán đó mà các quán khác vẫn chạy bình thường: FR-M2-05 yêu cầu token bucket bằng Lua theo <code>storeId</code>, bắn 30 lần với sức chứa 10 thì đúng 20 lần nhận 429 có <code>Retry-After</code>. Cùng lúc, mạng ở quán chập chờn nên POS gửi lại hóa đơn thanh toán: FR-M2-02 yêu cầu cùng <code>Idempotency-Key</code> thì chỉ một hóa đơn, cùng khóa mà khác body thì 422.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 640 230" role="img" aria-labelledby="c9-flow-title" style="max-width:100%;height:auto;display:block">
+<title id="c9-flow-title">Bên trái: token bucket theo storeId, nạp token theo thời gian, request lấy một token, hết token thì 429 kèm Retry-After. Bên phải: trạng thái Idempotency-Key NEW, IN_PROGRESS, DONE và MISMATCH</title>
+<text x="10" y="18" style="fill:var(--muted);font:12px var(--font-mono)">token-bucket.lua · l06:tb:store:&lt;id&gt;</text>
+<path d="M40 50 L60 170 L180 170 L200 50" style="fill:var(--surface);stroke:var(--accent);stroke-width:2"></path>
+<circle cx="80" cy="150" r="9" style="fill:var(--ok)"></circle>
+<circle cx="102" cy="150" r="9" style="fill:var(--ok)"></circle>
+<circle cx="124" cy="150" r="9" style="fill:var(--ok)"></circle>
+<circle cx="146" cy="150" r="9" style="fill:var(--ok)"></circle>
+<circle cx="168" cy="150" r="9" style="fill:var(--surface-2);stroke:var(--line)"></circle>
+<text x="70" y="40" style="fill:var(--fg);font:12px var(--font-mono)">+ rate token/giây</text>
+<line x1="120" y1="44" x2="120" y2="70" style="stroke:var(--accent);stroke-width:2"></line>
+<text x="20" y="196" style="fill:var(--ok);font:12px var(--font-body)">còn ≥ 1 token → lấy 1, cho qua</text>
+<text x="20" y="216" style="fill:var(--bad);font:12px var(--font-body)">hết token → 429 + Retry-After</text>
+<text x="330" y="18" style="fill:var(--muted);font:12px var(--font-mono)">idempotency-begin.lua · l06:idem:&lt;key&gt;</text>
+<rect x="330" y="34" width="120" height="36" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"></rect>
+<text x="342" y="57" style="fill:var(--fg);font:600 13px var(--font-mono)">NEW → xử lý</text>
+<rect x="330" y="96" width="140" height="36" rx="8" style="fill:var(--warn-soft);stroke:var(--warn)"></rect>
+<text x="342" y="119" style="fill:var(--fg);font:600 13px var(--font-mono)">IN_PROGRESS → 409</text>
+<rect x="330" y="158" width="170" height="36" rx="8" style="fill:var(--ok-soft);stroke:var(--ok)"></rect>
+<text x="342" y="181" style="fill:var(--fg);font:600 13px var(--font-mono)">DONE → trả response cũ</text>
+<rect x="510" y="96" width="120" height="36" rx="8" style="fill:var(--bad-soft);stroke:var(--bad)"></rect>
+<text x="520" y="119" style="fill:var(--fg);font:600 13px var(--font-mono)">MISMATCH → 422</text>
+<line x1="390" y1="70" x2="390" y2="94" style="stroke:var(--muted);stroke-width:2"></line>
+<line x1="390" y1="132" x2="390" y2="156" style="stroke:var(--muted);stroke-width:2"></line>
+<line x1="470" y1="114" x2="508" y2="114" style="stroke:var(--muted);stroke-width:2;stroke-dasharray:4 3"></line>
+<text x="476" y="150" style="fill:var(--muted);font:11px var(--font-body)">cùng khóa,</text>
+<text x="476" y="164" style="fill:var(--muted);font:11px var(--font-body)">body khác</text>
+</svg>
+<figcaption class="muted">Hai script của chặng này. Cả hai đọc, quyết định và ghi trong một lần chạy trên server; "bây giờ" lấy từ <code>TIME</code> của Redis.</figcaption>
+</figure>
+
+<div class="table-wrap"><table class="stats">
+<caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · advance-be-redis</caption>
+<thead><tr><th>Đo gì</th><th>Kết quả đã ghi</th><th>Run</th></tr></thead>
+<tbody>
+<tr><td>Bucket kiểu ngây thơ, còn 1 token, 2 request</td><td>A đọc <b class="m" data-run="09-bucket.naive.timeline">"1"</b>, B đọc <b class="m" data-run="09-bucket.naive.timeline">"1"</b>, cả hai ghi 0 → <b>2 request lọt từ 1 token</b></td><td><code>09-bucket.naive.timeline</code></td></tr>
+<tr><td>Bucket Lua, sức chứa 1, 2 request</td><td>A: allowed <b class="m" data-run="09-bucket-lua.claim.timeline">1</b>; B: allowed <b class="m" data-run="09-bucket-lua.claim.timeline">0</b>, retry_after_ms <b class="m" data-run="09-bucket-lua.claim.timeline">1000000</b></td><td><code>09-bucket-lua.claim.timeline</code></td></tr>
+<tr><td>FR-M2-05: 30 request, sức chứa 10, nạp 0,01 token/giây</td><td><b class="m" data-run="09-bridge.bucket30">allowed=10 denied=20 min_retry_after_ms=100000</b></td><td><code>09-bridge.bucket30</code></td></tr>
+<tr><td>FR-M2-02: cùng Idempotency-Key gửi 4 lần</td><td><b class="m" data-run="09-bridge.idempotency">NEW</b> → <b class="m" data-run="09-bridge.idempotency">IN_PROGRESS</b> → <b class="m" data-run="09-bridge.idempotency">DONE</b> + <b class="m" data-run="09-bridge.idempotency">{"orderId":"o1","total":120000}</b> → body khác: <b class="m" data-run="09-bridge.idempotency">MISMATCH</b></td><td><code>09-bridge.idempotency</code></td></tr>
+<tr><td>TTL của bản ghi idempotency (đặt 86400 s)</td><td><b class="m" data-run="09-bridge.idempotency">86399</b></td><td><code>09-bridge.idempotency</code></td></tr>
+</tbody>
+</table></div>
+
+<div class="check30">
+<span class="tag">Kiểm tra 30 giây</span>
+<p>Bucket còn đúng 1 token. Hai request tới cùng lúc, code app làm <code>GET</code> → "còn ≥ 1 thì cho qua" → <code>SET</code> số mới. Bao nhiêu request lọt?</p>
+<details><summary>Xem đáp án</summary>
+<p>Hai. Cả hai <code>GET</code> chạy trước khi ai kịp <code>SET</code>, nên cả hai đọc <b class="m" data-run="09-bucket.naive.timeline">"1"</b> và cả hai cho qua (run <code>09-bucket.naive.timeline</code>). Đây là lost update của chặng 5, chỉ là trên một con số giới hạn. Bản Lua đọc, trừ và ghi trong một lần nên người thứ hai nhận <b class="m" data-run="09-bucket-lua.claim.timeline">0</b>.</p>
+</details>
+</div>
+
+<div class="callout key">
+<span class="tag">Slide 41 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Chạy Redis cluster; dùng multi get và pipeline; tránh tác vụ chạy lâu; thường đặt TTL ngắn; rải TTL để tránh thundering herd; chọn đúng cấu trúc dữ liệu; dùng hashtag; hiểu độ phức tạp của từng lệnh; tinh chỉnh hiệu năng.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Từng mục đều đã có số đo ở một chặng trước. Bảng dưới nối mỗi mục với chỗ đo của nó, và thêm một mục slide chưa ghi: <b>"đọc → quyết định → ghi" phải nguyên tử</b> (Lua), bằng chứng là ba cặp chạy hai terminal ở chặng 6, 8 và 9.</p></div>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Mục của slide 41</th><th>Đã đo ở đâu, ra sao</th></tr></thead>
+<tbody>
+<tr><td>Run Redis cluster</td><td><a href="#chang-7">Chặng 7</a>: slot và hashtag đo được trên cluster 1 node; failover của Cluster chưa đo, chip slide 8 là "Đúng một phần".</td></tr>
+<tr><td>Multi get, pipeline</td><td><a href="#chang-1">Chặng 1</a>: <code>-P 16</code> gấp <b class="m" data-derived="r04_pipeline_ratio">12.5</b> lần <code>-P 1</code>; MGET 10 khóa cho số khóa/giây gấp <b class="m" data-derived="r06_keys_ratio">9.4</b> lần GET từng khóa.</td></tr>
+<tr><td>Tránh tác vụ chạy lâu</td><td><a href="#chang-1">Chặng 1</a>: một <code>DEBUG SLEEP</code> chặn mọi client. <a href="#chang-6">Chặng 6</a>: <code>DEL</code> một hash lớn chậm gấp <b class="m" data-derived="r32_del_unlink_ratio">7517</b> lần <code>UNLINK</code>.</td></tr>
+<tr><td>TTL ngắn</td><td><a href="#chang-3">Chặng 3</a>: khóa có TTL được dọn chủ động; khi bộ nhớ đầy, chính sách <code>volatile-*</code> chỉ chọn trong các khóa có TTL.</td></tr>
+<tr><td>Rải TTL (thundering herd)</td><td><a href="lesson_02_caching_teacher_guide.html#chang-4">Bài 02 chặng 4</a>: TTL cộng jitter và singleflight.</td></tr>
+<tr><td>Chọn đúng cấu trúc</td><td><a href="#chang-2">Chặng 2</a> (encoding và bộ nhớ, Hash so với JSON) và <a href="#chang-5">chặng 5</a> (hàng đợi, giỏ hàng, bảng xếp hạng).</td></tr>
+<tr><td>Dùng hashtag</td><td><a href="#chang-7">Chặng 7</a>: hai khóa <code>{34}</code> cùng slot <b class="m" data-run="07-cluster.keyslot">9745</b>; không hashtag thì <code>CROSSSLOT</code>.</td></tr>
+<tr><td>Độ phức tạp của lệnh</td><td><a href="#chang-1">Chặng 1</a>: phần Tự làm đo <code>KEYS</code> so với <code>SCAN</code>; big key ở chặng 6 (dòng trên).</td></tr>
+<tr><td>Tinh chỉnh hiệu năng</td><td><a href="#chang-1">Chặng 1</a> (I/O threads, RTT, kích thước value) và <a href="#chang-4">chặng 4</a> (RDB, AOF, mất gì khi kill).</td></tr>
+</tbody>
+</table></div>
+</div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · token bucket ngây thơ so với Lua</span>
+<p>Bước 1 dùng hai tab <code>redis-cli</code> trên main và dán từng dòng theo bảng (redis-cli không có lệnh "đợi", dòng <code>#@ sleep</code> của file lab chỉ để bạn biết nhịp). Bước 2 dùng hai tab Git Bash, dán cả khối.</p>
+</div>
+
+<h3>1 · Bucket ngây thơ: GET, tính trong code, SET</h3>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>naive-reset</code>: bucket còn đúng 1 token.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Chỉ dán <code>BLPOP l06:barrier:bucket-naive 5</code>.</td><td></td></tr>
+<tr><td>3</td><td>Dán <code>RPUSH … go</code> và <code>GET l06:tb:naive:7</code>.</td><td></td><td><input class="field" data-store="l06-c9-naive-a" placeholder="A đọc được mấy token?"></td></tr>
+<tr><td>4</td><td></td><td>Dán <code>GET l06:tb:naive:7</code>.</td><td><input class="field" data-store="l06-c9-naive-b" placeholder="B đọc được mấy token?"></td></tr>
+<tr><td>5</td><td>"Code thấy còn 1 → cho qua": dán <code>SET l06:tb:naive:7 0</code>.</td><td></td><td></td></tr>
+<tr><td>6</td><td></td><td>B cũng thấy còn 1 → cho qua: dán <code>SET l06:tb:naive:7 0</code>.</td><td><input class="field" data-store="l06-c9-naive-n" placeholder="bao nhiêu request lọt?"></td></tr>
+</tbody>
+</table></div>
+<details class="fold"><summary>Lệnh của bước 1</summary><div class="fold-body">
+<!--@CMD 09-bucket.A.redis#naive-reset@-->
+<!--@CMD 09-bucket.B.redis#naive@-->
+<!--@CMD 09-bucket.A.redis#naive@-->
+</div></details>
+<!--@RUN 09-bucket.naive.timeline@-->
+
+<h3>2 · Bucket bằng Lua: sức chứa 1, hai request</h3>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A (Git Bash)</th><th>Terminal B (Git Bash)</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>claim-reset</code> của <code>09-bucket-lua.A.sh</code>.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Dán cả region <code>claim</code> của <code>09-bucket-lua.B.sh</code>. Dòng BLPOP đứng chờ.</td><td></td></tr>
+<tr><td>3</td><td>Trong 5 giây: dán cả region <code>claim</code> của <code>09-bucket-lua.A.sh</code>.</td><td></td><td><input class="field" data-store="l06-c9-lua" placeholder="A: allowed = ? · B: allowed = ?, retry_after_ms = ?"></td></tr>
+</tbody>
+</table></div>
+<!--@CMD 09-bucket-lua.A.sh#claim-reset@-->
+<!--@CMD 09-bucket-lua.B.sh#claim@-->
+<!--@CMD 09-bucket-lua.A.sh#claim@-->
+<details class="fold"><summary>Script <code>lua/token-bucket.lua</code></summary><div class="fold-body">
+<!--@CMD lua/token-bucket.lua@-->
+</div></details>
+<!--@RUN 09-bucket-lua.claim.timeline@-->
+<p>Ba dòng trả về là <code>allowed</code>, số token còn (làm tròn xuống) và <code>retry_after_ms</code>. Nạp 0,001 token/giây thì cần 1000 giây cho một token, nên B được báo đợi <code>1000000</code> ms. Script làm tròn lên cả giây vì header <code>Retry-After</code> tính bằng giây.</p>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · FR-M2-05: 30 request vào quán số 7</span>
+<p>Region <code>bucket30</code> của <code>09-bridge.sh</code> (Git Bash, một terminal): vòng lặp chạy <b>trong</b> container (<code>sh -c '…'</code>, nên đường dẫn <code>/lab/…</code> không cần tiền tố), mỗi dòng in <code>allowed tokens retry_after_ms</code>, <code>awk</code> đếm và in dòng tổng.</p>
+</div>
+<!--@CMD 09-bridge.sh#bucket30@-->
+<!--@RUN 09-bridge.bucket30@-->
+<p>Mười request đầu lấy hết mười token, hai mươi request sau bị từ chối. Trong NestJS, guard của route claim gọi script với khóa theo <code>storeId</code>; <code>allowed = 0</code> thì trả 429 và đặt <code>Retry-After</code> bằng <code>retry_after_ms / 1000</code>. Hai tham số capacity và rate đọc từ env như FR-M2-05 ghi. Khi test, đặt rate rất chậm để kết quả không phụ thuộc tốc độ máy.</p>
+
+<div class="widget" id="w9">
+<div class="widget-head"><h4>W9 · Mô phỏng token bucket</h4><span class="eyebrow">run-w9 · 09-bridge.bucket30</span></div>
+<div class="widget-body">
+<p>Kéo sức chứa, tốc độ nạp và khoảng cách giữa hai request. Widget bắn 30 request bằng đúng công thức của <code>token-bucket.lua</code>; hàng dưới là 30 lần đã chạy thật trên máy bạn. Chấm tròn xanh = cho qua; ô vuông đỏ có dấu ✕ = 429. Dòng chữ dưới mỗi hàng ghi lại từng request.</p>
+<div class="fields">
+<label>Sức chứa (capacity) <output id="w9-cap-v"></output><input class="field" id="w9-cap" type="range" min="1" max="30" step="1" value="10"></label>
+<label>Nạp (token/giây) <output id="w9-rate-v"></output><select class="field" id="w9-rate"><option value="0.01">0.01</option><option value="0.1">0.1</option><option value="1">1</option><option value="5">5</option><option value="20">20</option></select></label>
+<label>Cách nhau (ms) <output id="w9-gap-v"></output><input class="field" id="w9-gap" type="range" min="0" max="500" step="10" value="0"></label>
+</div>
+<div><p class="muted">Mô phỏng</p>
+<div class="bucket" id="w9-sim" aria-label="30 request mô phỏng"></div></div>
+<div class="out" id="w9-sim-out" aria-live="polite"></div>
+<div><p class="muted">Đã chạy trên máy bạn</p>
+<div class="bucket" id="w9-run" aria-label="30 request đã chạy"></div></div>
+<div class="out" id="w9-run-out" aria-live="polite"></div>
+</div>
+</div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · FR-M2-02: bốn trạng thái của Idempotency-Key</span>
+<p>Region <code>idempotency</code> gọi <code>idempotency-begin.lua</code> bốn lần với cùng khóa <code>l06:idem:pay-001</code>. Giữa lần hai và lần ba, một dòng <code>HSET</code> đóng vai app xử lý xong và lưu response. Lần bốn đổi hash của body.</p>
+</div>
+<!--@CMD 09-bridge.sh#idempotency@-->
+<details class="fold"><summary>Script <code>lua/idempotency-begin.lua</code></summary><div class="fold-body">
+<!--@CMD lua/idempotency-begin.lua@-->
+</div></details>
+<!--@RUN 09-bridge.idempotency@-->
+<div class="table-wrap"><table>
+<thead><tr><th>Script trả</th><th>App NestJS làm gì</th></tr></thead>
+<tbody>
+<tr><td><code>NEW</code></td><td>Lần đầu thấy khóa, đã giữ chỗ <code>IN_PROGRESS</code>. Chạy nghiệp vụ, rồi <code>HSET … status DONE resp …</code>.</td></tr>
+<tr><td><code>IN_PROGRESS</code></td><td>Bản đầu còn đang chạy: trả 409, không chạy lại nghiệp vụ.</td></tr>
+<tr><td><code>DONE</code> + response</td><td>Trả lại đúng response đã lưu. POS gửi lại bao nhiêu lần cũng chỉ có một hóa đơn.</td></tr>
+<tr><td><code>MISMATCH</code></td><td>Cùng khóa mà body khác: trả 422 (FR-M2-02).</td></tr>
+</tbody>
+</table></div>
+<p><b>Điểm cần sửa khi mang vào app thật:</b> script đặt cả trạng thái <code>IN_PROGRESS</code> với TTL một ngày. Nếu app chết giữa <code>NEW</code> và <code>DONE</code>, mọi lần gửi lại nhận 409 suốt một ngày. Cách thường dùng: cho <code>IN_PROGRESS</code> một TTL ngắn (vài chục giây, như một lease), tới lúc <code>DONE</code> mới kéo TTL dài ra; hoặc xóa khóa khi nghiệp vụ báo lỗi chắc chắn chưa ghi gì. Đây cũng là chỗ khóa Redis của chặng 8 gặp lại idempotency: <code>IN_PROGRESS</code> chính là một khóa có hạn.</p>
+
+<div class="callout key">
+<span class="tag">Boss Challenge 2 · quan-ly-hop-dong</span>
+<p>Mục tiêu 2.2 bọc Idempotency-Key (SHA-256 của body + Redis) cho <code>executeImportExport</code> và <code>terminateContract</code>. Mang script của chặng này sang: khóa là <code>Idempotency-Key</code> từ header, <code>ARGV[1]</code> là SHA-256 của body đã chuẩn hóa, bốn trạng thái map như bảng trên. Nhớ ranh giới: idempotency chặn <b>cùng một request bị gửi lại</b>; hai request <b>khác khóa</b> cùng hủy một hợp đồng vẫn là lỗi TOCTOU của Boss Challenge 1, và chỉ <code>FOR UPDATE</code> hoặc <code>UPDATE … WHERE status = 'ACTIVE'</code> trong transaction mới chặn được. Mục tiêu 2.3 chủ yếu là Cache-Aside + Singleflight + Delete-after-Commit (<a href="lesson_02_caching_teacher_guide.html#chang-2">Bài 02</a>); phần giới hạn request kèm theo cho <code>sap-master-data</code>/<code>dashboard</code> thì dùng lại <code>token-bucket.lua</code>.</p>
+<p>Còn cache cho menu (FR-M2-03, Cache-Aside + Singleflight + TTL Jitter) là phần của <a href="lesson_02_caching_teacher_guide.html#chang-2">Bài 02 chặng 2</a> (lab ở chặng 6 của Bài 02); chặng 3 của bài này cho bạn biết khóa cache đó bị dọn và bị đuổi ra sao.</p>
+</div>
+
+<div class="callout challenge" id="chang-9-tu-lam">
+<span class="tag">Tự làm · chặng 9</span>
+<p><b>Đề:</b> tự viết vòng lặp ở <b>Git Bash trên máy host</b> (không dùng <code>sh -c</code> trong container như region mẫu) gọi <code>token-bucket.lua</code> 30 lần cho khóa <code>l06:my:tb:store:7</code> với sức chứa 10, nạp 0,01 token/giây, rồi đếm số lần cho qua, số lần bị từ chối và <code>retry_after_ms</code> nhỏ nhất. Từ đó viết ra header mà API sẽ trả cho request thứ 11.</p>
+<p><b>PASS khi:</b></p>
+<ul>
+<li>Đúng 10 lần <code>allowed = 1</code> và 20 lần <code>allowed = 0</code>, như run đã ghi <b class="m" data-run="09-bridge.bucket30">allowed=10 denied=20 min_retry_after_ms=100000</b>.</li>
+<li>Mọi dòng bị từ chối có <code>retry_after_ms</code> &gt; 0.</li>
+<li>Bạn viết được dòng trạng thái và header cho request thứ 11 (mã HTTP và <code>Retry-After</code> tính bằng giây).</li>
+</ul>
+<p>Tự kiểm tra trong redis-cli sau khi chạy:</p>
+<div class="code"><pre><code>HGETALL l06:my:tb:store:7
+PTTL l06:my:tb:store:7</code></pre></div>
+<label class="fields"><span class="muted">Dán dòng tổng của bạn và header cho request thứ 11</span>
+<textarea class="field" data-store="l06-c9-bucket" placeholder="allowed=… denied=… min_retry_after_ms=… · HTTP … · Retry-After: …"></textarea>
+</label>
+<details class="fold"><summary>Đáp án</summary><div class="fold-body">
+<div class="code"><pre><code>docker exec advance-be-redis redis-cli UNLINK l06:my:tb:store:7
+for i in $(seq 30); do MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/token-bucket.lua l06:my:tb:store:7 , 10 0.01 | paste -sd" " -; done | awk '{print} $1==1{a++} $1==0{d++; if (r=="" || $3&lt;r) r=$3} END{print "allowed="a+0" denied="d+0" min_retry_after_ms="r+0}'</code></pre></div>
+<p>Đường dẫn <code>/lab/…</code> nằm ngay trên dòng lệnh Git Bash nên cần <code>MSYS_NO_PATHCONV=1</code>. Mỗi vòng tốn thêm một lần <code>docker exec</code>, nên bucket kịp nạp thêm một chút trong lúc chạy: <code>retry_after_ms</code> của bạn có thể nhỏ hơn run đã ghi một ít. Số cho qua và bị từ chối vẫn là 10 và 20, vì cả vòng chỉ chạy vài giây, trong khi nạp đủ 1 token cần 100 giây.</p>
+<p>Request thứ 11 nhận <code>HTTP 429 Too Many Requests</code> kèm <code>Retry-After: &lt;retry_after_ms / 1000&gt;</code> (script đã làm tròn lên cả giây). <code>PTTL</code> cho thấy bucket tự hết hạn sau khoảng thời gian nạp đầy lại (sức chứa / tốc độ nạp), nên quán ít gọi không để lại khóa rác.</p>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 9</h3>
+<p>Dán vào redis-cli của main. Hai bucket tự hết hạn sau khoảng thời gian nạp đầy lại (với các tham số của lab là 1000 giây), nên nếu bạn kiểm chứng muộn hơn, <code>EXISTS</code> của chúng trả <code>0</code>: chạy lại region tương ứng là được.</p>
+<!--@CMD 09-bridge.redis#kiem-chung@-->
+<div class="table-wrap"><table class="expect">
+<thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>EXISTS l06:tb:store:7</code></td><td><b class="m" data-run="09-bridge.kiem-chung">(integer) 1</b></td><td>Bucket của quán số 7 từ region <code>bucket30</code> còn đó.</td></tr>
+<tr><td><code>HGET l06:idem:pay-001 status</code></td><td><b class="m" data-run="09-bridge.kiem-chung">"DONE"</b></td><td>Request thanh toán đã xử lý xong.</td></tr>
+<tr><td><code>HGET l06:idem:pay-001 hash</code></td><td><b class="m" data-run="09-bridge.kiem-chung">"3f2a9c1e"</b></td><td>Hash của body lần đầu được giữ nguyên; lần gửi body khác không ghi đè nó.</td></tr>
+<tr><td><code>HGET l06:idem:pay-001 resp</code></td><td><b class="m" data-run="09-bridge.kiem-chung">"{\"orderId\":\"o1\",\"total\":120000}"</b></td><td>Response đã lưu, sẽ trả lại cho mọi lần gửi lại.</td></tr>
+<tr><td><code>GET l06:tb:naive:7</code></td><td><b class="m" data-run="09-bridge.kiem-chung">"0"</b></td><td>Bucket ngây thơ về 0 dù đã cho lọt hai request.</td></tr>
+<tr><td><code>EXISTS l06:tb:store:8</code></td><td><b class="m" data-run="09-bridge.kiem-chung">(integer) 1</b></td><td>Bucket sức chứa 1 của bước Lua còn đó.</td></tr>
+</tbody>
+</table></div>
+
+<div class="callout key">
+<span class="tag">Tiếp theo trong bài</span>
+<p>Bạn đã đo đủ chín chặng. Còn ba phần cuối: <a href="#driver-drill">driver drill</a> (đọc một đoạn code node-redis do AI viết, chỉ ra 7 lỗi và 1 chỗ đúng: 6 lỗi nối với run, 1 lỗi nối với tài liệu driver), <a href="#bai-tap">bài tập về nhà</a> (khóa ghế A34_S012C, tự chấm bằng <code>hw-check.sh</code>), và <a href="#phong-van">câu hỏi phỏng vấn</a>.</p>
+</div>
+
+<div class="quiz" data-quiz="9"></div>
+</section>

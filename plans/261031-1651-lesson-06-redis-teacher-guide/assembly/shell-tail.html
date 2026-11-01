@@ -1,0 +1,402 @@
+
+<!-- BÀI TẬP -->
+<section id="bai-tap" class="stage col">
+  <h2>Bài tập slide 43: khóa phân tán cho hai request đặt cùng một ghế</h2>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_43_img_01.png" alt="Slide 43: bài tập cài đặt distributed lock cho hai request đặt cùng ghế A34_S012C trên chuyến FA634" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 43 · Homework: Implement Distributed Lock · ghế A34_S012C, chuyến FA634, không cần DB</figcaption></figure>
+  <p class="goal"><b>Mục tiêu:</b> viết một chương trình bắn hai request đặt ghế <code>A34_S012C</code> của chuyến <code>FA634</code> cùng lúc, dùng khóa Redis sao cho đúng một request đặt được, rồi tự chấm bằng <code>hw-check.sh</code>. Áp dụng đủ những gì đã đo ở <a href="#chang-8">chặng 8</a>.</p>
+  <div class="callout challenge" id="bai-tap-tu-lam">
+    <span class="tag">Tự làm · buổi tối · 45 phút</span>
+    <p>Ngôn ngữ nào cũng được. Chương trình của bạn chạy một lần là một vòng: bắn đúng hai request song song, mỗi request thử giữ khóa, "làm việc" <code>HOLD_MS</code> mili giây, ghi sổ nếu giữ được, rồi nhả khóa.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Hợp đồng</th><th>Giá trị</th></tr></thead>
+      <tbody>
+        <tr><td>Khóa của ghế</td><td><code>l06:hw:lock:FA634:A34_S012C</code></td></tr>
+        <tr><td>Sổ đặt chỗ (List)</td><td><code>l06:hw:bookings:FA634</code>. Đặt thành công thì <code>RPUSH l06:hw:bookings:FA634 "A34_S012C &lt;token&gt;"</code></td></tr>
+        <tr><td>Nhật ký sự kiện (List)</td><td><code>l06:hw:log</code>. Mỗi request ghi đúng một dòng: <code>RPUSH l06:hw:log "BOOKED &lt;token&gt;"</code> hoặc <code>"REJECTED &lt;token&gt;"</code></td></tr>
+        <tr><td><code>HW_TTL_MS</code></td><td>TTL của khóa, mili giây (mặc định 2000)</td></tr>
+        <tr><td><code>HOLD_MS</code></td><td>thời gian người giữ khóa "làm việc" trước khi nhả, mili giây (mặc định 100)</td></tr>
+        <tr><td><code>REDIS_URL</code></td><td>mặc định <code>redis://127.0.0.1:6379</code> (không dùng <code>localhost</code>)</td></tr>
+        <tr><td><code>HW_CMD</code></td><td>lệnh chạy một vòng của bạn; <code>hw-check.sh</code> gọi nó mỗi vòng (mặc định là lời giải mẫu <code>node hw-solution.mjs</code>)</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>PASS</b> khi <code>hw-check.sh</code> in 5 dòng ✔ (H1–H5) sau 10 vòng thường và vòng 11. Script tự kiểm <code>127.0.0.1:6379</code> đúng là container main (như C15), tự xóa <code>l06:hw:*</code> trước khi chấm, và chỉ dùng <code>docker exec advance-be-redis redis-cli</code>.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Luật</th><th>Kiểm tra gì</th><th>Học ở</th></tr></thead>
+      <tbody>
+        <tr><td>H1</td><td>Mỗi vòng <code>LLEN l06:hw:bookings:FA634</code> tăng đúng 1: không bao giờ bán ghế hai lần</td><td><a class="stage-link" href="#chang-8">8</a></td></tr>
+        <tr><td>H2</td><td>Mỗi vòng <code>l06:hw:log</code> có đúng 1 <code>BOOKED</code> và 1 <code>REJECTED</code></td><td><a class="stage-link" href="#chang-8">8</a></td></tr>
+        <tr><td>H3</td><td>Hết vòng không còn khóa nào sót lại</td><td><a class="stage-link" href="#chang-8">8</a></td></tr>
+        <tr><td>H4</td><td>Giá trị khóa = token riêng mỗi lần giữ: mọi token trong nhật ký của 10 vòng khác nhau (20 token), và ở vòng 11 giá trị khóa mà hw-check đọc được đúng là token của dòng <code>BOOKED</code></td><td><a class="stage-link" href="#chang-8">8</a></td></tr>
+        <tr><td>H5</td><td>Nhả khóa bằng compare-and-delete. Vòng 11 chạy với <code>HW_TTL_MS=50 HOLD_MS=200</code>, và <code>hw-check</code> đóng vai người giữ khóa thứ hai: nó phải thấy khóa của bạn với <code>PTTL</code> ≤ 50 ms (bạn tôn trọng <code>HW_TTL_MS</code>), đợi khóa hết hạn khi request của bạn còn đang làm, tự giữ khóa bằng token <code>hw-check-holder2</code>; sau khi chương trình của bạn nhả khóa (và thoát mã 0), token đó phải vẫn còn. Chương trình không chạy, lỗi, ghi cứng TTL dài hoặc nhả bằng <code>DEL</code> trơn đều ra ✘</td><td><a class="stage-link" href="#chang-8">8</a></td></tr>
+      </tbody>
+    </table></div>
+    <p>Cách chạy (Git Bash). Lệnh <code>npm install</code> chỉ cần lần đầu, nó cài node-redis vào riêng <code>labs/lesson-06-redis</code>:</p>
+    <div class="code"><pre><code>cd labs/lesson-06-redis
+npm install
+npm run hw:check                                  # chấm lời giải mẫu
+HW_CMD="node my-booking.mjs" bash hw-check.sh     # chấm bài của bạn</code></pre></div>
+    <label class="fields"><span class="muted">Dán code của bạn vào đây để lưu lại</span>
+      <textarea class="field" data-store="l06-hw-code" placeholder="const ok = await redis.set(lockKey, token, { NX: true, PX: ttl });"></textarea>
+    </label>
+  </div>
+  <p>Ví dụ một bài làm SAI (bộ kiểm tra của controller): đọc khóa bằng <code>GET</code> rồi mới <code>SET</code> (cách nhau 50 ms), và nhả khóa bằng <code>DEL</code>. <code>hw-check.sh</code> báo ✘ ở H1, H2 và H5, còn H3, H4 vẫn ✔:</p>
+<!--@RUN hw-check.bad@-->
+  <p>Bài làm sai thứ hai: khóa đúng <code>NX</code> và token ngẫu nhiên, nhưng TTL ghi cứng <code>PX 2000</code> (bỏ qua <code>HW_TTL_MS</code>) và nhả bằng <code>DEL</code> trơn, đúng kiểu lỗi 3 của driver drill. Mười vòng thường đều qua, nhưng vòng 11 thấy <code>PTTL</code> gần 2000 nên H5 ✘:</p>
+<!--@RUN hw-check.bad-del tail=7@-->
+  <details class="fold"><summary>Lời giải mẫu (chỉ mở sau khi bạn đã có 5 ✔ hoặc đã bí thật sự)</summary><div class="fold-body">
+    <p>Giữ khóa bằng <code>SET … NX PX $HW_TTL_MS</code> với token <code>randomUUID()</code>, chờ <code>HOLD_MS</code>, ghi sổ, rồi nhả bằng một <code>EVAL</code> compare-and-delete (chỉ <code>DEL</code> khi <code>GET</code> còn bằng token của mình).</p>
+<!--@CMD hw-solution.mjs@-->
+<!--@RUN hw-check.solution@-->
+  </div></details>
+</section>
+
+<!-- DRIVER DRILL -->
+<section id="driver-drill" class="stage col">
+  <h2>Driver drill: rà một service Redis do AI viết</h2>
+  <p class="goal"><b>Mục tiêu:</b> tìm 7 lỗi trong một <code>MenuCacheService</code> và <code>SeatLockService</code> viết bằng NestJS 10 + node-redis, cộng một chỗ đúng được cài vào để thử bạn. Mỗi lỗi phải chỉ ra được chặng nào đã đo bằng chứng cho nó.</p>
+<!--@CMD driver-drill.ai-snippet.ts@-->
+  <div class="fields">
+    <label>Lỗi 1<input class="field" data-store="l06-drill-1" placeholder="dòng / lệnh / vì sao"></label>
+    <label>Lỗi 2<input class="field" data-store="l06-drill-2"></label>
+    <label>Lỗi 3<input class="field" data-store="l06-drill-3"></label>
+    <label>Lỗi 4<input class="field" data-store="l06-drill-4"></label>
+    <label>Lỗi 5<input class="field" data-store="l06-drill-5"></label>
+    <label>Lỗi 6<input class="field" data-store="l06-drill-6"></label>
+    <label>Lỗi 7<input class="field" data-store="l06-drill-7"></label>
+    <label>Chỗ đúng (mồi)<input class="field" data-store="l06-drill-decoy"></label>
+  </div>
+  <details class="fold"><summary>Đáp án và bằng chứng</summary><div class="fold-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Chỗ sai</th><th>Sửa</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>KEYS menu:*</code> trong đường xử lý request</td><td><code>SCAN</code> theo lô, hoặc giữ sẵn một Set chỉ mục các khóa menu</td><td><a href="#chang-1">Chặng 1</a>: một lệnh chậm chặn mọi client (<code>01-block.sleep.timeline</code>); phần Tự làm đo <code>KEYS</code> so với <code>SCAN</code></td></tr>
+        <tr><td>2</td><td><code>SET</code> không có TTL</td><td><code>SET … EX</code> có jitter (Bài 02)</td><td><a href="#chang-3">Chặng 3</a>: hết bộ nhớ với <code>noeviction</code> thì mọi lệnh ghi nhận OOM (<code>03-eviction.noeviction</code>)</td></tr>
+        <tr><td>3</td><td>Nhả khóa bằng <code>DEL</code></td><td>Compare-and-delete bằng Lua (<code>eval</code>)</td><td><a href="#chang-8">Chặng 8</a>: <code>DEL</code> xóa khóa của người khác, thành hai người cùng giữ (<code>08-lock.ttldel.timeline</code> so với <code>08-lock-lua.cad.timeline</code>)</td></tr>
+        <tr><td>4</td><td>Bộ đếm <code>GET</code> rồi <code>SET</code> giá trị + 1</td><td><code>INCR</code> (hoặc Lua nếu cần điều kiện)</td><td><a href="#chang-5">Chặng 5</a>: hai client GET+SET ra 1, <code>INCR</code> ra 2 (<code>05-counter.getset.timeline</code>, <code>05-counter.incr.timeline</code>)</td></tr>
+        <tr><td>5</td><td><code>HGETALL</code> trên hash giỏ hàng lớn</td><td><code>HMGET</code> đúng trường cần, hoặc <code>HSCAN</code>; giữ hash nhỏ</td><td><a href="#chang-6">Chặng 6</a>: big key tốn bộ nhớ và chặn luồng chính (<code>06-practices.bigkey</code>)</td></tr>
+        <tr><td>6</td><td>N lần <code>await get()</code> nối tiếp</td><td>Một <code>mGet</code>, hoặc auto-pipeline bằng <code>Promise.all</code>, hoặc <code>multi().execAsPipeline()</code> (còn <code>multi().exec()</code> là transaction <code>MULTI</code>/<code>EXEC</code>, xem C6)</td><td><a href="#chang-1">Chặng 1</a>: mỗi lượt mạng tốn một RTT (<code>01-bench.mget</code>, <code>01-bench.pipeline</code>)</td></tr>
+        <tr><td>7</td><td>Không có <code>client.on('error')</code>, hàng đợi offline không giới hạn</td><td>Gắn handler <code>error</code>; tắt hoặc giới hạn offline queue để request lỗi nhanh khi mất kết nối</td><td>Tài liệu node-redis, xem trích dẫn bên dưới (<code>driver-claims</code>)</td></tr>
+        <tr><td>Mồi</td><td><code>SET … NX</code> kèm tùy chọn hết hạn</td><td>Giữ nguyên: đúng</td><td><a href="#chang-8">Chặng 8</a>: <code>NX</code> cho đúng một người giữ (<code>08-lock.nx.timeline</code>)</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>Ngoài 7 lỗi chính</b> (không tính điểm, nhưng nên nêu khi review): client <code>redis</code> tạo ở cấp module và dùng chung cho hai service, trong khi chỉ <code>MenuCacheService</code> mở và đóng nó; <code>SeatLockService</code> phụ thuộc ngầm vào vòng đời của service kia. Trong NestJS, tạo client trong một provider (ví dụ <code>REDIS_CLIENT</code>) rồi inject vào cả hai. File dùng <code>close()</code> để đóng client: ở node-redis 6.3.0, <code>quit()</code> vẫn còn nhưng đã deprecated (C12).</p>
+    <p>Trích dẫn API của driver (URL, phiên bản, dòng nguyên văn), ghi lúc soạn bài:</p>
+<!--@RUN driver-claims@-->
+  </div></details>
+</section>
+
+<!-- PHỎNG VẤN -->
+<section id="phong-van" class="stage col">
+  <h2>Kiểm tra cuối bài: 10 câu phỏng vấn</h2>
+  <p>Tự trả lời thành tiếng trước, rồi mới mở đáp án. Mỗi đáp án dẫn về run đã ghi trên máy bạn.</p>
+  <div id="examList"></div>
+  <label class="fields"><span class="muted">Đối chiếu với ghi chú đầu bài: bạn đã đổi suy nghĩ ở điểm nào?</span>
+    <textarea class="field" data-store="l06-wrapup" placeholder="Trước tôi nghĩ… giờ tôi thấy…"></textarea>
+  </label>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat-sheet" class="stage col">
+  <h2>Tổng kết và cheat sheet</h2>
+  <div class="callout pg" id="sl-42">
+    <span class="tag">Slide 42 · Recap · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><ul>
+        <li>Cluster có tổng cộng 16384 hash slot, dữ liệu được chia vào các slot.</li>
+        <li>CPU không phải nút cổ chai, nên mô hình một luồng là hợp lý.</li>
+        <li>Tận dụng cấu trúc dữ liệu và tính năng, đặc biệt cẩn thận với distributed lock.</li>
+      </ul></div>
+      <div><h5>Redis 7.2.3 đo được</h5><ul>
+        <li>Đúng: cluster một node của bài nhận đủ mọi slot, và hashtag đưa hai khóa về cùng slot (<a href="#chang-7">chặng 7</a>).</li>
+        <li>Một phần: lệnh chạy trên một luồng (<a href="#chang-1">chặng 1</a>), nhưng chính vì vậy một lệnh chậm chặn mọi client, và mạng (RTT, kích thước value) mới là trần thường gặp.</li>
+        <li>Đúng, và cần cẩn thận hơn slide: cách TTL + <code>DEL</code> của slide 40 cho hai người cùng giữ khóa; phải dùng compare-and-delete và fencing token (<a href="#chang-8">chặng 8</a>).</li>
+      </ul></div>
+    </div>
+    <p>Những chỗ khác bài đã sửa so với slide: slide 14 (luồng phụ đếm được là luồng nền, I/O threads đang tắt), slide 20 (ngưỡng lặp là 10% khóa hết hạn, 25 là giới hạn % CPU), slide 21 (không có ZSET nào cho khóa hết hạn), slide 25 (giết tiến trình với <code>everysec</code> không mất gì; chỉ sập hệ điều hành mới mất), slide 7 và 8 (chưa đo trực tiếp Sentinel và failover của Cluster).</p>
+  </div>
+
+  <h3>Cấu trúc dữ liệu: lệnh, Big-O, khi nào dùng</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Kiểu</th><th>Lệnh chính · Big-O</th><th>Khi nào dùng</th><th>Bẫy</th></tr></thead>
+    <tbody>
+      <tr><td>String</td><td><code>GET</code>/<code>SET</code>/<code>INCR</code> O(1), <code>SET … NX PX</code> O(1)</td><td>cache, bộ đếm, khóa</td><td>GET rồi SET để đếm thì mất cập nhật (chặng 5)</td></tr>
+      <tr><td>Hash</td><td><code>HSET</code>/<code>HGET</code>/<code>HINCRBY</code> O(1) mỗi trường, <code>HGETALL</code> O(N), <code>HSCAN</code> theo lô</td><td>object nhiều trường, giỏ hàng</td><td>hash quá ngưỡng listpack tốn bộ nhớ hơn hẳn (chặng 2); <code>HGETALL</code> trên big key</td></tr>
+      <tr><td>List</td><td><code>LPUSH</code>/<code>BRPOP</code>/<code>BLMOVE</code> O(1), <code>LRANGE</code> O(S+N), <code>LREM</code> O(N)</td><td>hàng đợi đơn giản</td><td><code>BRPOP</code> mất job khi consumer chết giữa chừng → <code>BLMOVE</code> + <code>LREM</code> để ack (chặng 5)</td></tr>
+      <tr><td>Set</td><td><code>SADD</code>/<code>SISMEMBER</code> O(1), <code>SMEMBERS</code> O(N), <code>SINTER</code> O(N×M)</td><td>like, follower, tag, chống trùng</td><td><code>SINTER</code> trên set lớn; trong Cluster cần cùng slot (chặng 7)</td></tr>
+      <tr><td>Sorted Set</td><td><code>ZADD</code>/<code>ZINCRBY</code> O(log N), <code>ZRANGE</code> O(log N + M)</td><td>bảng xếp hạng, delay queue</td><td><code>ZRANGE</code> rồi <code>ZREM</code> ở client không nguyên tử: hai poller cùng lấy một job (chặng 6)</td></tr>
+      <tr><td>Stream</td><td><code>XADD</code> O(1), <code>XREADGROUP</code>, <code>XACK</code></td><td>hàng đợi có consumer group và ack</td><td>phải tự dọn <code>XPENDING</code> (chặng 5, tùy chọn)</td></tr>
+      <tr><td>Keyspace</td><td><code>KEYS</code> O(N), <code>SCAN</code> theo lô, <code>DEL</code> O(M) phần tử, <code>UNLINK</code> giải phóng ở luồng nền, <code>EXPIRE</code> O(1)</td><td>quản trị</td><td><code>KEYS</code> trên production; <code>DEL</code> một big key (chặng 1, 6)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Lệnh quan sát dùng trong bài</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Lệnh</th><th>Cho biết gì</th><th>Chặng</th></tr></thead>
+    <tbody>
+      <tr><td><code>INFO server</code> · <code>CONFIG GET io-threads</code></td><td>phiên bản, <code>multiplexing_api</code>, <code>io_threads_active</code></td><td>1</td></tr>
+      <tr><td><code>SLOWLOG GET 1</code> · <code>LATENCY LATEST</code></td><td>lệnh chậm và thời gian chạy (µs), sự kiện trễ</td><td>1, 4, 6</td></tr>
+      <tr><td><code>OBJECT ENCODING k</code> · <code>MEMORY USAGE k SAMPLES 0</code></td><td>cách lưu bên trong và số byte thật của một khóa</td><td>2, 6</td></tr>
+      <tr><td><code>CONFIG GET hash-max-listpack-*</code></td><td>ngưỡng chuyển listpack → hashtable trên máy bạn (ngưỡng đo được ở chặng 2)</td><td>2</td></tr>
+      <tr><td><code>INFO keyspace</code> · <code>INFO stats</code> · <code>MEMORY STATS</code></td><td><code>keys</code>/<code>expires</code>, <code>expired_keys</code>, <code>evicted_keys</code>, <code>overhead.hashtable.expires</code></td><td>3</td></tr>
+      <tr><td><code>INFO persistence</code></td><td><code>rdb_bgsave_in_progress</code>, <code>rdb_last_bgsave_status</code>, <code>aof_rewrite_in_progress</code></td><td>4</td></tr>
+      <tr><td><code>INFO stats</code> (dòng fork)</td><td><code>latest_fork_usec</code>: thời gian fork lần gần nhất (µs)</td><td>4</td></tr>
+      <tr><td><code>redis-cli --bigkeys</code></td><td>khóa lớn nhất mỗi kiểu (quét bằng <code>SCAN</code>)</td><td>6</td></tr>
+      <tr><td><code>INFO replication</code> · <code>WAIT 1 500</code></td><td><code>role</code>, <code>master_link_status</code>, offset; số replica đã xác nhận</td><td>7</td></tr>
+      <tr><td><code>CLUSTER INFO</code> · <code>CLUSTER KEYSLOT k</code></td><td>số slot đã gán; slot của một khóa</td><td>7</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Lỗi gặp trong bài</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Thông báo</th><th>Nghĩa</th><th>Ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td><code>bash: …: unbound variable</code> (kể cả khi bấm Tab)</td><td>dòng <code>set -u</code> của region vẫn bật trong tab Git Bash: shell dừng khi gặp biến chưa gán, và tab-completion của git cũng hỏng. Gõ <code>set +u</code> hoặc mở tab mới</td><td>mọi region <code>.sh</code></td></tr>
+      <tr><td><code>OOM command not allowed when used memory &gt; 'maxmemory'</code></td><td>hết bộ nhớ với <code>noeviction</code>: lệnh ghi bị từ chối, lệnh đọc vẫn chạy</td><td>chặng 3</td></tr>
+      <tr><td><code>BUSY Redis is busy running a script</code></td><td>script Lua chạy quá <code>busy-reply-threshold</code>; chỉ <code>SCRIPT KILL</code> được</td><td>chặng 1 (tùy chọn)</td></tr>
+      <tr><td><code>CROSSSLOT Keys in request don't hash to the same slot</code></td><td>lệnh nhiều khóa khác slot trong Cluster</td><td>chặng 7</td></tr>
+      <tr><td><code>STALE</code> · <code>MISMATCH</code></td><td>trả lời của script trong lab: fencing token cũ bị từ chối; idempotency key dùng lại với body khác</td><td>chặng 8, 9</td></tr>
+      <tr><td><code>ERR unknown command '#'</code></td><td>pipe file <code>.redis</code> mà không lọc dòng chú thích</td><td>Cách học</td></tr>
+      <tr><td><code>the input device is not a TTY</code></td><td><code>docker exec -it</code> trong Git Bash thiếu <code>winpty</code></td><td>Cách học</td></tr>
+      <tr><td><code>ResponseError: syntax error</code> (DBX)</td><td>dán nhiều dòng vào console DBX: nó gửi cả khối thành một lệnh</td><td>Cách học</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Quy tắc dùng Redis</h3>
+  <ol>
+    <li>Không chạy lệnh O(N) trên keyspace hay key lớn ở đường request: <code>SCAN</code> thay <code>KEYS</code>, <code>UNLINK</code> thay <code>DEL</code> cho key lớn (chặng 1, 6).</li>
+    <li>Gom lượt mạng: <code>MGET</code>/pipeline thay cho N lệnh nối tiếp (chặng 1).</li>
+    <li>Đọc-sửa-ghi phải nguyên tử: lệnh có sẵn (<code>INCR</code>, <code>HINCRBY</code>) hoặc Lua (chặng 2, 5, 6, 9).</li>
+    <li>Mọi khóa cache có TTL kèm jitter; chọn <code>maxmemory-policy</code> theo vai trò của instance (chặng 3, Bài 02).</li>
+    <li>Biết mình mất gì khi sập: RDB mất từ ảnh chụp cuối, AOF <code>everysec</code> chỉ mất khi hệ điều hành sập (chặng 4).</li>
+    <li>Khóa phân tán: <code>SET NX PX</code> + token, nhả bằng compare-and-delete, fencing token cấp cùng script với lệnh lấy khóa và được kiểm ở chỗ ghi cuối (chặng 8).</li>
+    <li>Replica có thể trả dữ liệu cũ; trong Cluster, khóa dùng chung lệnh phải chung hashtag (chặng 7).</li>
+  </ol>
+</section>
+
+<!-- BẢN ĐỒ SLIDE -->
+<section id="ban-do-slide" class="stage col">
+  <h2>Bản đồ 46 slide</h2>
+  <p>Mỗi chip dẫn tới chỗ slide được giải thích. Gạch chân xanh là slide có khung "Slide nói / Redis 7.2.3 đo được" riêng (nhãn <span class="vchip diff">Đúng một phần</span> hoặc <span class="vchip fix">Cần sửa</span>).</p>
+  <div class="chips" id="slideMap"></div>
+</section>
+
+<!-- THAM KHẢO -->
+<section id="tham-khao" class="stage col">
+  <h2>Tài liệu tham khảo</h2>
+  <h4>Slide 44 (một số link đã chuyển chỗ, đường dẫn bên dưới là chỗ mới)</h4>
+  <ul>
+    <li><a href="https://redis.io/tutorials/redis-anti-patterns-every-developer-should-avoid/" target="_blank" rel="noreferrer">Redis anti-patterns every developer should avoid</a> (slide ghi developer.redis.com/howtos/antipatterns)</li>
+    <li><a href="https://redis.io/blog/7-redis-worst-practices/" target="_blank" rel="noreferrer">7 Redis worst practices</a> (slide ghi redis.com/blog)</li>
+    <li><a href="https://architecturenotes.co/p/redis" target="_blank" rel="noreferrer">Architecture Notes: Redis explained</a></li>
+    <li><a href="https://medium.com/software-design/why-software-developers-should-care-about-cpu-caches-8da04355bb8a" target="_blank" rel="noreferrer">Why software developers should care about CPU caches</a></li>
+  </ul>
+  <h4>redis.io (nguồn cho các nhãn "Đúng một phần" / "Cần sửa")</h4>
+  <ul>
+    <li><a href="https://redis.io/docs/latest/commands/expire/" target="_blank" rel="noreferrer">EXPIRE: Redis xóa khóa hết hạn thế nào</a></li>
+    <li><a href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noreferrer">Key eviction: các chính sách maxmemory</a></li>
+    <li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/" target="_blank" rel="noreferrer">Persistence: RDB, AOF, hybrid</a></li>
+    <li><a href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/" target="_blank" rel="noreferrer">Cluster specification: hash slot, hashtag</a></li>
+    <li><a href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/" target="_blank" rel="noreferrer">Distributed locks with Redis (Redlock)</a></li>
+  </ul>
+  <h4>Phản biện Redlock</h4>
+  <ul>
+    <li><a href="https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html" target="_blank" rel="noreferrer">Martin Kleppmann: How to do distributed locking</a> (fencing token, vì sao khóa có TTL không đủ cho đúng đắn)</li>
+  </ul>
+</section>
+
+<!-- TIẾP THEO -->
+<section id="tiep-theo" class="stage col">
+  <div class="callout key">
+    <span class="tag">Tiếp theo · Cụm 2 · slide 45–46 "Thank you"</span>
+    <h3 style="margin-top:4px">Đưa Redis vào OmniPOS M2</h3>
+    <p>Những gì bạn vừa đo là nền cho mốc M2 của OmniPOS FinLedger Hub. Hub dùng Redis riêng ở cổng 6380; guide này chỉ mô tả, không bao giờ chạy lệnh nào vào cổng đó:</p>
+    <ul>
+      <li><b>FR-M2-02</b> <code>@Idempotent()</code> qua header <code>Idempotency-Key</code>: trạng thái NEW / IN_PROGRESS / DONE / MISMATCH như script idempotency của <a href="#chang-9">chặng 9</a>.</li>
+      <li><b>FR-M2-03</b> <code>GET /stores/:id/menu</code> với Cache-Aside, Singleflight, TTL Jitter: kỹ thuật của Bài 02, cộng TTL và eviction của <a href="#chang-3">chặng 3</a>.</li>
+      <li><b>FR-M2-04</b> bảng món bán chạy bằng ZSET, dựng lại được từ SQL: <a href="#chang-5">chặng 5</a>.</li>
+      <li><b>FR-M2-05</b> token bucket bằng Lua cho claim voucher, khóa theo <code>storeId</code>: <a href="#chang-9">chặng 9</a>.</li>
+    </ul>
+    <p>Sau đó làm <b>Boss Challenge 2</b> trên <code>quan-ly-hop-dong</code>: idempotency key (hash SHA-256 của body + khóa Redis) cho <code>executeImportExport</code> và <code>terminateContract</code>, Cache-Aside + Singleflight + xóa cache sau commit cho <code>sap-master-data</code> và <code>dashboard</code>, kèm token bucket Lua. Rồi sang K2 Bài 04 Rate Limiting để đi sâu các thuật toán giới hạn tốc độ.</p>
+    <p>Bài trước: <a href="lesson_07_data_modeling_teacher_guide.html">Bài 07 Data modeling</a> · <a href="lesson_02_caching_teacher_guide.html">Bài 02 Caching</a> · <a href="lesson_14_locking_teacher_guide.html">Bài 14 Locking</a>.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+/* === GUIDE_DATA_START === */
+// SLIDES: chép từ assembly/contract.md §6 (stage, chip). href = #sl-NN cho slide Đúng một phần / Cần sửa.
+var SLIDES = [
+  { n: 1, title: 'Redis', stage: 'cach-hoc', chip: null, href: '#cach-hoc' },
+  { n: 2, title: 'Outline', stage: 'cach-hoc', chip: null, href: '#cach-hoc' },
+  { n: 3, title: '1. Introduction', stage: 'cach-hoc', chip: null, href: '#cach-hoc' },
+  { n: 4, title: '1.1 Definition', stage: 1, chip: 'Đúng trên Redis 7.2', href: '#chang-1' },
+  { n: 5, title: '1.2 Redis vs Memcached', stage: 1, chip: 'Đúng một phần', href: '#sl-05' },
+  { n: 6, title: '1.3.1 Master-Slave', stage: 7, chip: 'Đúng trên Redis 7.2', href: '#chang-7' },
+  { n: 7, title: '1.3.2 Sentinel', stage: 7, chip: 'Đúng một phần', href: '#sl-07' },
+  { n: 8, title: '1.3.3 Cluster', stage: 7, chip: 'Đúng một phần', href: '#sl-08' },
+  { n: 9, title: '1.3.3 Cluster (hash slots)', stage: 7, chip: 'Đúng trên Redis 7.2', href: '#chang-7' },
+  { n: 10, title: '2. How Redis Works?', stage: 1, chip: null, href: '#chang-1' },
+  { n: 11, title: '2.1 Why is Redis So Fast?', stage: 1, chip: null, href: '#chang-1' },
+  { n: 12, title: '2.1.1 Redis Bottleneck', stage: 1, chip: 'Đúng một phần', href: '#sl-12' },
+  { n: 13, title: '2.1.2 Why is Redis So Fast?', stage: 1, chip: 'Đúng trên Redis 7.2', href: '#chang-1' },
+  { n: 14, title: '2.1.3 Note (I/O threads)', stage: 1, chip: 'Đúng một phần', href: '#sl-14' },
+  { n: 15, title: '2.2 How Redis Store Data?', stage: 2, chip: null, href: '#chang-2' },
+  { n: 16, title: '2.2 Dictionary', stage: 2, chip: 'Đúng trên Redis 7.2', href: '#chang-2' },
+  { n: 17, title: '2.3 Expired Deletion', stage: 3, chip: null, href: '#chang-3' },
+  { n: 18, title: '2.3.1 Expire dictionary', stage: 3, chip: 'Đúng trên Redis 7.2', href: '#chang-3' },
+  { n: 19, title: '2.3.2 Passive deletion', stage: 3, chip: 'Đúng một phần', href: '#sl-19' },
+  { n: 20, title: '2.3.2 Active deletion', stage: 3, chip: 'Đúng một phần', href: '#sl-20' },
+  { n: 21, title: '2.3.2 Combined + ZSET idea', stage: 3, chip: 'Cần sửa', href: '#sl-21' },
+  { n: 22, title: 'Memory full?', stage: 3, chip: null, href: '#chang-3' },
+  { n: 23, title: '2.4 Memory Eviction', stage: 3, chip: 'Đúng một phần', href: '#sl-23' },
+  { n: 24, title: '2.4 Data Persistence', stage: 4, chip: null, href: '#chang-4' },
+  { n: 25, title: '2.4.1 AOF', stage: 4, chip: 'Đúng một phần', href: '#sl-25' },
+  { n: 26, title: '2.4.2 RDB', stage: 4, chip: 'Đúng trên Redis 7.2', href: '#chang-4' },
+  { n: 27, title: '2.4.3 Hybrid', stage: 4, chip: 'Đúng một phần', href: '#sl-27' },
+  { n: 28, title: '3. In Practices', stage: 5, chip: null, href: '#chang-5' },
+  { n: 29, title: '3.1 Data Structures', stage: 2, chip: null, href: '#chang-2' },
+  { n: 30, title: '3.0 Question (Hash vs JSON)', stage: 2, chip: 'Đúng một phần', href: '#sl-30' },
+  { n: 31, title: '3.1.1 String', stage: 2, chip: 'Đúng trên Redis 7.2', href: '#chang-2' },
+  { n: 32, title: '3.1.2 List', stage: 5, chip: 'Đúng một phần', href: '#sl-32' },
+  { n: 33, title: '3.1.3 Hash', stage: 5, chip: 'Đúng một phần', href: '#sl-33' },
+  { n: 34, title: '3.1.4 Set', stage: 5, chip: 'Đúng một phần', href: '#sl-34' },
+  { n: 35, title: '3.1.5 Sorted Set', stage: 5, chip: 'Đúng một phần', href: '#sl-35' },
+  { n: 36, title: '3.2 Practices', stage: 6, chip: null, href: '#chang-6' },
+  { n: 37, title: '3.2.1 Delay task', stage: 6, chip: 'Đúng trên Redis 7.2', href: '#chang-6' },
+  { n: 38, title: '3.2.2 Big keys', stage: 6, chip: 'Đúng trên Redis 7.2', href: '#chang-6' },
+  { n: 39, title: '3.2.3 Keys on one node (hashtag)', stage: 7, chip: 'Đúng trên Redis 7.2', href: '#chang-7' },
+  { n: 40, title: '3.2.4 Distributed locks', stage: 8, chip: 'Cần sửa', href: '#sl-40' },
+  { n: 41, title: '3.2.5 Best Practices', stage: 9, chip: 'Đúng trên Redis 7.2', href: '#chang-9' },
+  { n: 42, title: 'Recap', stage: 'wrap', chip: 'Đúng một phần', href: '#sl-42' },
+  { n: 43, title: 'Homework', stage: 'bai-tap', chip: 'Đúng trên Redis 7.2', href: '#bai-tap' },
+  { n: 44, title: 'References', stage: 'tham-khao', chip: null, href: '#tham-khao' },
+  { n: 45, title: 'Thank you', stage: 'tiep-theo', chip: null, href: '#tiep-theo' },
+  { n: 46, title: 'Thank you', stage: 'tiep-theo', chip: null, href: '#tiep-theo' }
+];
+
+var QUIZ = /*@QUIZ@*/;
+
+var EXAM = [
+  { q: '1. Redis chạy lệnh trên một luồng mà vẫn nhanh. Vì sao, và khi nào một luồng thành điểm yếu?', a: 'Dữ liệu nằm trong RAM, một event loop (epoll) phục vụ mọi kết nối, và vì chỉ một luồng chạy lệnh nên không tốn chi phí khóa hay đổi ngữ cảnh. Trên máy bạn io_threads_active:0 và io-threads 1 (run 01-why-fast.threads); các luồng khác đếm được trong /proc là luồng nền bio (ghi đĩa, giải phóng bộ nhớ), không phải luồng chạy lệnh (01-bench.threads). Điểm yếu: một lệnh chậm chặn mọi client. DEBUG SLEEP ở terminal A làm PING của B phải chờ tới khi A xong (01-block.sleep.timeline); KEYS trên keyspace lớn, DEL một big key hay một script Lua dài gây đúng hiệu ứng đó. Nút cổ chai thường là mạng: pipelining tăng req/s nhiều lần (01-bench.pipeline), còn value lớn làm req/s tụt mạnh (01-bench.size).' },
+  { q: '2. Pipelining, MGET, MULTI/EXEC và Lua khác nhau thế nào?', a: 'Pipelining chỉ gom nhiều lệnh vào một lượt mạng: bớt RTT nhưng không nguyên tử, lệnh của client khác vẫn chen vào giữa được (01-bench.pipeline). MGET là một lệnh đọc nhiều khóa, nên chỉ một lượt mạng và nguyên tử (01-bench.mget so với GET từng khóa). MULTI/EXEC chạy một dãy lệnh liền nhau không bị chen, nhưng không đọc được kết quả giữa chừng để rẽ nhánh và không rollback khi một lệnh lỗi. Lua chạy cả đoạn logic có điều kiện trên server một cách nguyên tử, ví dụ claim job (06-delay-lua.claim.timeline) hay token bucket (09-bucket-lua.claim.timeline); cái giá là script dài chặn cả server như mọi lệnh khác. Trong Cluster, mọi khóa của MGET, MULTI hay Lua phải cùng slot.' },
+  { q: '3. Redis xóa khóa hết hạn thế nào? Slide 20 và 21 sai ở đâu?', a: 'Khóa có TTL nằm thêm trong một dict expires, là bảng băm (thấy ở overhead.hashtable.expires của MEMORY STATS, run 03-expiry.expire-dict). Có hai cách xóa. Thụ động: khi có lệnh chạm vào khóa đã hết hạn (03-expiry.passive: tắt active expiry thì khóa hết hạn vẫn nằm trong keyspace tới lúc GET). Chủ động: chu kỳ nền quét tiếp khoảng 20 khóa có TTL mỗi vòng từ con trỏ của lần trước (dictScan, không rút ngẫu nhiên) và lặp lại khi hơn 10% khóa vừa quét đã hết hạn (03-expiry.active). Slide 20 nói 25%: trong 7.2, 25 là giới hạn % CPU của chu kỳ chậm, không phải ngưỡng lặp. Slide 21 gợi ý xếp khóa theo thời điểm hết hạn trong một ZSET: Redis không dùng ZSET nào cả, expires là bảng băm được quét dần từng phần, có trần CPU.' },
+  { q: '4. Bộ nhớ đầy (maxmemory) thì chuyện gì xảy ra? Chọn chính sách nào?', a: 'Mặc định là noeviction: lệnh ghi vượt maxmemory nhận OOM command not allowed, lệnh đọc vẫn chạy (03-eviction.noeviction). allkeys-lru và allkeys-lfu chọn khóa để xóa bằng lấy mẫu, nên khóa nóng (được đọc nhiều) sống sót nhiều hơn khóa nguội nhưng không tuyệt đối (03-eviction.allkeys-lru, 03-eviction.allkeys-lfu). volatile-* chỉ xóa khóa có TTL; khóa không TTL không bao giờ bị xóa (03-eviction.volatile-ttl). Redis làm cache thuần thì chọn allkeys-lfu hoặc allkeys-lru. Redis giữ dữ liệu không được mất (idempotency key, khóa) thì giữ noeviction, đặt cảnh báo bộ nhớ, và tách cache sang instance khác.' },
+  { q: '5. RDB, AOF và hybrid khác nhau thế nào? Giết tiến trình Redis thì mất gì?', a: 'RDB là ảnh chụp bằng fork (BGSAVE): giết tiến trình thì mất mọi lệnh ghi sau ảnh chụp cuối (04-persistence.rdb-loss: khởi động lại chỉ còn phần đã chụp). AOF ghi lại từng lệnh; với appendfsync everysec, giết tiến trình (docker kill) không mất gì vì dữ liệu đã nằm trong page cache của hệ điều hành (04-persistence.aof-loss). Cửa sổ mất khoảng một giây của everysec chỉ xảy ra khi hệ điều hành sập hoặc mất điện. Hybrid (aof-use-rdb-preamble yes, mặc định) viết lại AOF thành một file base dạng RDB cộng phần AOF tăng dần: khởi động nhanh như RDB mà ít mất như AOF (04-persistence.hybrid: file base.rdb mở đầu bằng REDIS).' },
+  { q: '6. Lưu object người dùng bằng Hash hay một chuỗi JSON? Big key thì xử lý sao?', a: 'Hash nhỏ được lưu dạng listpack, gọn bộ nhớ, đọc và sửa từng trường bằng HGET, HINCRBY một cách nguyên tử (02-encodings.slide30-ops). JSON string phải GET cả chuỗi rồi SET lại cả chuỗi, nên hai client sửa hai trường khác nhau vẫn ghi đè nhau và mất cập nhật age (02-json-race.lost.timeline), còn bản Hash giữ được cả hai. JSON hợp khi luôn đọc và ghi cả object. Hash vượt ngưỡng listpack chuyển sang hashtable và tốn bộ nhớ hơn hẳn (02-encodings.hash). Big key: DEL chạy trên luồng chính và chặn server tỉ lệ với số phần tử, UNLINK giải phóng ở luồng nền (06-practices.bigkey). Tìm big key bằng redis-cli --bigkeys hoặc MEMORY USAGE, đọc dần bằng HSCAN thay cho HGETALL.' },
+  { q: '7. Viết khóa phân tán bằng Redis thế nào cho đúng?', a: 'Không khóa thì hai người cùng thấy ghế trống và cùng đặt (08-lock.nolock.timeline). SET key token NX PX ttl cho đúng một người giữ (08-lock.nx.timeline). Nhả khóa bằng DEL là sai: khi khóa của A đã hết hạn và B đang giữ, DEL của A xóa khóa của B, người thứ ba vào được và có hai người cùng giữ (08-lock.ttldel.timeline). Nhả bằng compare-and-delete trong Lua, chỉ xóa khi giá trị vẫn là token của mình: A nhận 0 và khóa của B còn nguyên (08-lock-lua.cad.timeline). TTL ngắn hơn thời gian làm việc thì vẫn có lúc hai người tin mình giữ khóa, nên chỗ ghi cuối cùng phải kiểm fencing token tăng dần và từ chối token cũ (08-lock-lua.fencing.timeline trả STALE). Token phải được cấp trong cùng script với lệnh lấy khóa; SET NX rồi mới INCR riêng thì thứ tự token có thể ngược thứ tự giữ khóa. Theo Kleppmann, khóa Redis (kể cả Redlock) chỉ nên dùng để giảm việc làm trùng; đúng đắn thật phải dựa vào ràng buộc ở chỗ ghi, như UPDATE … WHERE version của Bài 14.' },
+  { q: '8. Chống spam và chống gửi trùng request cho API (OmniPOS M2) bằng Redis thế nào?', a: 'Rate limit bằng token bucket chạy trong Lua: đọc số token và thời điểm nạp, tính lại theo TIME của server, trừ token rồi ghi, tất cả nguyên tử. Bản đọc-tính-ghi ở client để hai request cùng tiêu một token (09-bucket.naive.timeline); bản Lua cho một request qua và từ chối request kia (09-bucket-lua.claim.timeline). Bắn 30 lần vào một quán có sức chứa 10, nạp rất chậm: đúng 10 lần qua, 20 lần bị từ chối kèm retry_after_ms để trả header Retry-After (09-bridge.bucket30). Idempotency key: lần đầu ghi trạng thái IN_PROGRESS kèm hash của body và TTL; request lặp trong lúc đang chạy nhận IN_PROGRESS, xong rồi thì nhận DONE cùng response cũ, cùng key nhưng body khác thì nhận MISMATCH (09-bridge.idempotency).' },
+  { q: '9. Cluster chia dữ liệu thế nào? Hashtag và CROSSSLOT là gì?', a: 'Cluster có 16384 hash slot; slot của một khóa là CRC16(khóa) mod 16384, và mỗi node giữ một phần các slot (07-cluster.keyslot). Nếu khóa có {…}, chỉ phần trong cặp ngoặc nhọn đầu tiên được băm, nên l06:user_profile:{34} và l06:user_session:{34} cùng slot. Lệnh nhiều khóa (MGET, SINTER, MULTI, Lua) mà các khóa khác slot thì bị từ chối với CROSSSLOT; gắn cùng hashtag thì chạy được (07-cluster.crossslot). Cái giá: dồn quá nhiều khóa vào một hashtag tạo slot nóng trên một node.' },
+  { q: '10. Đọc từ replica có an toàn không? WAIT và failover giúp được gì?', a: 'Replication của Redis là bất đồng bộ. Khi mạng giữa master và replica đứt, master vẫn nhận ghi còn replica tiếp tục trả giá trị cũ (07-architecture.partition); WAIT 1 500 trả 0, nghĩa là chưa replica nào xác nhận. Nối lại mạng và khởi động lại replica thì nó bắt kịp và trả giá trị mới. WAIT chỉ cho biết bao nhiêu replica đã nhận, không biến Redis thành nhất quán mạnh. Khi failover, lệnh ghi chỉ nằm ở một phía có thể mất: nâng replica lên master, ghi vào nó, rồi trả nó về làm replica thì phần ghi riêng đó biến mất (07-architecture.failover). Sentinel và failover tự động của Cluster theo cùng nguyên lý nhưng chưa đo trực tiếp trên máy này.' }
+];
+/* === GUIDE_DATA_END === */
+
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* chế độ riêng tư: bỏ qua, trang vẫn chạy */ } }
+  };
+  // esc(): hàm DUY NHẤT để thoát HTML trong trang. Chuỗi nào lấy từ run/dữ liệu mà đi vào innerHTML phải qua esc() (contract §4, V19).
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // run('wN'): đọc <script type="application/json" id="run-wN"> (chép từ runs/data/wN.json); không có hoặc hỏng thì trả null.
+  const run = (id) => { const tag = document.getElementById('run-' + id); if (!tag) return null; try { return JSON.parse(tag.textContent); } catch { return null; } };
+  const press = (group, btn) => { $$('[aria-pressed]', group).forEach((b) => b.setAttribute('aria-pressed', String(b === btn))); };
+  // el('tag', { class, text, ...thuộc tính }, ...con): dựng DOM không qua innerHTML; con là chuỗi thì thành text node.
+  const el = (tag, props = {}, ...kids) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else node.setAttribute(k, v === true ? '' : String(v));
+    }
+    for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) node.append(kid instanceof Node ? kid : String(kid));
+    return node;
+  };
+
+  // Giao diện sáng/tối (khóa l06-theme)
+  const theme = store.get('l06-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  $('#themeBtn')?.addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    store.set('l06-theme', next);
+  });
+
+  // Ô điền tay: chỉ dùng khóa l06-* (data-store)
+  $$('[data-store]').forEach((field) => {
+    const key = field.dataset.store;
+    if (!key.startsWith('l06-')) return;
+    const saved = store.get(key);
+    if (field.type === 'checkbox') {
+      field.checked = saved === 'true';
+      field.addEventListener('change', () => store.set(key, String(field.checked)));
+    } else {
+      field.value = saved ?? '';
+      field.addEventListener('input', () => store.set(key, field.value));
+    }
+  });
+
+  // Bảng walkthrough và bảng kiểm chứng: nhãn cột cho dạng thẻ trên màn nhỏ
+  $$('table.walk, table.expect').forEach((t) => {
+    const heads = $$('thead th', t).map((th) => th.textContent.trim());
+    $$('tbody tr', t).forEach((tr) => $$('td', tr).forEach((td, i) => { if ((i > 0 || t.matches('.expect')) && heads[i]) td.dataset.label = heads[i]; }));
+  });
+
+  // Quiz: 4 câu mỗi chặng, đáp án xáo thứ tự
+  $$('.quiz[data-quiz]').forEach((box) => {
+    const n = box.dataset.quiz;
+    const qs = QUIZ[n];
+    if (!Array.isArray(qs) || !qs.length) return;
+    let score = 0, answered = 0;
+    const scoreEl = el('span', { class: 'quiz-score num', 'aria-live': 'polite' }, `0/${qs.length}`);
+    box.replaceChildren(el('div', { class: 'quiz-head' }, el('h4', {}, `Tự kiểm tra chặng ${n}`), scoreEl));
+    qs.forEach((x, i) => {
+      const order = x.opts.map((_, j) => j).sort(() => Math.random() - 0.5);
+      const opts = order.map((j) => el('button', { type: 'button', class: 'q-opt', 'data-j': j }, x.opts[j]));
+      const qel = el('div', { class: 'q' }, el('p', { class: 'q-text' }, `${i + 1}. ${x.q}`), el('div', { class: 'q-opts' }, opts));
+      // Đáp án đúng có chữ "✔ Đáp án:" (không chỉ đổi màu); nút dùng aria-disabled để không làm rơi focus,
+      // rồi focus chuyển sang lời giải thích (có ghi lại đáp án đúng) để trình đọc màn hình đọc tiếp.
+      opts.forEach((btn) => btn.addEventListener('click', () => {
+        if (btn.getAttribute('aria-disabled') === 'true') return;
+        const j = Number(btn.dataset.j);
+        opts.forEach((b) => {
+          b.setAttribute('aria-disabled', 'true');
+          if (Number(b.dataset.j) === x.ans) { b.classList.add('right'); b.prepend(el('b', {}, '✔ Đáp án: ')); }
+        });
+        if (j === x.ans) score++; else { btn.classList.add('wrong'); btn.prepend(el('b', {}, '✘ Bạn chọn: ')); }
+        answered++;
+        const ex = el('div', { class: 'q-explain', tabindex: '-1' }, el('strong', {}, j === x.ans ? 'Đúng.' : 'Chưa đúng.'), ' Đáp án: ', x.opts[x.ans], '. ', x.why);
+        qel.append(ex);
+        ex.focus();
+        scoreEl.textContent = `${score}/${qs.length}${answered === qs.length ? (score === qs.length ? ' · Đạt' : ' · Xem lại phần sai') : ''}`;
+      }));
+      box.append(qel);
+    });
+  });
+
+  // Phỏng vấn + bản đồ slide
+  const exam = $('#examList');
+  if (exam) exam.replaceChildren(...EXAM.map((e) => el('details', { class: 'fold' }, el('summary', {}, e.q), el('div', { class: 'fold-body' }, el('p', {}, e.a)))));
+  const chipClass = { 'Đúng trên Redis 7.2': 'ok', 'Đúng một phần': 'diff', 'Cần sửa': 'fix' };
+  const map = $('#slideMap');
+  if (map) map.replaceChildren(...SLIDES.map((s) => {
+    // Bản build còn chặng chưa viết: chưa có #sl-NN thì dẫn về đầu chặng.
+    const href = document.getElementById(s.href.slice(1)) ? s.href : (typeof s.stage === 'number' ? '#chang-' + s.stage : '#' + s.stage);
+    return el('a', { class: 'chip' + (s.href.startsWith('#sl-') ? ' pg' : ''), href },
+      el('b', {}, String(s.n)), ' ', s.title, s.chip ? [' ', el('span', { class: 'vchip ' + chipClass[s.chip] }, s.chip)] : null);
+  }));
+
+  // Widget W1–W9 được assemble.mjs chèn vào đây, mỗi file bọc trong { }.
+  // Helper dùng chung qua closure (không thêm biến global): $, $$, store, esc, run, press, el.
+  /*@WIDGETS@*/
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis
+# lua lock-release.lua sha256=d8705959f9404e159b1925459258c25c8ec7276452eba9aa25472be137b6e406
+$ docker exec advance-be-redis redis-cli RPUSH l06:barrier:lock-cad go
+1
+$ set -u
+$ docker exec advance-be-redis redis-cli SET l06:lock:FA634:A34_S012C tokA NX PX 2000
+OK
+$ sleep 3.5
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/lock-release.lua l06:lock:FA634:A34_S012C , tokA
+0
+$ docker exec advance-be-redis redis-cli GET l06:lock:FA634:A34_S012C
+tokB

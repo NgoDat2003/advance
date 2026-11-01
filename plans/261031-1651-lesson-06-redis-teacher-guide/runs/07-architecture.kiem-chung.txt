@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:49 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep -E '^(role|master_link_status):'
+role:slave
+master_link_status:up
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:price
+120
+$ docker exec advance-be-redis-replica redis-cli EXISTS l06:rep:replica-only
+0
+$ docker exec advance-be-redis-cluster redis-cli CLUSTER INFO | grep -E '^(cluster_state|cluster_slots_assigned):'
+cluster_state:ok
+cluster_slots_assigned:16384
+$ docker exec advance-be-redis-cluster redis-cli CLUSTER KEYSLOT 'l06:user_profile:{34}'
+9745
+$ docker exec advance-be-redis-cluster redis-cli CLUSTER KEYSLOT 'l06:user_session:{34}'
+9745

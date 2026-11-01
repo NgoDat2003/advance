@@ -1,0 +1,37 @@
+# final gate · chạy lúc 01/11/2026 12:31 +0700 · Redis 7.2.3 · advance-be-redis
+
+| Kiểm tra | Kết quả |
+|---|---|
+| fingerprint --compare (rc) | 0 |
+| verify-guide (V01–V16, V19, V20) | ✔ không có lỗi |
+| verify-guide --runs (M01, D01, V18) | ✔ không có lỗi (kiểm sau khi đăng ký file này vào manifest) |
+| verify-guide --data | ✔ không có lỗi |
+| verify-guide --lint | ✔ không có lỗi |
+| negative-tests | 26/26 ca đỏ đúng thiết kế · 0 SKIP · tổng 26 ca |
+| widget-smoke | ✔ không có exception, widget có nội dung |
+| render light 375/768/1440 | 0 errors, 0 warnings |
+| render dark 375/768/1440 | 0 errors, 0 warnings |
+| check.sh | rc 0, 0 ✘ |
+| lesson-07 verifier V01,V02,V03,V10 | ✔ không có lỗi |
+| guide size | 487KB (≤ 520 KB) |
+| git status scope | only the guide, labs/lesson-06-redis/, this plan folder, README, TONG_QUAN, lesson-07 guide + shell-tail; other untracked paths were not created by this plan |
+
+## check.sh (learner state at handoff)
+✔ C01 main advance-be-redis · redis:7.2.3, redis_version:7.2.3, debug local, network advance-be-l06, /lab ro
+– C02 advance-be-redis-replica · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up replica
+– C03 advance-be-redis-cluster · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up cluster
+– C04 advance-be-redis-evict · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up evict
+– C05 advance-be-redis-rdb · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up persist
+– C06 advance-be-redis-aof · chưa bật (tùy chọn) · khi tới chặng: bash labs/lesson-06-redis/00-containers.sh up persist
+✔ C07 khóa ngoài l06: · không có
+✔ C08 seed user · l06:user:1 listpack 4 trường, l06:user:1:json 51 ký tự
+✔ C09 seed cart · l06:cart:u1 có 3 món
+✔ C10 seed board · l06:board:bestseller có 5 món
+✔ C11 cấu hình mặc định · maxmemory 0, noeviction, lazyfree-lazy-user-del no, slowlog 10000, latency 0, appendonly no
+✔ C12 active expiry · khóa PX 50 tự hết hạn trong 1 s
+✔ C13 không còn lock/barrier · 0 khóa l06:lock:*, 0 khóa l06:barrier:*
+✔ C14 publish chỉ 127.0.0.1 · main 127.0.0.1:6379, container phụ không publish
+✔ C15 127.0.0.1:6379 là main · run_id khớp (07ae7fa0…)
+
+## docker ps --filter name=advance-be-redis
+advance-be-redis|Up 3 hours|127.0.0.1:6379->6379/tcp

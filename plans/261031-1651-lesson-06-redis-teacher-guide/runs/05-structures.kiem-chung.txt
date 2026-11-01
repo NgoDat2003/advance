@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 09:45 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> LLEN l06:q:orders
+(integer) 0
+127.0.0.1:6379> LLEN l06:q:processing
+(integer) 0
+127.0.0.1:6379> HGET l06:cart:u2 latte
+"2"
+127.0.0.1:6379> HLEN l06:cart:u1
+(integer) 3
+127.0.0.1:6379> SCARD l06:followers:c
+(integer) 1
+127.0.0.1:6379> SINTER l06:followers:a l06:followers:b
+1) "u3"
+2) "u4"
+127.0.0.1:6379> ZSCORE l06:board:bestseller croissant
+"110"
+127.0.0.1:6379> GET l06:cnt:views
+"2"

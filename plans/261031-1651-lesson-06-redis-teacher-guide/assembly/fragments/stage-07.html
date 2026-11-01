@@ -1,0 +1,233 @@
+<section id="chang-7" class="stage col">
+<div class="stage-head">
+<span class="stage-no">07</span>
+<div>
+<div class="stage-meta"><span>Slide 6–9, 39</span><span>35 phút + 10 tùy chọn</span><span>lõi</span></div>
+<h2>Replica trả giá cũ, slot và hashtag</h2>
+</div>
+</div>
+<p class="goal"><b>Mục tiêu:</b> tự cắt mạng giữa main và replica, thấy main vẫn nhận ghi còn replica vẫn trả giá cũ, rồi nối lại và xem hai bên khớp offset. Sau đó tính hash slot bằng tay, so với <code>CLUSTER KEYSLOT</code>, và dùng hashtag để hai khóa chạy chung một lệnh trên cluster.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>Replica nhận bản sao các lệnh ghi của main theo kiểu <b>bất đồng bộ</b>: main trả <code>OK</code> cho client trước, gửi sang replica sau. Cluster chia 16384 hash slot cho các node; mỗi khóa thuộc một slot theo <code>CRC16(khóa) mod 16384</code>, hoặc theo phần nằm trong <code>{…}</code> nếu khóa có hashtag.</dd>
+<dt>TẠI SAO?</dt><dd>Replica giúp đọc được nhiều hơn và có sẵn một bản dự phòng. Cluster giúp dữ liệu và lượt ghi vượt sức một node. Cả hai đổi lại một điều: có lúc dữ liệu giữa các node lệch nhau.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Đừng đọc từ replica cho dữ liệu phải đúng ngay sau khi ghi: giá đang bán, tồn kho, khóa phân tán. Đừng bật cluster khi một node còn đủ sức: lệnh nhiều khóa bị giới hạn trong một slot và vận hành nặng hơn hẳn.</dd>
+</dl>
+
+<div class="story">
+<span class="tag">Tình huống</span>
+<p>Tối thứ sáu, quản lý chuỗi đổi giá Trà đào trên hệ thống. Lệnh ghi vào Redis main trả <code>OK</code>. App menu của các quán đọc từ replica để đỡ tải cho main, và đúng lúc đó đường mạng nội bộ giữa main và replica bị đứt. Main vẫn nhận ghi, replica vẫn trả lời, chỉ là trả <b>giá cũ</b>. POS không báo lỗi gì, nên khách bị tính giá cũ cho tới khi mạng nối lại. Ở chặng này bạn tự cắt đường mạng đó trên máy mình và đo xem chuyện gì xảy ra.</p>
+</div>
+
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_06_img_01.png" alt="Slide 6: client ghi vào master, master gửi bản sao lệnh sang các replica; client đọc từ replica" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 6 · Master–Slave: ghi vào master, replica nhận bản sao bất đồng bộ</figcaption></figure>
+
+<figure>
+<svg viewBox="0 0 640 210" role="img" aria-labelledby="c7-part-title" style="max-width:100%;height:auto;display:block">
+<title id="c7-part-title">Mất mạng giữa main và replica: main vẫn nhận ghi giá mới, replica vẫn trả giá cũ cho app menu</title>
+<rect x="10" y="20" width="170" height="64" rx="10" style="fill:var(--surface);stroke:var(--line)"></rect>
+<text x="24" y="46" style="fill:var(--fg);font:600 14px var(--font-body)">Admin đổi giá</text>
+<text x="24" y="68" style="fill:var(--muted);font:12px var(--font-mono)">SET l06:rep:price …</text>
+<rect x="235" y="20" width="170" height="64" rx="10" style="fill:var(--accent-soft);stroke:var(--accent)"></rect>
+<text x="249" y="46" style="fill:var(--fg);font:600 14px var(--font-body)">main</text>
+<text x="249" y="68" style="fill:var(--muted);font:12px var(--font-mono)">advance-be-redis</text>
+<rect x="460" y="20" width="170" height="64" rx="10" style="fill:var(--surface);stroke:var(--line)"></rect>
+<text x="474" y="46" style="fill:var(--fg);font:600 14px var(--font-body)">replica</text>
+<text x="474" y="68" style="fill:var(--muted);font:12px var(--font-mono)">advance-be-redis-replica</text>
+<line x1="180" y1="52" x2="232" y2="52" style="stroke:var(--accent);stroke-width:2"></line>
+<polygon points="232,47 232,57 240,52" style="fill:var(--accent)"></polygon>
+<line x1="405" y1="52" x2="457" y2="52" style="stroke:var(--bad);stroke-width:2;stroke-dasharray:5 4"></line>
+<text x="420" y="44" style="fill:var(--bad);font:700 18px var(--font-body)">✕</text>
+<text x="380" y="104" style="fill:var(--bad);font:12px var(--font-mono)">docker network disconnect</text>
+<rect x="460" y="130" width="170" height="64" rx="10" style="fill:var(--surface);stroke:var(--line)"></rect>
+<text x="474" y="156" style="fill:var(--fg);font:600 14px var(--font-body)">App menu ở quán</text>
+<text x="474" y="178" style="fill:var(--bad);font:12px var(--font-mono)">GET → giá cũ</text>
+<line x1="545" y1="128" x2="545" y2="90" style="stroke:var(--muted);stroke-width:2"></line>
+<polygon points="540,90 550,90 545,82" style="fill:var(--muted)"></polygon>
+<text x="235" y="130" style="fill:var(--fg);font:12px var(--font-mono)">WAIT 1 500 → không replica nào</text>
+<text x="235" y="148" style="fill:var(--fg);font:12px var(--font-mono)">xác nhận, nhưng SET đã ghi rồi</text>
+</svg>
+<figcaption class="muted">Sơ đồ thí nghiệm <code>07-architecture.sh#partition</code>: cắt mạng chỉ nhắm container replica, main không bị đụng tới.</figcaption>
+</figure>
+
+<div class="table-wrap"><table class="stats">
+<caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · main + advance-be-redis-replica + advance-be-redis-cluster</caption>
+<thead><tr><th>Đo gì</th><th>Kết quả đã ghi</th><th>Run</th></tr></thead>
+<tbody>
+<tr><td>Bình thường: SET rồi WAIT trên cùng kết nối</td><td>WAIT trả <b class="m" data-run="07-architecture.replica">1</b>, replica đọc <b class="m" data-run="07-architecture.replica">100</b>; <b class="m" data-run="07-architecture.replica">master_repl_offset:15203</b> = <b class="m" data-run="07-architecture.replica">slave_repl_offset:15203</b></td><td><code>07-architecture.replica</code></td></tr>
+<tr><td>Cắt mạng, SET giá mới + WAIT 1 500 cùng kết nối</td><td>SET <b class="m" data-run="07-architecture.partition">OK</b>, WAIT trả <b class="m" data-run="07-architecture.partition">0</b></td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>WAIT 1 500 ở một kết nối mới (bẫy)</td><td>trả ngay <b class="m" data-run="07-architecture.partition">1</b>, dù replica đang bị cắt</td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>GET trên replica khi mất mạng</td><td><b class="m" data-run="07-architecture.partition">100</b> (giá cũ; main đã giữ giá mới)</td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>Nối mạng + restart replica, poll tới khi nối</td><td><b class="m" data-run="07-architecture.partition">polls=1</b>, <b class="m" data-run="07-architecture.partition">master_link_status:up</b>, GET <b class="m" data-run="07-architecture.partition">120</b></td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>Offset sau khi nối lại</td><td><b class="m" data-run="07-architecture.partition">master_repl_offset:15361</b> = <b class="m" data-run="07-architecture.partition">slave_repl_offset:15361</b></td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>Bộ đếm đồng bộ của main (chỉ ghi nhận)</td><td><b class="m" data-run="07-architecture.partition">sync_full:3</b>, <b class="m" data-run="07-architecture.partition">sync_partial_ok:3</b></td><td><code>07-architecture.partition</code></td></tr>
+<tr><td>Tùy chọn: nâng replica lên master bằng tay rồi trả về</td><td><b class="m" data-run="07-architecture.failover">role:master</b>; trả về sau <b class="m" data-run="07-architecture.failover">polls=8</b>; khóa chỉ ghi trên replica thành dòng trống (nil); main giữ <b class="m" data-run="07-architecture.failover">after</b></td><td><code>07-architecture.failover</code></td></tr>
+<tr><td>Cluster 1 node</td><td><b class="m" data-run="07-cluster.keyslot">cluster_slots_assigned:16384</b>, <b class="m" data-run="07-cluster.keyslot">cluster_known_nodes:1</b></td><td><code>07-cluster.keyslot</code></td></tr>
+<tr><td><code>CLUSTER KEYSLOT</code></td><td>foo <b class="m" data-run="07-cluster.keyslot">12182</b>; hai khóa <code>{34}</code> <b class="m" data-run="07-cluster.keyslot">9745</b> và <b class="m" data-run="07-cluster.keyslot">9745</b>; <code>l06:a</code> <b class="m" data-run="07-cluster.keyslot">8130</b>, <code>l06:b</code> <b class="m" data-run="07-cluster.keyslot">12193</b></td><td><code>07-cluster.keyslot</code></td></tr>
+<tr><td>SINTER hai khóa khác slot / cùng hashtag</td><td><b class="m" data-run="07-cluster.crossslot">CROSSSLOT Keys in request don't hash to the same slot</b> / <b class="m" data-run="07-cluster.crossslot">1) "u2"</b> <b class="m" data-run="07-cluster.crossslot">2) "u3"</b></td><td><code>07-cluster.crossslot</code></td></tr>
+</tbody>
+</table></div>
+
+<div class="check30">
+<span class="tag">Kiểm tra 30 giây</span>
+<p>Bạn SET giá mới trên main, rồi mở một redis-cli khác gõ <code>WAIT 1 500</code> và nhận <code>1</code>. Đã chắc replica có giá mới chưa?</p>
+<details><summary>Xem đáp án</summary>
+<p>Chưa. <code>WAIT</code> chỉ chờ các lệnh ghi <b>của chính kết nối gọi nó</b>. Kết nối mới chưa ghi gì, nên WAIT trả ngay số replica mà main còn tưởng đang nối. Run <code>07-architecture.partition</code> cho thấy đúng vậy: WAIT ở kết nối mới trả <b class="m" data-run="07-architecture.partition">1</b> trong khi replica vẫn đọc <b class="m" data-run="07-architecture.partition">100</b>. Muốn WAIT có nghĩa, SET và WAIT phải đi chung một kết nối (trong lab dùng <code>printf '…' | docker exec -i … redis-cli</code>).</p>
+</details>
+</div>
+
+<div class="callout key">
+<span class="tag">Slide 6 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Ghi vào master, master gửi bản sao lệnh sang replica bất đồng bộ. Ưu điểm: scale được phần đọc. Nhược điểm: dữ liệu lệch, và khi master chết thì chưa biết replica nào lên thay.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Đúng cả hai mặt. Lúc mạng bình thường, offset hai bên bằng nhau ngay sau lần ghi (<b class="m" data-run="07-architecture.replica">master_repl_offset:15203</b> = <b class="m" data-run="07-architecture.replica">slave_repl_offset:15203</b>). Lúc mất mạng, main vẫn trả <code>OK</code> còn replica trả giá cũ <b class="m" data-run="07-architecture.partition">100</b>: đó chính là "data inconsistency" của slide, đo được trên máy bạn.</p></div>
+</div>
+</div>
+
+<div class="callout pg" id="sl-07">
+<span class="tag">Slide 7 · <span class="vchip diff">Đúng một phần</span> · chưa đo trực tiếp</span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Sentinel theo dõi master và replica, làm service discovery. Khi master chết, các sentinel bầu một leader để chọn replica lên làm master và cho các replica khác theo master mới. Ưu: giải quyết failover. Nhược: dữ liệu lệch, tốn công vận hành, không scale được phần ghi.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p><b>Máy bạn không chạy Sentinel</b>, nên phần bầu chọn chỉ là sơ đồ. Thứ đo được là "nguyên liệu" Sentinel phải làm việc cùng: lúc replica bị cắt, main vẫn nhận ghi và <code>WAIT 1 500</code> trả <b class="m" data-run="07-architecture.partition">0</b>. Nếu ngay lúc đó Sentinel nâng replica này lên, giá mới mà main đã trả <code>OK</code> sẽ mất. Vì vậy "solve failover" đúng ở nghĩa <i>có master mới tự động</i>, không đúng ở nghĩa <i>không mất dữ liệu</i>.</p></div>
+</div>
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_07_img_01.png" alt="Slide 7: các sentinel theo dõi master và replica, bầu leader để chọn replica lên làm master mới" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 7 · Sentinel (sơ đồ, không chạy trong bài)</figcaption></figure>
+<p>Theo tài liệu redis.io (chưa đo ở đây): một master chỉ bị coi là chết khi đủ <code>quorum</code> sentinel cùng đồng ý, và failover cần đa số sentinel cho phép. Muốn thu hẹp cửa sổ mất ghi, master có thể đặt <code>min-replicas-to-write</code> để từ chối ghi khi không đủ replica còn nối.</p>
+</div>
+
+<div class="callout pg" id="sl-08">
+<span class="tag">Slide 8 · <span class="vchip diff">Đúng một phần</span> · chưa đo trực tiếp</span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Cluster chia dữ liệu ra nhiều server. Ưu: giải quyết failover, bớt phụ thuộc một master, scale cả đọc lẫn ghi. Nhược: dữ liệu lệch, tốn công vận hành. Nên chọn Cluster.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Cluster của bài chỉ có <b class="m" data-run="07-cluster.keyslot">cluster_known_nodes:1</b> giữ <b class="m" data-run="07-cluster.keyslot">cluster_slots_assigned:16384</b>, nên <b>không có failover của Cluster nào được đo</b>. Phần tùy chọn bên dưới nâng replica lên master bằng tay để thấy cái giá: hai "master" cùng nhận ghi, và khi node cũ quay về theo main, khóa chỉ ghi trên nó biến mất. Failover tự động của Cluster cũng dựa trên sao chép bất đồng bộ như vậy. "Scale cho ghi" chỉ đúng với lệnh một khóa hoặc nhiều khóa cùng slot (xem slide 39). "Cluster (recommended)" là tùy quy mô: hub OmniPOS một quán hay một chuỗi nhỏ thường chỉ cần một node + replica.</p></div>
+</div>
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_08_img_01.png" alt="Slide 8: Redis Cluster gồm nhiều master, mỗi master có replica riêng" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 8 · Cluster (sơ đồ; bài chạy cluster 1 node)</figcaption></figure>
+</div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · replica, cắt mạng, nối lại</span>
+<p>Bật replica trước (một lần): <code>bash labs/lesson-06-redis/00-containers.sh up replica</code>. Mọi lệnh phá hủy của chặng này (ngắt mạng, <code>docker restart</code>, <code>REPLICAOF</code>) chỉ nhắm <code>advance-be-redis-replica</code>; dòng đầu mỗi region in tên container đó ra để bạn thấy trước khi chạy. Dán từng dòng vào Git Bash.</p>
+<ol>
+<li><b>Region <code>replica</code>:</b> ghi trên main, đọc trên replica. Hai dòng cuối in offset hai bên: phải bằng nhau.</li>
+</ol>
+<!--@CMD 07-architecture.sh#replica@-->
+<!--@RUN 07-architecture.replica@-->
+<ol start="2">
+<li><b>Region <code>partition</code>:</b> sau <code>docker network disconnect</code>, SET giá mới vẫn <code>OK</code> nhưng WAIT cùng kết nối trả <code>0</code>. Dòng tiếp theo cố tình gọi WAIT ở kết nối mới để bạn thấy cái bẫy: trả <code>1</code>.</li>
+<li>Replica vẫn trả giá cũ. Nối mạng xong phải <code>docker restart</code> replica, vì <code>repl-timeout</code> mặc định 60 giây: replica chưa tự biết kết nối cũ đã chết. Vòng <code>for</code> chờ tới khi <code>master_link_status:up</code> (tối đa 40 lần × 0,5 giây) rồi in số lần chờ.</li>
+<li>Đọc lại: replica có giá mới, offset hai bên bằng nhau. <code>sync_full</code> và <code>sync_partial_ok</code> chỉ để ghi nhận; chúng là bộ đếm cộng dồn từ lúc main khởi động, nên số của bạn sẽ khác.</li>
+</ol>
+<!--@CMD 07-architecture.sh#partition@-->
+<!--@RUN 07-architecture.partition@-->
+<p><b>Điểm phỏng vấn:</b> lần ghi đầu tiên của lab, SET và WAIT nằm ở hai lệnh <code>docker exec</code> riêng, và WAIT trả <code>1</code> ngay lúc replica đang bị cắt. Lab đã sửa lại cho hai lệnh đi chung một kết nối. Bài học: <code>WAIT</code> là theo kết nối; gọi nó từ client khác không nói gì về lần ghi của bạn. Và kể cả khi WAIT trả đủ số, Redis vẫn không hứa ghi đó sống sót qua failover.</p>
+</div>
+
+<div class="widget" id="w7">
+<div class="widget-head"><h4>W7 · Phát lại lần cắt mạng replica</h4><span class="eyebrow">run-w7 · 07-architecture.partition</span></div>
+<div class="widget-body">
+<p>Bấm từng bước theo đúng thứ tự region <code>partition</code>. Số trong khung là số đã ghi trên máy bạn.</p>
+<div class="btns tabs" id="w7-steps" role="group" aria-label="Chọn bước của lần cắt mạng"></div>
+<div class="lanes" id="w7-view" aria-live="polite"></div>
+<div class="out" id="w7-out" aria-live="polite"></div>
+</div>
+</div>
+
+<details class="fold"><summary>Tùy chọn 10 phút · nâng replica lên master bằng tay (split-brain thu nhỏ)</summary><div class="fold-body">
+<p>Region <code>failover</code> gõ <code>REPLICAOF NO ONE</code> trên replica: nó thành master và nhận ghi riêng. Main cũng nhận ghi. Khi trả replica về theo main bằng <code>REPLICAOF advance-be-redis 6379</code>, nó đồng bộ lại toàn bộ từ main, và khóa chỉ ghi trên nó mất (dòng trống = nil). Đây là lý do Sentinel và Cluster phải bầu chọn có đa số và "rào" node cũ lại.</p>
+<!--@CMD 07-architecture.sh#failover@-->
+<!--@RUN 07-architecture.failover@-->
+</div></details>
+
+<div class="callout key">
+<span class="tag">Slide 9 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Hash slot nối dữ liệu với node. Một cluster có tổng cộng 16384 hash slot, chia đều cho các node, một slot chứa được nhiều khóa.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Đúng. Cluster của bài giữ <b class="m" data-run="07-cluster.keyslot">cluster_slots_assigned:16384</b>. <code>CLUSTER KEYSLOT foo</code> trả <b class="m" data-run="07-cluster.keyslot">12182</b>, và W6 bên dưới tính lại đúng số đó bằng CRC16-XMODEM mod 16384 ngay trong trình duyệt.</p></div>
+</div>
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_09_img_01.png" alt="Slide 9: 16384 hash slot chia cho các node của cluster" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 9 · Hash slot</figcaption></figure>
+</div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · slot và CROSSSLOT trên cluster</span>
+<p>Bật cluster: <code>bash labs/lesson-06-redis/00-containers.sh up cluster</code>. Mở redis-cli <b>của container cluster</b>: PowerShell <code>docker exec -it advance-be-redis-cluster redis-cli</code>, Git Bash <code>winpty docker exec -it advance-be-redis-cluster redis-cli</code>. Dán cả khối.</p>
+<ol>
+<li><b>Region <code>keyslot</code>:</b> đọc <code>CLUSTER INFO</code>, rồi lấy slot của vài khóa. Để ý ba quy tắc hashtag: hai khóa <code>{34}</code> cùng slot; <code>{}</code> rỗng không phải hashtag nên băm cả khóa; <code>{a}{b}</code> chỉ lấy <code>a</code> đầu tiên, nên ra cùng slot với khóa <code>a</code> (<b class="m" data-run="07-cluster.keyslot">15495</b>).</li>
+</ol>
+<!--@CMD 07-cluster.redis#keyslot@-->
+<!--@RUN 07-cluster.keyslot@-->
+<ol start="2">
+<li><b>Region <code>crossslot</code>:</b> cluster chỉ có một node, vậy mà <code>SINTER l06:a l06:b</code> vẫn bị từ chối. Redis kiểm tra <b>slot</b>, không kiểm tra node. Cùng hashtag <code>{34}</code> thì chạy được.</li>
+</ol>
+<!--@CMD 07-cluster.redis#crossslot@-->
+<!--@RUN 07-cluster.crossslot@-->
+</div>
+
+<div class="widget" id="w6">
+<div class="widget-head"><h4>W6 · Máy tính hash slot</h4><span class="eyebrow">run-w6 · 07-cluster.keyslot</span></div>
+<div class="widget-body">
+<p>Gõ một khóa. Widget tính CRC16-XMODEM trên các byte UTF-8 rồi lấy dư 16384, giống Redis; phần được băm được tô màu. Gõ khóa thứ hai để xem hai khóa có chạy chung một lệnh được không.</p>
+<div class="slotcalc">
+<label>Khóa 1<input class="field" id="w6-key" type="text" value="l06:user_profile:{34}" autocomplete="off" spellcheck="false"></label>
+<output id="w6-slot" for="w6-key" aria-live="polite"></output>
+<div class="hashed" id="w6-hashed"></div>
+<label>Khóa 2<input class="field" id="w6-key2" type="text" value="l06:user_session:{34}" autocomplete="off" spellcheck="false"></label>
+<output id="w6-slot2" for="w6-key2" aria-live="polite"></output>
+<div class="hashed" id="w6-hashed2"></div>
+</div>
+<div class="out" id="w6-verdict" aria-live="polite"></div>
+<p class="muted">Các khóa đã chạy <code>CLUSTER KEYSLOT</code> trên máy bạn (bấm để nạp vào khóa 1):</p>
+<div class="btns" id="w6-pairs"></div>
+<div class="out" id="w6-check" aria-live="polite"></div>
+</div>
+</div>
+
+<div class="callout key">
+<span class="tag">Slide 39 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Hàm chạy trên hai set nằm ở hai node khác nhau thì không được; hai set cùng hash slot thì được. Dùng hashtag: <code>User_profile:{34}</code> và <code>User_session:{34}</code>.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Đúng, và chặt hơn slide: điều kiện là <b>cùng slot</b>, không phải cùng node. Trên cluster một node, <code>SINTER l06:a l06:b</code> vẫn trả <b class="m" data-run="07-cluster.crossslot">CROSSSLOT Keys in request don't hash to the same slot</b>. Hai khóa của slide (thêm tiền tố <code>l06:</code>) cùng ra <b class="m" data-run="07-cluster.keyslot">9745</b>.</p></div>
+</div>
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_39_img_01.png" alt="Slide 39: hai khóa có cùng hashtag 34 được đặt vào cùng một hash slot" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 39 · Hashtag đưa nhiều khóa về một slot</figcaption></figure>
+<p>Đổi lại: mọi khóa cùng hashtag dồn vào một slot, tức một node. Hashtag theo <code>storeId</code> thì một quán rất đông sẽ thành "node nóng". Chỉ gom những khóa thật sự cần chạy chung một lệnh (giỏ hàng và khóa giỏ hàng của cùng một user), đừng gom cả quán.</p>
+</div>
+
+<div class="callout challenge" id="chang-7-tu-lam">
+<span class="tag">Tự làm · chặng 7</span>
+<p><b>Đề:</b> user 34 có giỏ hàng và khóa giỏ hàng. Đặt tên hai khóa (bắt đầu bằng <code>l06:my:</code>, có chữ <code>cart</code> và <code>cart-lock</code>) sao cho chúng cùng slot. Dự đoán slot bằng W6 trước, rồi trong redis-cli của <code>advance-be-redis-cluster</code> chạy <code>MSET</code> hai khóa và <code>MGET</code> hai khóa. Thử thêm một cặp tên <b>không</b> có hashtag để thấy lỗi.</p>
+<p><b>PASS khi:</b></p>
+<ul>
+<li><code>CLUSTER KEYSLOT</code> của hai khóa bằng nhau và bằng số W6 dự đoán.</li>
+<li><code>MSET</code> trả <code>OK</code>, <code>MGET</code> trả đủ hai giá trị, không có <code>CROSSSLOT</code>.</li>
+<li>Cặp không hashtag cho <code>CROSSSLOT</code> ở <code>MSET</code>, và bạn giải thích được vì sao.</li>
+</ul>
+<div class="code"><pre><code>CLUSTER KEYSLOT &lt;khóa cart&gt;
+CLUSTER KEYSLOT &lt;khóa cart-lock&gt;
+MSET &lt;khóa cart&gt; v1 &lt;khóa cart-lock&gt; v2
+MGET &lt;khóa cart&gt; &lt;khóa cart-lock&gt;</code></pre></div>
+<label class="fields"><span class="muted">Ghi tên hai khóa, slot và kết quả MSET/MGET</span>
+<textarea class="field" data-store="l06-c7-slot" placeholder="l06:my:… → slot …, MSET …, MGET …"></textarea>
+</label>
+<details class="fold"><summary>Đáp án</summary><div class="fold-body">
+<div class="code"><pre><code>CLUSTER KEYSLOT l06:my:cart:{34}
+CLUSTER KEYSLOT l06:my:cart-lock:{34}
+MSET l06:my:cart:{34} v1 l06:my:cart-lock:{34} v2
+MGET l06:my:cart:{34} l06:my:cart-lock:{34}
+MSET l06:my:cart:34 v1 l06:my:cart-lock:34 v2</code></pre></div>
+<p>Hai khóa có hashtag <code>{34}</code> chỉ băm chuỗi <code>34</code>, giống <code>l06:user_profile:{34}</code> đã ghi, nên cùng ra <b class="m" data-run="07-cluster.keyslot">9745</b>; MSET/MGET chạy bình thường. Dòng cuối không có hashtag: Redis băm cả khóa, hai khóa rơi vào hai slot khác nhau và MSET bị từ chối với <code>CROSSSLOT</code>, như <code>SINTER l06:a l06:b</code> ở run <code>07-cluster.crossslot</code>. Đặt <code>{u34}</code> hay <code>{user:34}</code> cũng được, miễn hai khóa giống hệt phần trong ngoặc.</p>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 7</h3>
+<p>Cần cả replica và cluster đang chạy. Dán từng dòng vào Git Bash rồi so với bảng.</p>
+<!--@CMD 07-architecture.sh#kiem-chung@-->
+<div class="table-wrap"><table class="expect">
+<thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>INFO replication</code> trên replica</td><td><b class="m" data-run="07-architecture.kiem-chung">role:slave</b> <b class="m" data-run="07-architecture.kiem-chung">master_link_status:up</b></td><td>Replica đã nối lại main sau lần cắt mạng (và sau phần tùy chọn, nếu bạn chạy).</td></tr>
+<tr><td><code>GET l06:rep:price</code> trên replica</td><td><b class="m" data-run="07-architecture.kiem-chung">120</b></td><td>Giá mới ghi lúc mất mạng đã sang replica.</td></tr>
+<tr><td><code>EXISTS l06:rep:replica-only</code> trên replica</td><td><b class="m" data-run="07-architecture.kiem-chung">0</b></td><td>Khóa chỉ ghi lúc replica "làm master" đã mất khi đồng bộ lại (nếu bạn bỏ qua phần tùy chọn thì cũng là 0).</td></tr>
+<tr><td><code>CLUSTER INFO</code></td><td><b class="m" data-run="07-architecture.kiem-chung">cluster_state:ok</b> <b class="m" data-run="07-architecture.kiem-chung">cluster_slots_assigned:16384</b></td><td>Cluster nhận đủ mọi slot nên mọi khóa đều có chỗ.</td></tr>
+<tr><td><code>CLUSTER KEYSLOT</code> hai khóa <code>{34}</code></td><td><b class="m" data-run="07-architecture.kiem-chung">9745</b> và <b class="m" data-run="07-architecture.kiem-chung">9745</b></td><td>Hashtag đưa hai khóa về cùng slot (slide 39).</td></tr>
+</tbody>
+</table></div>
+<p class="muted">Xong chặng 7, tắt hai container phụ: <code>bash labs/lesson-06-redis/00-containers.sh down replica</code> và <code>down cluster</code>. Replica còn chạy sẽ làm SLOWLOG của main có thêm dòng <code>REPLCONF</code> khi bạn đo lại chặng 6.</p>
+
+<div class="quiz" data-quiz="7"></div>
+</section>

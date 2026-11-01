@@ -1,0 +1,384 @@
+{
+  "sources": [
+    "08-lock.nolock.timeline",
+    "08-lock.nx.timeline",
+    "08-lock.ttldel.timeline",
+    "08-lock-lua.cad.timeline",
+    "08-lock-lua.fencing.timeline"
+  ],
+  "timelines": [
+    {
+      "run": "08-lock.nolock.timeline",
+      "events": [
+        {
+          "ms": 253,
+          "who": "A",
+          "dir": "send",
+          "text": "GET l06:seat:FA634:A34_S012C"
+        },
+        {
+          "ms": 253,
+          "who": "B",
+          "dir": "send",
+          "text": "GET l06:seat:FA634:A34_S012C"
+        },
+        {
+          "ms": 254,
+          "who": "A",
+          "dir": "reply",
+          "text": "(nil)"
+        },
+        {
+          "ms": 254,
+          "who": "B",
+          "dir": "reply",
+          "text": "(nil)"
+        },
+        {
+          "ms": 761,
+          "who": "A",
+          "dir": "send",
+          "text": "SET l06:seat:FA634:A34_S012C A"
+        },
+        {
+          "ms": 763,
+          "who": "A",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 763,
+          "who": "A",
+          "dir": "send",
+          "text": "RPUSH l06:seat:FA634:log BOOKED:A"
+        },
+        {
+          "ms": 765,
+          "who": "A",
+          "dir": "reply",
+          "text": "(integer) 1"
+        },
+        {
+          "ms": 962,
+          "who": "B",
+          "dir": "send",
+          "text": "SET l06:seat:FA634:A34_S012C B"
+        },
+        {
+          "ms": 965,
+          "who": "B",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 965,
+          "who": "B",
+          "dir": "send",
+          "text": "RPUSH l06:seat:FA634:log BOOKED:B"
+        },
+        {
+          "ms": 967,
+          "who": "B",
+          "dir": "reply",
+          "text": "(integer) 2"
+        },
+        {
+          "ms": 1269,
+          "who": "B",
+          "dir": "send",
+          "text": "GET l06:seat:FA634:A34_S012C"
+        },
+        {
+          "ms": 1272,
+          "who": "B",
+          "dir": "reply",
+          "text": "\"B\""
+        },
+        {
+          "ms": 1272,
+          "who": "B",
+          "dir": "send",
+          "text": "LRANGE l06:seat:FA634:log 0 -1"
+        },
+        {
+          "ms": 1275,
+          "who": "B",
+          "dir": "reply",
+          "text": "1) \"BOOKED:A\""
+        },
+        {
+          "ms": 1275,
+          "who": "B",
+          "dir": "reply",
+          "text": "2) \"BOOKED:B\""
+        }
+      ]
+    },
+    {
+      "run": "08-lock.nx.timeline",
+      "events": [
+        {
+          "ms": 217,
+          "who": "A",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokA NX PX 5000"
+        },
+        {
+          "ms": 218,
+          "who": "A",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 519,
+          "who": "B",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokB NX PX 5000"
+        },
+        {
+          "ms": 521,
+          "who": "B",
+          "dir": "reply",
+          "text": "(nil)"
+        },
+        {
+          "ms": 818,
+          "who": "A",
+          "dir": "send",
+          "text": "DEL l06:lock:FA634:A34_S012C"
+        },
+        {
+          "ms": 820,
+          "who": "A",
+          "dir": "reply",
+          "text": "(integer) 1"
+        }
+      ]
+    },
+    {
+      "run": "08-lock.ttldel.timeline",
+      "events": [
+        {
+          "ms": 258,
+          "who": "A",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokA NX PX 2000"
+        },
+        {
+          "ms": 259,
+          "who": "A",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 3058,
+          "who": "B",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokB NX PX 2000"
+        },
+        {
+          "ms": 3060,
+          "who": "B",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 3571,
+          "who": "A",
+          "dir": "send",
+          "text": "DEL l06:lock:FA634:A34_S012C"
+        },
+        {
+          "ms": 3573,
+          "who": "A",
+          "dir": "reply",
+          "text": "(integer) 1"
+        },
+        {
+          "ms": 3868,
+          "who": "B",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokC NX PX 2000"
+        },
+        {
+          "ms": 3870,
+          "who": "B",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 3871,
+          "who": "B",
+          "dir": "send",
+          "text": "GET l06:lock:FA634:A34_S012C"
+        },
+        {
+          "ms": 3872,
+          "who": "B",
+          "dir": "reply",
+          "text": "\"tokC\""
+        }
+      ]
+    },
+    {
+      "run": "08-lock-lua.cad.timeline",
+      "events": [
+        {
+          "ms": 506,
+          "who": "A",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokA NX PX 2000"
+        },
+        {
+          "ms": 685,
+          "who": "A",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 3336,
+          "who": "B",
+          "dir": "send",
+          "text": "SET l06:lock:FA634:A34_S012C tokB NX PX 5000"
+        },
+        {
+          "ms": 3503,
+          "who": "B",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 4227,
+          "who": "A",
+          "dir": "send",
+          "text": "--eval /lab/lua/lock-release.lua l06:lock:FA634:A34_S012C , tokA"
+        },
+        {
+          "ms": 4396,
+          "who": "A",
+          "dir": "reply",
+          "text": "0"
+        },
+        {
+          "ms": 4408,
+          "who": "A",
+          "dir": "send",
+          "text": "GET l06:lock:FA634:A34_S012C"
+        },
+        {
+          "ms": 4571,
+          "who": "A",
+          "dir": "reply",
+          "text": "tokB"
+        },
+        {
+          "ms": 5540,
+          "who": "B",
+          "dir": "send",
+          "text": "--eval /lab/lua/lock-release.lua l06:lock:FA634:A34_S012C , tokB"
+        },
+        {
+          "ms": 5713,
+          "who": "B",
+          "dir": "reply",
+          "text": "1"
+        }
+      ]
+    },
+    {
+      "run": "08-lock-lua.fencing.timeline",
+      "events": [
+        {
+          "ms": 558,
+          "who": "A",
+          "dir": "send",
+          "text": "--eval /lab/lua/lock-acquire-fenced.lua l06:lock:FA634:A34_S012C l06:fence:A34_S012C , tokA 2000"
+        },
+        {
+          "ms": 740,
+          "who": "A",
+          "dir": "reply",
+          "text": "1"
+        },
+        {
+          "ms": 3383,
+          "who": "B",
+          "dir": "send",
+          "text": "--eval /lab/lua/lock-acquire-fenced.lua l06:lock:FA634:A34_S012C l06:fence:A34_S012C , tokB 5000"
+        },
+        {
+          "ms": 3580,
+          "who": "B",
+          "dir": "reply",
+          "text": "2"
+        },
+        {
+          "ms": 3592,
+          "who": "B",
+          "dir": "send",
+          "text": "--eval /lab/lua/fenced-write.lua l06:seat:FA634:A34_S012C:row , 2 B"
+        },
+        {
+          "ms": 3756,
+          "who": "B",
+          "dir": "reply",
+          "text": "OK"
+        },
+        {
+          "ms": 3768,
+          "who": "B",
+          "dir": "send",
+          "text": "--eval /lab/lua/lock-release.lua l06:lock:FA634:A34_S012C , tokB"
+        },
+        {
+          "ms": 3936,
+          "who": "B",
+          "dir": "reply",
+          "text": "1"
+        },
+        {
+          "ms": 4780,
+          "who": "A",
+          "dir": "send",
+          "text": "--eval /lab/lua/fenced-write.lua l06:seat:FA634:A34_S012C:row , 1 A"
+        },
+        {
+          "ms": 4972,
+          "who": "A",
+          "dir": "reply",
+          "text": "STALE 2"
+        },
+        {
+          "ms": 4983,
+          "who": "A",
+          "dir": "send",
+          "text": "HGETALL l06:seat:FA634:A34_S012C:row"
+        },
+        {
+          "ms": 5157,
+          "who": "A",
+          "dir": "reply",
+          "text": "owner"
+        },
+        {
+          "ms": 5157,
+          "who": "A",
+          "dir": "reply",
+          "text": "B"
+        },
+        {
+          "ms": 5157,
+          "who": "A",
+          "dir": "reply",
+          "text": "token"
+        },
+        {
+          "ms": 5157,
+          "who": "A",
+          "dir": "reply",
+          "text": "2"
+        }
+      ]
+    }
+  ]
+}

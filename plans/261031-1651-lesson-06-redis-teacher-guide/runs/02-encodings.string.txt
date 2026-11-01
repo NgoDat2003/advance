@@ -1,0 +1,31 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> SET l06:enc:n 12345
+OK
+127.0.0.1:6379> OBJECT ENCODING l06:enc:n
+"int"
+127.0.0.1:6379> SET l06:enc:s44 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGH
+OK
+127.0.0.1:6379> STRLEN l06:enc:s44
+(integer) 44
+127.0.0.1:6379> OBJECT ENCODING l06:enc:s44
+"embstr"
+127.0.0.1:6379> MEMORY USAGE l06:enc:s44
+(integer) 104
+127.0.0.1:6379> SET l06:enc:s45 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHI
+OK
+127.0.0.1:6379> STRLEN l06:enc:s45
+(integer) 45
+127.0.0.1:6379> OBJECT ENCODING l06:enc:s45
+"raw"
+127.0.0.1:6379> MEMORY USAGE l06:enc:s45
+(integer) 112
+127.0.0.1:6379> SET l06:enc:app hi
+OK
+127.0.0.1:6379> OBJECT ENCODING l06:enc:app
+"embstr"
+127.0.0.1:6379> APPEND l06:enc:app !
+(integer) 3
+127.0.0.1:6379> STRLEN l06:enc:app
+(integer) 3
+127.0.0.1:6379> OBJECT ENCODING l06:enc:app
+"raw"

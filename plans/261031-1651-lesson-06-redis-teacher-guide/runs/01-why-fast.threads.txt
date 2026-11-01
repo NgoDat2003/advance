@@ -1,0 +1,31 @@
+# chạy lúc 01/11/2026 09:28 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> INFO server
+# Server
+redis_version:7.2.3
+redis_git_sha1:00000000
+redis_git_dirty:0
+redis_build_id:c30a2ad35da64f5c
+redis_mode:standalone
+os:Linux 6.18.54.1-microsoft-standard-WSL2 x86_64
+arch_bits:64
+monotonic_clock:POSIX clock_gettime
+multiplexing_api:epoll
+atomicvar_api:c11-builtin
+gcc_version:12.2.0
+process_id:1
+process_supervised:no
+run_id:07ae7fa01aaf9cc94ccfa4520202e6c72100deb5
+tcp_port:6379
+server_time_usec:1793500135762638
+uptime_in_seconds:947
+uptime_in_days:0
+hz:10
+configured_hz:10
+lru_clock:15115239
+executable:/data/redis-server
+config_file:
+io_threads_active:0
+listener0:name=tcp,bind=*,bind=-::*,port=6379
+127.0.0.1:6379> CONFIG GET io-threads
+1) "io-threads"
+2) "1"

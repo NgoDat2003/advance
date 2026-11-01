@@ -1,0 +1,13 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> HLEN l06:user:1
+(integer) 4
+127.0.0.1:6379> OBJECT ENCODING l06:user:1
+"listpack"
+127.0.0.1:6379> MEMORY USAGE l06:user:1
+(integer) 112
+127.0.0.1:6379> STRLEN l06:user:1:json
+(integer) 51
+127.0.0.1:6379> OBJECT ENCODING l06:user:1:json
+"raw"
+127.0.0.1:6379> MEMORY USAGE l06:user:1:json
+(integer) 120

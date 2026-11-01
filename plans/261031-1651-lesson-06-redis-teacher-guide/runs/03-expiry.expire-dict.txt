@@ -1,0 +1,76 @@
+# chạy lúc 01/11/2026 09:37 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> SET l06:exp:persist v
+OK
+127.0.0.1:6379> SET l06:exp:ttl v EX 10
+OK
+127.0.0.1:6379> INFO keyspace
+# Keyspace
+db0:keys=30,expires=1,avg_ttl=0
+127.0.0.1:6379> TTL l06:exp:persist
+(integer) -1
+127.0.0.1:6379> TTL l06:exp:ttl
+(integer) 10
+127.0.0.1:6379> TTL l06:exp:missing
+(integer) -2
+127.0.0.1:6379> MEMORY STATS
+ 1) "peak.allocated"
+ 2) (integer) 112614416
+ 3) "total.allocated"
+ 4) (integer) 2179968
+ 5) "startup.allocated"
+ 6) (integer) 865896
+ 7) "replication.backlog"
+ 8) (integer) 0
+ 9) "clients.slaves"
+10) (integer) 0
+11) "clients.normal"
+12) (integer) 0
+13) "cluster.links"
+14) (integer) 0
+15) "aof.buffer"
+16) (integer) 0
+17) "lua.caches"
+18) (integer) 280
+19) "functions.caches"
+20) (integer) 184
+21) "db.0"
+22) 1) "overhead.hashtable.main"
+    2) (integer) 1456
+    3) "overhead.hashtable.expires"
+    4) (integer) 56
+    5) "overhead.hashtable.slot-to-keys"
+    6) (integer) 0
+23) "overhead.total"
+24) (integer) 867872
+25) "keys.count"
+26) (integer) 30
+27) "keys.bytes-per-key"
+28) (integer) 43802
+29) "dataset.bytes"
+30) (integer) 1312096
+31) "dataset.percentage"
+32) "99.84962463378906"
+33) "peak.percentage"
+34) "1.9357805252075195"
+35) "allocator.allocated"
+36) (integer) 2314728
+37) "allocator.active"
+38) (integer) 6217728
+39) "allocator.resident"
+40) (integer) 13221888
+41) "allocator-fragmentation.ratio"
+42) "2.686159133911133"
+43) "allocator-fragmentation.bytes"
+44) (integer) 3903000
+45) "allocator-rss.ratio"
+46) "2.1264822483062744"
+47) "allocator-rss.bytes"
+48) (integer) 7004160
+49) "rss-overhead.ratio"
+50) "1.3212515115737915"
+51) "rss-overhead.bytes"
+52) (integer) 4247552
+53) "fragmentation"
+54) "8.252540588378906"
+55) "fragmentation.bytes"
+56) (integer) 15352584

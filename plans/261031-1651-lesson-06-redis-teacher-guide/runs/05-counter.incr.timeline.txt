@@ -1,0 +1,12 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:counter-incr 5
++   208 A > RPUSH l06:barrier:counter-incr go
++   209 A < (integer) 1
++   209 A > INCR l06:cnt:views
++   210 B < 1) "l06:barrier:counter-incr"
++   210 B < 2) "go"
++   211 A < (integer) 1
++   421 B > INCR l06:cnt:views
++   423 B < (integer) 2
++   717 A > GET l06:cnt:views
++   719 A < "2"

@@ -1,0 +1,8 @@
+# chạy lúc 01/11/2026 09:46 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:bucket-naive 5
+1) "l06:barrier:bucket-naive"
+2) "go"
+127.0.0.1:6379> GET l06:tb:naive:7
+"1"
+127.0.0.1:6379> SET l06:tb:naive:7 0
+OK

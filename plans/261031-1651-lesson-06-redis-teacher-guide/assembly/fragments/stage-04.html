@@ -1,0 +1,187 @@
+<section id="chang-4" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">04</span>
+    <div>
+      <div class="stage-meta"><span>Slide 24–27</span><span>25 phút + 5 tùy chọn</span><span>Lõi</span></div>
+      <h2>RDB, AOF, hybrid: giết tiến trình rồi đếm khóa còn lại</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> tự <code>docker kill</code> một Redis đang có dữ liệu, khởi động lại, đếm <code>DBSIZE</code>, và nói được mỗi chế độ mất gì, vì sao.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd><b>RDB</b> chụp cả bộ nhớ thành một file. <b>AOF</b> ghi nối từng lệnh ghi vào một file log. <b>Hybrid</b>: phần nền của AOF là một RDB, sau đó nối tiếp lệnh mới.</dd>
+    <dt>TẠI SAO?</dt><dd>Tiến trình chết hay mất điện thì RAM trống. Khởi động lại, Redis chỉ còn những gì đã nằm trên đĩa.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Dữ liệu dựng lại được từ SQL (cache, bảng bán chạy) không cần AOF. Tiền và sổ cái không lấy Redis làm nguồn sự thật.</dd>
+  </dl>
+
+  <div class="story">
+    <span class="tag">Tình huống</span>
+    <p>Tối thứ Bảy, quán mất điện. Có điện lại, hub OmniPOS và Redis khởi động. Trong Redis có khóa idempotency của hóa đơn POS (FR-M2-02), token bucket voucher của từng quán (FR-M2-05) và bảng món bán chạy (FR-M2-04). Cái nào còn, cái nào mất, mất thì có sao không? Ta trả lời bằng cách giết Redis rồi đếm.</p>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 24 · trang tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>2.4 Data Persistence.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định để đo; slide 25–27 đo bên dưới.</p></div>
+    </div>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_26_img_01.png" alt="Slide 26: luồng chính, dữ liệu Redis, RDB snapshot ghi xuống đĩa" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 26 · RDB: snapshot từ RAM xuống đĩa</figcaption></figure>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_25_img_01.png" alt="Slide 25: luồng chính ghi dữ liệu và AOF buffer, buffer ghi xuống đĩa" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 25 · AOF: lệnh ghi qua AOF buffer rồi xuống đĩa</figcaption></figure>
+
+  <div class="table-wrap">
+    <table class="stats">
+      <caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · container advance-be-redis-rdb / -aof · µs phụ thuộc máy</caption>
+      <thead><tr><th>Đo gì</th><th>Kết quả</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td>RDB: <code>BGSAVE</code>, ghi thêm, <code>docker kill</code></td><td><b class="m" data-run="04-persistence.rdb-loss">1500</b> → <b class="m" data-run="04-persistence.rdb-loss">1000</b></td><td>mất mọi khóa ghi sau ảnh chụp (từ <code>l06:p:1001</code> trở đi)</td></tr>
+        <tr><td>AOF <b class="m" data-run="04-persistence.aof-loss">everysec</b>, <code>sleep 2</code>, <code>docker kill</code></td><td><b class="m" data-run="04-persistence.aof-loss">1500</b> → <b class="m" data-run="04-persistence.aof-loss">1500</b></td><td>kill tiến trình không mất gì</td></tr>
+        <tr><td><code>BGSAVE</code> trả ngay</td><td><b class="m" data-run="04-persistence.rdb-loss">Background saving started</b></td><td>tiến trình con ghi file</td></tr>
+        <tr><td>Fork của BGSAVE (chặn luồng chính)</td><td><b class="m" data-run="04-persistence.rdb-loss">latest_fork_usec:325</b></td><td>chỉ lúc fork là chặn</td></tr>
+        <tr><td><code>SAVE</code> trên luồng chính (SLOWLOG, µs)</td><td><b class="m" data-run="04-persistence.rdb-loss">7158</b></td><td>chặn mọi client suốt lúc ghi</td></tr>
+        <tr><td>Đầu file nền AOF, preamble <code>yes</code> / <code>no</code></td><td><b class="m" data-run="04-persistence.hybrid">REDIS</b> / <b class="m" data-run="04-persistence.hybrid">*2  $</b></td><td>RDB nhị phân / lệnh RESP</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="check30">
+    <span class="tag">Câu hỏi 30 giây</span>
+    <p>AOF <code>everysec</code>. Bạn vừa nhận <code>OK</code> cho một <code>SET</code> thì container bị <code>docker kill</code>. Khóa còn không? Mất điện thì sao?</p>
+    <details><summary>Xem đáp án</summary>
+      <p>Kill: thường là còn. Redis thường đã <code>write()</code> lệnh vào file trước khi trả <code>OK</code>, dữ liệu nằm trong page cache của hệ điều hành, và kill tiến trình không xóa page cache (run: <b class="m" data-run="04-persistence.aof-loss">1500</b> → <b class="m" data-run="04-persistence.aof-loss">1500</b>). Mất điện: page cache mất theo RAM, phần chưa <code>fsync</code> (khoảng giây cuối) mất. Máy này không đo kịch bản đó. Ngoại lệ của chữ "thường": khi lần <code>fsync</code> nền trước còn chưa xong (đĩa chậm), 7.2 hoãn <code>write()</code> tối đa 2 giây mà vẫn trả <code>OK</code> cho client (<code>aof.c</code>, <code>aof_flush_postponed_start</code>); kill đúng lúc đó thì mất phần đã trả <code>OK</code> nhưng chưa ghi.</p>
+    </details>
+  </div>
+
+  <div class="widget" id="w5">
+    <div class="widget-head"><h4>W5 · Cửa sổ mất dữ liệu</h4><span class="eyebrow">run-w5 · 04-persistence.rdb-loss · 04-persistence.aof-loss</span></div>
+    <div class="widget-body">
+      <p>Làn R: vạch đứng là lúc <code>BGSAVE</code>. Làn A: vạch minh họa fsync mỗi giây (không theo tỉ lệ). Số lấy từ hai run.</p>
+      <div class="lanes" id="w5-lanes"></div>
+      <div class="btns">
+        <button type="button" class="btn primary" id="w5-kill">kill -9 ở đây</button>
+        <button type="button" class="btn" id="w5-again">Ghi lại từ đầu</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="w5-power"><span>Mất điện / hệ điều hành sập thay vì kill tiến trình</span></label>
+      <div class="out" id="w5-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <h3>Làm mẫu</h3>
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · container riêng cho thí nghiệm phá hủy</span>
+    <p><code>FLUSHALL</code> và <code>docker kill</code> không bao giờ chạy trên main. Bật hai container phụ: <code>bash labs/lesson-06-redis/00-containers.sh up persist</code>. <code>advance-be-redis-rdb</code> chạy <code>--appendonly no --save ""</code> (chỉ có snapshot khi ta gọi). <code>advance-be-redis-aof</code> chạy <code>--appendonly yes --appendfsync everysec</code>. Dòng đầu mỗi region in tên container đích (<code>echo "→ advance-be-redis-rdb"</code>); thấy tên khác thì dừng.</p>
+  </div>
+
+  <h4>Bước 1 · RDB: ghi sau snapshot cuối là mất</h4>
+  <p>Dán từng dòng vào Git Bash.</p>
+<!--@CMD 04-persistence.sh#rdb-loss@-->
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>04-persistence.rdb-loss</code> (trích)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="04-persistence.rdb-loss">$ docker exec advance-be-redis-rdb redis-cli BGSAVE
+Background saving started
+…
+rdb_last_bgsave_status:ok
+$ docker exec advance-be-redis-rdb redis-cli INFO stats | grep ^latest_fork_usec
+latest_fork_usec:325
+…
+$ docker exec advance-be-redis-rdb redis-cli DBSIZE
+1500
+$ docker kill advance-be-redis-rdb
+…
+$ docker exec advance-be-redis-rdb redis-cli DBSIZE
+1000
+…
+$ docker exec advance-be-redis-rdb redis-cli SLOWLOG GET 1
+…
+7158
+SAVE
+…</pre></div>
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu · đọc kết quả RDB</span>
+    <ol>
+      <li><code>BGSAVE</code> fork một tiến trình con. Con thấy bộ nhớ đúng như lúc fork (copy-on-write) và ghi nó thành <code>dump.rdb</code>; cha vẫn nhận lệnh. Chỉ lúc fork là chặn: <b class="m" data-run="04-persistence.rdb-loss">latest_fork_usec:325</b> µs, càng nhiều GB càng lâu.</li>
+      <li>Ghi thêm tới <b class="m" data-run="04-persistence.rdb-loss">1500</b> khóa, kill, start: còn <b class="m" data-run="04-persistence.rdb-loss">1000</b>. Redis khởi động bằng cách đọc lại <code>dump.rdb</code>, file đó chỉ biết các khóa có lúc <code>BGSAVE</code>.</li>
+      <li><code>SAVE</code> làm cùng việc ngay trên luồng chính: <b class="m" data-run="04-persistence.rdb-loss">7158</b> µs cho một DB bé xíu, mọi POS phải chờ, như <code>DEBUG SLEEP</code> ở <a href="#chang-1">chặng 1</a>.</li>
+    </ol>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 26 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>RDB là mặc định. <code>SAVE</code> chặn luồng chính, <code>BGSAVE</code> dùng tiến trình con. Phục hồi nhanh; nhược là mất dữ liệu và khá nặng.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Đúng: <code>SAVE</code> <b class="m" data-run="04-persistence.rdb-loss">7158</b> µs, fork <b class="m" data-run="04-persistence.rdb-loss">latest_fork_usec:325</b>, mất phần sau snapshot (<b class="m" data-run="04-persistence.rdb-loss">1500</b> → <b class="m" data-run="04-persistence.rdb-loss">1000</b>). "Mặc định": main có luật <code>save</code> <b class="m" data-run="04-persistence.kiem-chung">3600 1 300 100 60 10000</b> (từng cặp: sau bao nhiêu giây, nếu ít nhất bao nhiêu thay đổi) và <code>appendonly</code> <b class="m" data-run="04-persistence.kiem-chung">no</b>.</p></div>
+    </div>
+  </div>
+
+  <h4>Bước 2 · AOF everysec: kill tiến trình không mất khóa nào</h4>
+<!--@CMD 04-persistence.sh#aof-loss@-->
+<!--@RUN 04-persistence.aof-loss@-->
+  <div class="callout warn">
+    <span class="tag">Đừng kết luận sai từ thí nghiệm này</span>
+    <p><code>docker kill</code> với <code>everysec</code> <b>không mất gì</b> (<b class="m" data-run="04-persistence.aof-loss">1500</b> → <b class="m" data-run="04-persistence.aof-loss">1500</b>). Redis gọi <code>write()</code> đẩy AOF buffer vào file trước khi trả lời client (thường là vậy; ngoại lệ hoãn tối đa 2 giây khi fsync nền chậm, xem ô trả lời ở trên). <code>write()</code> chỉ chép vào <b>page cache</b> của hệ điều hành; <code>fsync</code> mới ép xuống đĩa, <code>everysec</code> làm việc đó mỗi giây ở luồng nền. SIGKILL giết tiến trình, nhưng page cache thuộc nhân hệ điều hành và vẫn được ghi xuống đĩa.</p>
+    <p>Cửa sổ khoảng một giây của <code>everysec</code> chỉ mở khi <b>hệ điều hành sập hoặc mất điện</b>. Máy này không đo kịch bản đó; đây là điều đọc từ tài liệu Redis. Muốn đóng cửa sổ thì <code>appendfsync always</code> (chậm hơn nhiều), hoặc để PostgreSQL giữ phần không được mất.</p>
+  </div>
+
+  <div class="callout" id="sl-25">
+    <span class="tag">Slide 25 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>AOF không chặn lệnh ghi đang chạy, ít mất dữ liệu. Nhược: vẫn mất dữ liệu, có thể chặn thao tác khác, log dài thì phục hồi chậm.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Slide không nói mất <b>khi nào</b>: kill tiến trình với <b class="m" data-run="04-persistence.aof-loss">everysec</b> không mất khóa nào; chỉ mất điện / hệ điều hành sập mới mất phần chưa fsync. Log dài: Redis 7 tự viết gọn bằng <code>BGREWRITEAOF</code> và chia AOF thành nhiều file trong <code>appendonlydir</code> (bước 3). "Có thể chặn" (fsync chậm trên đĩa yếu) chưa đo trên máy này.</p></div>
+    </div>
+  </div>
+
+  <details class="fold">
+    <summary>Bước 3 · Tùy chọn 5 phút: hybrid, file nền AOF là RDB</summary>
+    <div class="fold-body">
+<!--@CMD 04-persistence.sh#hybrid@-->
+<!--@RUN 04-persistence.hybrid@-->
+      <p>File nền <code>….base.rdb</code> mở đầu bằng <b class="m" data-run="04-persistence.hybrid">REDIS</b>: RDB nhị phân, khởi động đọc nhanh; lệnh mới nằm trong <code>….incr.aof</code>. Tắt preamble rồi viết lại: file nền thành <code>….base.aof</code>, mở đầu bằng <b class="m" data-run="04-persistence.hybrid">*2  $</b> (một lệnh RESP).</p>
+    </div>
+  </details>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_27_img_01.png" alt="Slide 27: một file AOF gồm RDB content ở trên và AOF content ở dưới" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 27 · Hybrid: RDB content rồi AOF content</figcaption></figure>
+  <div class="callout" id="sl-27">
+    <span class="tag">Slide 27 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Hybrid ít mất dữ liệu, phục hồi nhanh. Nhược: khó đọc, không dùng được trên Redis trước 4.0.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Ý chính đúng, preamble bật sẵn (<b class="m" data-run="04-persistence.hybrid">yes</b>). Hình vẽ một file; Redis 7 tách thành <code>….base.rdb</code> (mở đầu <b class="m" data-run="04-persistence.hybrid">REDIS</b>), <code>….incr.aof</code> và <code>appendonly.aof.manifest</code>. "Khó đọc" chỉ đúng với phần nền. Điều cần nhớ hơn chuyện bản 4.0: thư mục AOF nhiều file của Redis 7 không chép sang Redis 6 được.</p></div>
+    </div>
+  </div>
+
+  <div class="callout challenge" id="chang-4-tu-lam">
+    <span class="tag">Tự làm · chặng 4</span>
+    <p><b>Đề:</b> chọn chế độ (không lưu / RDB / AOF <code>everysec</code> / AOF <code>always</code>) cho ba loại khóa của hub M2, mỗi lựa chọn một câu lý do có một số đo của chặng này: (1) khóa idempotency của <code>POST /pos/invoices</code> (FR-M2-02, <a href="#chang-9">chặng 9</a>); (2) token bucket voucher theo quán (FR-M2-05); (3) ZSET bán chạy (FR-M2-04), dựng lại được từ SQL (I-09).</p>
+    <p><b>PASS khi:</b> đủ ba lựa chọn; mỗi câu trích đúng một số trong bảng đo (RDB <b class="m" data-run="04-persistence.rdb-loss">1500</b> → <b class="m" data-run="04-persistence.rdb-loss">1000</b>, AOF <b class="m" data-run="04-persistence.aof-loss">1500</b> → <b class="m" data-run="04-persistence.aof-loss">1500</b>) và nói "mất thì sao" cho cả kill tiến trình lẫn mất điện.</p>
+    <p><b>Tự kiểm:</b> chạy khối Kiểm chứng bên dưới, so hai số <code>DBSIZE</code> với số bạn trích.</p>
+    <div class="fields">
+      <label><span class="muted">1 · Idempotency</span><textarea class="field" data-store="l06-c4-idem" placeholder="Chế độ + số đo + mất thì sao"></textarea></label>
+      <label><span class="muted">2 · Token bucket</span><textarea class="field" data-store="l06-c4-bucket" placeholder="Chế độ + số đo + mất thì sao"></textarea></label>
+      <label><span class="muted">3 · ZSET bán chạy</span><textarea class="field" data-store="l06-c4-board" placeholder="Chế độ + số đo + mất thì sao"></textarea></label>
+    </div>
+    <details class="fold"><summary>Lời giải mẫu</summary><div class="fold-body">
+      <ol>
+        <li><b>Idempotency: AOF everysec.</b> Mất khóa thì POS gửi lại sau khởi động thành hóa đơn thứ hai. Kill: AOF giữ đủ <b class="m" data-run="04-persistence.aof-loss">1500</b>, RDB chỉ còn <b class="m" data-run="04-persistence.rdb-loss">1000</b>. Mất điện còn cửa sổ giây cuối, nên bảng hóa đơn vẫn cần <code>UNIQUE (idempotency_key)</code> ở PostgreSQL.</li>
+        <li><b>Token bucket: RDB, thậm chí không lưu.</b> Mất thì bucket coi như đầy lại: một quán được claim thêm tối đa một lần sức chứa. Thường chấp nhận được.</li>
+        <li><b>ZSET bán chạy: RDB.</b> Phần sau snapshot mất (như <b class="m" data-run="04-persistence.rdb-loss">1000</b> trên <b class="m" data-run="04-persistence.rdb-loss">1500</b>) thì dựng lại từ SQL, vì SQL đúng (I-09).</li>
+      </ol>
+      <p>Chế độ bền vững là cấu hình của cả instance, không theo từng khóa. Một instance thì lấy chế độ chặt nhất (AOF everysec, preamble bật); muốn tách thì chạy hai instance.</p>
+    </div></details>
+  </div>
+
+  <h3>Kiểm chứng chặng 4</h3>
+  <p>Chạy khi hai container phụ còn bật (Git Bash, từng dòng). Xong thì tắt: <code>bash labs/lesson-06-redis/00-containers.sh down persist</code>.</p>
+<!--@CMD 04-persistence.sh#kiem-chung@-->
+  <div class="table-wrap">
+    <table class="expect">
+      <thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+      <tbody>
+        <tr><td><code>docker exec advance-be-redis-rdb redis-cli DBSIZE</code></td><td><b class="m" data-run="04-persistence.kiem-chung">1000</b></td><td>chỉ còn khóa trong snapshot</td></tr>
+        <tr><td><code>docker exec advance-be-redis-aof redis-cli DBSIZE</code></td><td><b class="m" data-run="04-persistence.kiem-chung">1500</b></td><td>AOF còn đủ sau kill</td></tr>
+        <tr><td><code>docker exec advance-be-redis-aof redis-cli CONFIG GET aof-use-rdb-preamble</code></td><td><b class="m" data-run="04-persistence.kiem-chung">yes</b></td><td>preamble đã bật lại</td></tr>
+        <tr><td><code>docker exec advance-be-redis redis-cli CONFIG GET appendonly</code></td><td><b class="m" data-run="04-persistence.kiem-chung">no</b></td><td>main không bị đụng</td></tr>
+        <tr><td><code>docker exec advance-be-redis redis-cli CONFIG GET save</code></td><td><b class="m" data-run="04-persistence.kiem-chung">3600 1 300 100 60 10000</b></td><td>main giữ luật mặc định</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="quiz" data-quiz="4"></div>
+</section>

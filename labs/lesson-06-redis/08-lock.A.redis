@@ -1,0 +1,46 @@
+# Bài 06 · Chặng 8 — Terminal A: đặt ghế A34_S012C chuyến FA634 khi có 2 request cùng lúc (slide 40).
+# Thứ tự mỗi kịch bản: (1) region *-reset ở A, (2) region cùng tên ở B (B đứng chờ BLPOP), (3) region ở A.
+# "#@ sleep 3" = tự đợi chừng đó giây (giả lập request đang xử lý / GC pause).
+
+# #region nolock-reset · Chuẩn bị: ghế trống, sổ đặt chỗ rỗng (slide 40)
+UNLINK l06:seat:FA634:A34_S012C l06:seat:FA634:log l06:barrier:lock-nolock
+# #endregion
+
+# #region nolock · Không khóa: cả hai thấy ghế trống và cùng đặt (slide 40)
+RPUSH l06:barrier:lock-nolock go
+GET l06:seat:FA634:A34_S012C
+#@ sleep 0.5
+SET l06:seat:FA634:A34_S012C A
+RPUSH l06:seat:FA634:log BOOKED:A
+# #endregion
+
+# #region nx-reset · Chuẩn bị: chưa ai giữ khóa (slide 40)
+UNLINK l06:lock:FA634:A34_S012C l06:barrier:lock-nx
+# #endregion
+
+# #region nx · SET NX PX: chỉ một người lấy được khóa (slide 40)
+RPUSH l06:barrier:lock-nx go
+SET l06:lock:FA634:A34_S012C tokA NX PX 5000
+#@ sleep 0.6
+# A xong việc và trả khóa bằng DEL. Kịch bản ttldel bên dưới cho thấy vì sao DEL trơn là nguy hiểm.
+DEL l06:lock:FA634:A34_S012C
+# #endregion
+
+# #region ttldel-reset · Chuẩn bị: chưa ai giữ khóa (slide 40)
+UNLINK l06:lock:FA634:A34_S012C l06:barrier:lock-ttldel
+# #endregion
+
+# #region ttldel · Khóa PX 2000 hết hạn khi A còn làm 3,3 s; DEL của A xóa nhầm khóa của B (slide 40)
+RPUSH l06:barrier:lock-ttldel go
+SET l06:lock:FA634:A34_S012C tokA NX PX 2000
+#@ sleep 3.3
+DEL l06:lock:FA634:A34_S012C
+# #endregion
+
+# #region kiem-chung · Kiểm chứng chặng 8 (slide 40)
+EXISTS l06:lock:FA634:A34_S012C
+GET l06:seat:FA634:A34_S012C
+LRANGE l06:seat:FA634:log 0 -1
+GET l06:fence:A34_S012C
+HGETALL l06:seat:FA634:A34_S012C:row
+# #endregion

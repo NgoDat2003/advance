@@ -1,0 +1,9 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+# lua delay-claim.lua sha256=688bd83fccb5acfdbaf7077befb0428bc897abcbdb7f020af68d59cdb4ff3e13
+$ docker exec advance-be-redis redis-cli BLPOP l06:barrier:delay-lua 5
+l06:barrier:delay-lua
+go
+$ set -u
+$ sleep 0.2
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/delay-claim.lua l06:delay:orders l06:delay:done
+

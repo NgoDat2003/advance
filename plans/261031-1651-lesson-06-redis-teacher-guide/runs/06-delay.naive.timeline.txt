@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:delay-naive 5
++   214 A > RPUSH l06:barrier:delay-naive go
++   215 A < (integer) 1
++   216 A > ZRANGE l06:delay:orders -inf 2000000000 BYSCORE LIMIT 0 1
++   216 B < 1) "l06:barrier:delay-naive"
++   216 B < 2) "go"
++   216 B > ZRANGE l06:delay:orders -inf 2000000000 BYSCORE LIMIT 0 1
++   217 A < 1) "o1"
++   217 B < 1) "o1"
++   727 A > RPUSH l06:delay:done o1
++   730 A < (integer) 1
++   730 A > ZREM l06:delay:orders o1
++   733 A < (integer) 1
++   931 B > RPUSH l06:delay:done o1
++   933 B < (integer) 2
++   933 B > ZREM l06:delay:orders o1
++   934 B < (integer) 0

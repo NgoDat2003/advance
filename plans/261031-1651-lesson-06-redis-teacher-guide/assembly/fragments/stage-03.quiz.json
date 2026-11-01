@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Tắt active expiry, ghi 1000 khóa PX 100, đợi 0,5 s. INFO keyspace báo gì?",
+    "opts": [
+      "expires=0, vì khóa đã hết hạn",
+      "expires=1000: khóa hết hạn vẫn nằm trong RAM cho tới khi bị đọc",
+      "Redis báo lỗi vì khóa hết hạn",
+      "keys=0, Redis xóa ngay đúng mili giây hết hạn"
+    ],
+    "ans": 1,
+    "why": "03-expiry.passive: db0:keys=1029,expires=1000 sau sleep 0.5; GET l06:exp:p:1 trả nil và expired_keys:4 → expired_keys:5."
+  },
+  {
+    "q": "Theo mã nguồn Redis 7.2.3 ở mức active-expire-effort mặc định, chu kỳ xóa chủ động lặp lại khi nào?",
+    "opts": [
+      "Khi hơn 25% trong 20 khóa vừa quét đã hết hạn",
+      "Khi hơn 10% khóa vừa quét đã hết hạn; 25 là trần CPU của chu kỳ",
+      "Luôn quét hết bảng expires mỗi giây",
+      "Chỉ khi có client đọc khóa"
+    ],
+    "ans": 1,
+    "why": "Slide 20 ghi 25%, mã nguồn 7.2.3 lặp khi quá 10% khóa vừa quét đã hết hạn (25% là trần thời gian CPU; khóa được quét bằng con trỏ, không rút ngẫu nhiên); lần chạy 03-expiry.active dọn 10000 khóa trong 3 s với expire_cycle_cpu_milliseconds:24, còn expired_stale_perc:3.40 chỉ là trung bình trượt trễ."
+  },
+  {
+    "q": "Slide 21 nói bảng hết hạn lưu trong Sorted Set. Lần chạy trên Redis 7.2.3 thấy gì?",
+    "opts": [
+      "Có một ZSET ẩn tên expires",
+      "Bảng expires là hash table (overhead.hashtable.expires), không có ZSET nào",
+      "Hạn lưu ngay trong value của khóa",
+      "Hạn lưu trong một List"
+    ],
+    "ans": 1,
+    "why": "03-expiry.expire-dict và 03-expiry.active: MEMORY STATS có overhead.hashtable.main và overhead.hashtable.expires, không có ZSET."
+  },
+  {
+    "q": "Cùng kịch bản ghi tràn, allkeys-lru giữ hot 66/300 còn allkeys-lfu giữ 300/300. Vì sao?",
+    "opts": [
+      "LRU có lỗi trong Redis 7.2",
+      "LRU chỉ nhớ lần chạm cuối nên khóa ghi tràn mới nhất đẩy cả hot ra; LFU đếm số lần dùng nên hot được đọc 10 vòng ở lại",
+      "LFU không bỏ khóa nào",
+      "Hot ở LRU bị hết hạn TTL"
+    ],
+    "ans": 1,
+    "why": "03-eviction.allkeys-lru: hot=66/300 cold=58/600, evicted_keys:925; 03-eviction.allkeys-lfu: hot=300/300 cold=306/600, evicted_keys:923."
+  }
+]

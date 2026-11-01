@@ -1,0 +1,30 @@
+# chạy lúc 01/11/2026 09:45 +0700 · Redis 7.2.3 · advance-be-redis-cluster
+127.0.0.1:6379> CLUSTER INFO
+cluster_state:ok
+cluster_slots_assigned:16384
+cluster_slots_ok:16384
+cluster_slots_pfail:0
+cluster_slots_fail:0
+cluster_known_nodes:1
+cluster_size:1
+cluster_current_epoch:0
+cluster_my_epoch:0
+cluster_stats_messages_sent:0
+cluster_stats_messages_received:0
+total_cluster_links_buffer_limit_exceeded:0
+127.0.0.1:6379> CLUSTER KEYSLOT foo
+(integer) 12182
+127.0.0.1:6379> CLUSTER KEYSLOT l06:user_profile:{34}
+(integer) 9745
+127.0.0.1:6379> CLUSTER KEYSLOT l06:user_session:{34}
+(integer) 9745
+127.0.0.1:6379> CLUSTER KEYSLOT l06:a
+(integer) 8130
+127.0.0.1:6379> CLUSTER KEYSLOT l06:b
+(integer) 12193
+127.0.0.1:6379> CLUSTER KEYSLOT l06:{}x
+(integer) 8887
+127.0.0.1:6379> CLUSTER KEYSLOT l06:{a}{b}
+(integer) 15495
+127.0.0.1:6379> CLUSTER KEYSLOT a
+(integer) 15495

@@ -1,0 +1,15 @@
+# Bài 06 · Dữ liệu mẫu cho cả bài. Chạy lại bao nhiêu lần cũng được: xóa đúng các khóa seed rồi tạo lại.
+# Không bao giờ đụng l06:my:* (thí nghiệm riêng của bạn) và l06:hw:* (bài tập).
+# Cách chạy (Git Bash): grep -v '^#' labs/lesson-06-redis/00-seed.redis | docker exec -i advance-be-redis redis-cli
+# Giá trị ghi vào Redis chỉ dùng chữ ASCII (redis-cli hiện chữ có dấu thành \xc4\x90...).
+UNLINK l06:user:1 l06:user:1:json l06:cart:u1 l06:followers:a l06:followers:b l06:board:bestseller
+# Slide 30: cùng một user, lưu 2 kiểu. Hash 4 trường và chuỗi JSON 51 ký tự.
+HSET l06:user:1 id 1 name Dat age 30 email dat@abc.vn
+SET l06:user:1:json '{"id":1,"name":"Dat","age":30,"email":"dat@abc.vn"}'
+# Slide 33: giỏ hàng = Hash, mỗi món là một trường, giá trị là số lượng.
+HSET l06:cart:u1 latte 2 croissant 1 cold-brew 1
+# Slide 34: người theo dõi của 2 tài khoản (Set).
+SADD l06:followers:a u1 u2 u3 u4
+SADD l06:followers:b u3 u4 u5
+# Slide 35: bảng món bán chạy (Sorted Set, điểm = số ly bán trong ngày).
+ZADD l06:board:bestseller 120 latte 95 cold-brew 80 croissant 60 banh-mi 45 tra-dao

@@ -1,0 +1,97 @@
+{
+  "entries": [
+    {
+      "name": "r04_pipeline_ratio",
+      "value": 12.5,
+      "formula": "p16/p1",
+      "inputs": {
+        "p16": 2083333.38,
+        "p1": 166944.92
+      },
+      "sources": [
+        "01-bench.pipeline"
+      ]
+    },
+    {
+      "name": "r05_small_mb_s",
+      "value": 2.59,
+      "formula": "s*16/1048576",
+      "inputs": {
+        "s": 169491.53
+      },
+      "sources": [
+        "01-bench.size"
+      ]
+    },
+    {
+      "name": "r05_big_mb_s",
+      "value": 3692.1,
+      "formula": "b*bytes/1048576",
+      "inputs": {
+        "b": 37807.18,
+        "bytes": 102400
+      },
+      "sources": [
+        "01-bench.size"
+      ]
+    },
+    {
+      "name": "r05_rps_ratio",
+      "value": 4.5,
+      "formula": "s/b",
+      "inputs": {
+        "s": 169491.53,
+        "b": 37807.18
+      },
+      "sources": [
+        "01-bench.size"
+      ]
+    },
+    {
+      "name": "r06_get_keys_s",
+      "value": 21953.9,
+      "formula": "g*1",
+      "inputs": {
+        "g": 21953.9
+      },
+      "sources": [
+        "01-bench.mget"
+      ]
+    },
+    {
+      "name": "r06_mget_keys_s",
+      "value": 205761.3,
+      "formula": "m*10",
+      "inputs": {
+        "m": 20576.13
+      },
+      "sources": [
+        "01-bench.mget"
+      ]
+    },
+    {
+      "name": "r06_keys_ratio",
+      "value": 9.4,
+      "formula": "m*10/g",
+      "inputs": {
+        "m": 20576.13,
+        "g": 21953.9
+      },
+      "sources": [
+        "01-bench.mget"
+      ]
+    },
+    {
+      "name": "r32_del_unlink_ratio",
+      "value": 7517,
+      "formula": "d/u",
+      "inputs": {
+        "d": 165363,
+        "u": 22
+      },
+      "sources": [
+        "06-practices.bigkey"
+      ]
+    }
+  ]
+}

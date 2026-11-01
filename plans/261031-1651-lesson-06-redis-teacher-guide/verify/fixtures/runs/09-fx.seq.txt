@@ -1,0 +1,6 @@
+# chạy lúc 31/10/2026 18:40 +0700 · Redis 7.2.3 · advance-be-redis-aof
+$ seq 1 1500 | awk '{print "SET l06:p:"$1" v"$1}' | docker exec -i advance-be-redis-aof redis-cli > /dev/null
+$ docker exec advance-be-redis-aof redis-cli DBSIZE
+1499
+$ echo "hot=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:hot:*' | wc -l)/300 cold=…"
+hot=66/300 cold=58/600

@@ -1,0 +1,8 @@
+# chạy lúc 01/11/2026 09:45 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:queue 5
+1) "l06:barrier:queue"
+2) "go"
+127.0.0.1:6379> BRPOP l06:q:orders 10
+1) "l06:q:orders"
+2) "o1"
+(1.09s)

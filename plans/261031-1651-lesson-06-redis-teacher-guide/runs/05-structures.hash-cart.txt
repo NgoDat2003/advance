@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> DEL l06:cart:u2
+(integer) 0
+127.0.0.1:6379> HSET l06:cart:u2 latte 1
+(integer) 1
+127.0.0.1:6379> HSET l06:cart:u2 croissant 1
+(integer) 1
+127.0.0.1:6379> HINCRBY l06:cart:u2 latte 1
+(integer) 2
+127.0.0.1:6379> HLEN l06:cart:u2
+(integer) 2
+127.0.0.1:6379> HDEL l06:cart:u2 croissant
+(integer) 1
+127.0.0.1:6379> HGET l06:cart:u2 latte
+"2"
+127.0.0.1:6379> HGETALL l06:cart:u2
+1) "latte"
+2) "2"

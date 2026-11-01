@@ -1,0 +1,94 @@
+# driver claims · node-redis = npm "redis" 6.3.0 (@redis/client 6.3.0), cùng bản lesson-02 package-lock.json và labs/lesson-06-redis/package.json (ghim 6.3.0) · kiểm 01/11/2026
+# Nguồn: mã nguồn đã phát hành tại tag redis@6.3.0 trên github.com/redis/node-redis và unpkg.com. Không đọc node_modules.
+# Mỗi khối: Cn <khẳng định của drill> / dòng https nguồn / version / quote nguyên văn (kèm số dòng). Khẳng định về hành vi Redis trỏ tới run id.
+
+C1 createClient({ url }) nhận chuỗi redis://host:port; drill dùng redis://127.0.0.1:6379
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/index.ts
+version: @redis/client 6.3.0
+quote L71: "  url?: string;"
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/docs/client-configuration.md
+quote L5: "| url | | `redis[s]://[[username][:password]@][host][:port][/db-number]` …"
+
+C2 Phải đăng ký listener 'error'; thiếu nó thì một lỗi kết nối làm process Node thoát (lỗi 7 của drill)
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/README.md
+version: redis 6.3.0
+quote L395-396: "> :warning: You **MUST** listen to `error` events. If a client doesn't have at least one `error` listener registered and" / "> an `error` occurs, that error will be thrown and the Node.js process will exit."
+
+C3 disableOfflineQueue mặc định false: khi mất kết nối, lệnh được xếp hàng trong bộ nhớ chờ nối lại (lỗi 7: hàng đợi offline không giới hạn)
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/docs/client-configuration.md
+version: redis 6.3.0
+quote L28: "| disableOfflineQueue | `false` | Disables offline queuing, see [FAQ](./FAQ.md#what-happens-when-the-network-goes-down)"
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/index.ts
+quote L122-125: "   * When `true`, commands are rejected when the client is reconnecting." / "  disableOfflineQueue?: boolean;"
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/docs/FAQ.md
+quote L7: "The rest will remain queued in memory until a new socket is established."
+quote L9: "If don't want to queue commands in memory until a new socket is established, set the `disableOfflineQueue` option to `true`"
+
+C4 SET có tùy chọn condition 'NX' và expiration { type: 'PX', value } (chỗ ĐÚNG của drill); kiểu cũ { NX: true, PX } đã deprecated nhưng vẫn chạy
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/commands/SET.ts
+version: @redis/client 6.3.0
+quote L5: "  expiration?: {"
+quote L44: "  condition?: 'NX' | 'XX' |  'IFEQ' | 'IFNE' | 'IFDEQ' | 'IFDNE';"
+quote L52-54: "   * @deprecated Use `{ condition: 'NX' }` instead." / "  NX?: boolean;"
+https://unpkg.com/@redis/client@6.3.0/dist/lib/commands/SET.d.ts
+quote: "        type: 'EX' | 'PX' | 'EXAT' | 'PXAT';" / "     * @deprecated Use `expiration` { type: 'PX', value: number } instead"
+# Ghi chú: README 6.3.0 L133 vẫn minh họa "  NX: true," (kiểu cũ). Lesson 02 lab 06 dùng { NX: true, PX } — vẫn đúng, chỉ là deprecated.
+
+C5 Lệnh gửi trong cùng một "tick" được node-redis tự gộp thành pipeline; dùng Promise.all (sửa lỗi 6: N lệnh GET await tuần tự)
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/README.md
+version: redis 6.3.0
+quote L319: "Node Redis will automatically pipeline requests that are made during the same \"tick\"."
+quote L328: "advantage of auto-pipelining and handle your Promises, use `Promise.all()`."
+
+C6 multi() … exec() là transaction MULTI/EXEC; execAsPipeline() gửi lô lệnh không bọc MULTI
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/multi-command.ts
+version: @redis/client 6.3.0
+quote L232: "  async exec<T extends MultiReply = MULTI_REPLY['GENERIC']>(execAsPipeline = false): Promise<MultiReplyType<T, REPLIES>> {"
+quote L246: "  async execAsPipeline<T extends MultiReply = MULTI_REPLY['GENERIC']>(): Promise<MultiReplyType<T, REPLIES>> {"
+
+C7 client.eval(script, { keys, arguments }) chạy Lua (sửa lỗi 3: trả khóa bằng compare-and-delete; hw-solution.mjs dùng đúng dạng này)
+https://unpkg.com/@redis/client@6.3.0/dist/lib/commands/EVAL.d.ts
+version: @redis/client 6.3.0
+quote: "export interface EvalOptions {" / "    keys?: Array<RedisArgument>;" / "    arguments?: Array<RedisArgument>;"
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/commands/index.ts
+quote L1754: "  eval: EVAL,"
+
+C8 sendCommand([...]) gửi lệnh thô khi chưa có hàm riêng
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/index.ts
+version: @redis/client 6.3.0
+quote L1620: "  sendCommand<T = ReplyUnion>("
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/README.md
+quote L172: "await client.sendCommand([\"SET\", \"key\", \"value\", \"NX\"]); // 'OK'"
+
+C9 Tên hàm camelCase mà drill và bài tập dùng: set, get, del, keys, incr, mGet, hGetAll, rPush
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/commands/index.ts
+version: @redis/client 6.3.0
+quote L1674: "  del: DEL," · L2264: "  get: GET," · L2426: "  hGetAll: HGETALL," · L2934: "  incr: INCR," · L3030: "  keys: KEYS," · L3548: "  mGet: MGET," · L4152: "  rPush: RPUSH," · L4348: "  set: SET,"
+
+C10 scanIterator() thay cho KEYS (sửa lỗi 1); ở bản 6.3.0 mỗi vòng lặp trả MỘT MẢNG khóa (một lô SCAN), không phải từng khóa
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/README.md
+version: redis 6.3.0
+quote L232: "for await (const keys of client.scanIterator()) {"
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/index.ts
+quote L2019: "  async* scanIterator("
+
+C11 Kiểu RedisClientType và hàm createClient được export từ gói redis
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/redis/index.ts
+version: redis 6.3.0
+quote L41: "export type RedisClientType<"
+quote L49: "export function createClient<"
+
+C12 close() đóng client sau khi chờ các lệnh đang chạy; quit() vẫn còn nhưng đã deprecated ở 6.3.0 (drill và hw-solution.mjs dùng close(); không tính là lỗi của drill)
+https://raw.githubusercontent.com/redis/node-redis/redis%406.3.0/packages/client/lib/client/index.ts
+version: @redis/client 6.3.0
+quote L2166: "   * @deprecated use .close instead"
+quote L2190-2192: "   * Close the client. Wait for pending commands." / "   */" / "  close() {"
+
+# Khẳng định về hành vi Redis (đo trên máy này, không cần URL):
+B1 KEYS/lệnh chậm chặn mọi client vì một luồng chạy lệnh (lỗi 1) → runs 01-block.sleep.timeline, 01-why-fast.slowlog
+B2 SET không TTL: key sống mãi, tới maxmemory với noeviction thì ghi bị từ chối OOM (lỗi 2) → runs 03-eviction.noeviction, 03-expiry.expire-dict
+B3 DEL trơn xóa nhầm khóa của người khác khi khóa đã hết hạn; compare-and-delete thì không (lỗi 3) → runs 08-lock.ttldel.timeline, 08-lock-lua.cad.timeline
+B4 GET rồi SET làm mất lượt đếm, INCR thì không (lỗi 4) → runs 05-counter.getset.timeline, 05-counter.incr.timeline
+B5 Hash lớn tốn bộ nhớ và thao tác toàn bộ (HGETALL/DEL) chặn luồng chính; HGET một trường là O(1) (lỗi 5) → runs 06-practices.bigkey, 02-encodings.hash
+B6 N lệnh tuần tự trả N round trip; MGET/pipeline gộp lại (lỗi 6) → runs 01-bench.mget, 01-bench.pipeline
+B7 SET NX PX: chỉ một người lấy được khóa (chỗ đúng) → run 08-lock.nx.timeline

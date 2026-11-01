@@ -1,0 +1,46 @@
+[
+  {
+    "q": "Replica đang bị cắt mạng. Trên cùng một redis-cli bạn chạy SET l06:rep:price 120 rồi WAIT 1 500. Kết quả là gì?",
+    "opts": [
+      "SET trả OK, WAIT trả 0: main đã ghi, nhưng không replica nào xác nhận trong 500 ms",
+      "SET trả OK, WAIT trả 1: replica đã nhận giá mới",
+      "SET bị từ chối vì không đủ replica",
+      "SET bị treo cho tới khi mạng nối lại"
+    ],
+    "ans": 0,
+    "why": "Run 07-architecture.partition: sau docker network disconnect, printf 'SET …\\nWAIT 1 500' trả OK rồi 0. WAIT không hủy lệnh ghi; sao chép là bất đồng bộ nên main vẫn nhận ghi khi replica vắng mặt."
+  },
+  {
+    "q": "Ngay sau đó, một kết nối redis-cli MỚI gọi WAIT 1 500 và nhận 1. Vì sao?",
+    "opts": [
+      "Replica đã kịp nhận giá mới qua đường khác",
+      "WAIT chỉ đếm lệnh ghi của chính kết nối gọi nó; kết nối mới chưa ghi gì nên trả ngay số replica main còn tưởng đang nối",
+      "WAIT luôn trả số replica được cấu hình, bất kể trạng thái",
+      "Kết nối mới đọc từ replica nên thấy 1"
+    ],
+    "ans": 1,
+    "why": "Run 07-architecture.partition: WAIT ở kết nối mới trả 1 trong khi GET trên replica vẫn trả 100 (giá cũ). Main chỉ phát hiện replica mất sau repl-timeout (mặc định 60 s), nên nó vẫn đếm replica đó."
+  },
+  {
+    "q": "CLUSTER KEYSLOT l06:{a}{b} cho cùng slot với khóa nào?",
+    "opts": [
+      "l06:{}x, vì cả hai đều có ngoặc nhọn",
+      "b, vì Redis lấy hashtag cuối cùng",
+      "a, vì Redis chỉ băm phần trong cặp {…} đầu tiên",
+      "Không khóa nào, vì có hai hashtag nên Redis báo lỗi"
+    ],
+    "ans": 2,
+    "why": "Run 07-cluster.keyslot: l06:{a}{b} và a cùng ra 15495. Còn l06:{}x ra 8887 vì {} rỗng không phải hashtag, Redis băm cả khóa."
+  },
+  {
+    "q": "Cluster của bài chỉ có 1 node. SINTER l06:a l06:b trả gì?",
+    "opts": [
+      "Giao của hai set, vì cùng một node",
+      "(empty array), vì cluster không hỗ trợ SINTER",
+      "MOVED sang node khác",
+      "CROSSSLOT, vì Redis kiểm tra hai khóa có cùng slot chứ không kiểm tra cùng node"
+    ],
+    "ans": 3,
+    "why": "Run 07-cluster.crossslot: SINTER l06:a l06:b → CROSSSLOT Keys in request don't hash to the same slot (slot 8130 và 12193 theo 07-cluster.keyslot); cùng hashtag {34} thì trả u2, u3."
+  }
+]

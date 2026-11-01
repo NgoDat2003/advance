@@ -1,0 +1,36 @@
+[
+  {
+    "q": "Hai poller ngây thơ cùng ZRANGE … BYSCORE LIMIT 0 1 rồi mới RPUSH và ZREM. Sau khi cả hai chạy xong, o1 nằm trong l06:delay:done mấy lần?",
+    "opts": ["2 lần", "1 lần", "0 lần, vì ZREM đã xóa nó", "Tùy encoding của ZSET"],
+    "ans": 0,
+    "why": "Run 06-delay.naive.timeline: cả A và B đọc 1) \"o1\" ở +217 ms; RPUSH của B trả (integer) 2 và ZREM của B trả (integer) 0 vì A đã xóa trước."
+  },
+  {
+    "q": "Trong run Lua, B gọi delay-claim.lua sau A. B nhận được gì?",
+    "opts": ["nil (dòng trống): không còn việc đến hạn", "o1, giống A", "o2, việc tiếp theo trong ZSET", "Lỗi BUSY vì script của A đang chạy"],
+    "ans": 0,
+    "why": "Run 06-delay-lua.claim.timeline: A nhận o1 ở +726 ms, B nhận dòng trống ở +947 ms; LRANGE done chỉ có o1, ZRANGE còn o2 và o3 (điểm còn rất xa trong tương lai, chưa đến hạn)."
+  },
+  {
+    "q": "Vì sao delay-claim.lua lấy \"bây giờ\" bằng redis.call('TIME') thay vì nhận từ client?",
+    "opts": [
+      "Chỉ một đồng hồ quyết định việc nào đến hạn, dù các instance hub có đồng hồ lệch nhau",
+      "Lua không nhận được tham số từ client",
+      "TIME nhanh hơn Date.now()",
+      "redis-cli --eval cấm truyền số"
+    ],
+    "ans": 0,
+    "why": "Run 06-delay-lua.claim.A ghi hash của lua/delay-claim.lua: script đọc TIME trên server, rồi ZRANGE, ZREM, RPUSH liền một mạch, nên chỉ một poller nhận o1."
+  },
+  {
+    "q": "Xóa hash một triệu field: DEL mất 165363 µs, UNLINK mất 22 µs. Vì sao UNLINK nhanh như vậy?",
+    "opts": [
+      "Luồng chính chỉ gỡ khóa khỏi keyspace; giải phóng bộ nhớ chạy ở luồng nền (lazyfreed_objects tăng 1)",
+      "UNLINK chỉ đánh dấu khóa hết hạn, bộ nhớ không bao giờ được trả",
+      "UNLINK xóa trên replica thay vì master",
+      "UNLINK nén hash trước khi xóa"
+    ],
+    "ans": 0,
+    "why": "Run 06-practices.bigkey: SLOWLOG GET 1 ghi DEL 165363 µs và UNLINK 22 µs (phụ thuộc máy); lazyfreed_objects:2 lên lazyfreed_objects:3 sau UNLINK."
+  }
+]

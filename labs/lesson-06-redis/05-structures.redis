@@ -1,0 +1,67 @@
+# Bài 06 · Chặng 5 — Năm kiểu dữ liệu dùng vào việc thật. Dán từng region trong redis-cli.
+#   PowerShell: docker exec -it advance-be-redis redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis redis-cli
+# Hàng đợi hai consumer và bộ đếm hai client nằm ở 05-queue.{A,B}.redis và 05-counter.{A,B}.redis.
+
+# #region list-reliable · Hàng đợi tin cậy: BLMOVE sang danh sách processing, xong việc mới LREM (slide 32)
+RPUSH l06:q:orders job-1
+# Lấy việc và đặt ngay vào processing trong MỘT lệnh: worker chết giữa chừng thì việc vẫn còn trong processing.
+BLMOVE l06:q:orders l06:q:processing RIGHT LEFT 5
+LRANGE l06:q:processing 0 -1
+LLEN l06:q:orders
+# Xử lý xong → xác nhận (ack) bằng cách xóa khỏi processing.
+LREM l06:q:processing 1 job-1
+LLEN l06:q:processing
+# #endregion
+
+# #region hash-cart · Giỏ hàng = Hash, đúng các lệnh của slide 33 (slide 33)
+DEL l06:cart:u2
+HSET l06:cart:u2 latte 1
+HSET l06:cart:u2 croissant 1
+HINCRBY l06:cart:u2 latte 1
+HLEN l06:cart:u2
+HDEL l06:cart:u2 croissant
+HGET l06:cart:u2 latte
+HGETALL l06:cart:u2
+# #endregion
+
+# #region set-likes · Set: thêm trùng không tính, giao hai tập = người theo dõi chung (slide 34)
+DEL l06:followers:c
+SADD l06:followers:c u1
+SADD l06:followers:c u1
+SCARD l06:followers:c
+SISMEMBER l06:followers:c u1
+SINTER l06:followers:a l06:followers:b
+# #endregion
+
+# #region zset-board · Sorted Set: bảng món bán chạy, cộng điểm và lấy top 3 (slide 35)
+# Đặt lại điểm như seed (0 = không có món mới) để chạy lại vẫn ra cùng kết quả.
+ZADD l06:board:bestseller 120 latte 95 cold-brew 80 croissant 60 banh-mi 45 tra-dao
+ZINCRBY l06:board:bestseller 30 croissant
+ZRANGE l06:board:bestseller 0 2 REV WITHSCORES
+ZREVRANK l06:board:bestseller croissant
+ZSCORE l06:board:bestseller croissant
+# #endregion
+
+# #region streams · Tùy chọn. Stream + consumer group: mỗi việc giao cho một consumer, có danh sách chờ ack (slide 32)
+DEL l06:q:stream
+# ID ghi tay (1-1, 1-2) để chạy lại ra cùng kết quả; trong ứng dụng thật dùng * để Redis tự sinh ID.
+XADD l06:q:stream 1-1 order o1
+XADD l06:q:stream 1-2 order o2
+XGROUP CREATE l06:q:stream kitchen 0
+XREADGROUP GROUP kitchen c1 COUNT 1 STREAMS l06:q:stream >
+XREADGROUP GROUP kitchen c2 COUNT 1 STREAMS l06:q:stream >
+XPENDING l06:q:stream kitchen
+XACK l06:q:stream kitchen 1-1
+XPENDING l06:q:stream kitchen
+# #endregion
+
+# #region kiem-chung · Kiểm chứng chặng 5 (slide 31, 32, 33, 34, 35)
+LLEN l06:q:orders
+LLEN l06:q:processing
+HGET l06:cart:u2 latte
+HLEN l06:cart:u1
+SCARD l06:followers:c
+SINTER l06:followers:a l06:followers:b
+ZSCORE l06:board:bestseller croissant
+GET l06:cnt:views
+# #endregion

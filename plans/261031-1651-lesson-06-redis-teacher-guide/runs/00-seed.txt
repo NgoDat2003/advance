@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 12:03 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> UNLINK l06:user:1 l06:user:1:json l06:cart:u1 l06:followers:a l06:followers:b l06:board:bestseller
+(integer) 6
+127.0.0.1:6379> HSET l06:user:1 id 1 name Dat age 30 email dat@abc.vn
+(integer) 4
+127.0.0.1:6379> SET l06:user:1:json '{"id":1,"name":"Dat","age":30,"email":"dat@abc.vn"}'
+OK
+127.0.0.1:6379> HSET l06:cart:u1 latte 2 croissant 1 cold-brew 1
+(integer) 3
+127.0.0.1:6379> SADD l06:followers:a u1 u2 u3 u4
+(integer) 4
+127.0.0.1:6379> SADD l06:followers:b u3 u4 u5
+(integer) 3
+127.0.0.1:6379> ZADD l06:board:bestseller 120 latte 95 cold-brew 80 croissant 60 banh-mi 45 tra-dao
+(integer) 5

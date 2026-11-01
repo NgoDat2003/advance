@@ -1,0 +1,46 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli UNLINK l06:enc:si l06:enc:ss l06:enc:z l06:enc:l > /dev/null
+$ seq 1 512 | awk '{print "SADD l06:enc:si "$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli SCARD l06:enc:si
+512
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:si
+intset
+$ docker exec advance-be-redis redis-cli SADD l06:enc:si 513
+1
+$ docker exec advance-be-redis redis-cli SCARD l06:enc:si
+513
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:si
+hashtable
+$ seq 1 128 | awk '{print "SADD l06:enc:ss u"$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli SCARD l06:enc:ss
+128
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:ss
+listpack
+$ docker exec advance-be-redis redis-cli SADD l06:enc:ss u129
+1
+$ docker exec advance-be-redis redis-cli SCARD l06:enc:ss
+129
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:ss
+hashtable
+$ seq 1 128 | awk '{print "ZADD l06:enc:z "$1" m"$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli ZCARD l06:enc:z
+128
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:z
+listpack
+$ docker exec advance-be-redis redis-cli ZADD l06:enc:z 129 m129
+1
+$ docker exec advance-be-redis redis-cli ZCARD l06:enc:z
+129
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:z
+skiplist
+$ seq 1 10 | awk '{print "RPUSH l06:enc:l item-"$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli LLEN l06:enc:l
+10
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:l
+listpack
+$ seq 11 3000 | awk '{print "RPUSH l06:enc:l item-"$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli LLEN l06:enc:l
+3000
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:l
+quicklist

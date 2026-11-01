@@ -1,0 +1,154 @@
+/* === Bài 06: lớp mới (contract §4), chỉ dùng token màu ở :root === */
+.callout.challenge { background: var(--surface); border-left: 3px solid var(--warn); }
+.callout.challenge .tag { background: var(--warn-soft); color: var(--warn); }
+.story { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; }
+.story > .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px; background: var(--accent-soft); color: var(--accent); }
+.check30 { border: 1px dashed var(--accent); border-radius: var(--radius); background: var(--accent-soft); padding: 12px 16px; margin: 16px 0; }
+.check30 > .tag { display: inline-block; font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; background: var(--surface); color: var(--accent); }
+.check30 details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--accent); }
+.check30 details[open] > summary { margin-bottom: 4px; }
+table.stats caption { caption-side: top; text-align: left; padding: 10px 12px; font: 500 0.78rem/1.4 var(--font-mono); color: var(--muted); background: var(--surface); }
+table.stats td:not(:first-child) { font-variant-numeric: tabular-nums; }
+table.stats b.m { font-size: 1rem; }
+table.expect td:first-child { font: 400 0.8rem/1.5 var(--font-mono); overflow-wrap: anywhere; }
+table.expect td:first-child code { background: none; padding: 0; }
+table.expect td b.m { overflow-wrap: anywhere; }
+.lanes .lane-track { position: relative; height: 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.lanes .lane-seg { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; background: var(--accent); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px; font: 700 0.66rem/14px var(--font-mono); color: var(--bg); }
+.lanes .lane-seg.belief { background: transparent; border: 2px dashed var(--fg); color: var(--fg); font-size: 0.56rem; line-height: 10px; padding-top: 0; padding-bottom: 0; }
+.lanes .lane-seg.wait { background: var(--warn); }
+.lanes .lane-seg.ok { background: var(--ok); }
+.lanes .lane-seg.bad { background: var(--bad); }
+.lanes .lane-mark { position: absolute; top: 0; bottom: 0; transform: translateX(-50%); font: 800 0.8rem/18px var(--font-mono); color: var(--bad); }
+.lanes .lane-axis { display: flex; justify-content: space-between; gap: 12px; font: 500 0.72rem/1.4 var(--font-mono); color: var(--muted); }
+.slotcalc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: end; }
+.slotcalc label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; min-width: 0; }
+.slotcalc output { font: 800 clamp(1.8rem, 6vw, 2.4rem)/1 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; min-width: 5ch; text-align: right; }
+.slotcalc .hashed { grid-column: 1 / -1; font: 400 0.84rem/1.5 var(--font-mono); overflow-wrap: anywhere; color: var(--muted); }
+.slotcalc mark { background: var(--warn-soft); color: var(--warn); border-radius: 3px; padding: 0 2px; }
+.bucket { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bucket .tok { width: 22px; height: 22px; border-radius: 50%; background: var(--ok); flex: none; }
+.bucket .tok.empty { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.bucket .tok.denied { background: var(--bad); border-radius: 4px; color: var(--bg); font: 800 0.8rem/22px var(--font-mono); text-align: center; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+main td a:not(.stage-link) { padding-block: 12px; }   /* link trong ô bảng cũng đủ 44 px để chạm */
+figure.slide-fig figcaption code { background: #eceff4; color: #1a1d24; }   /* ảnh slide luôn nền trắng, kể cả giao diện tối */
+@media (max-width: 560px) {
+  .slotcalc { grid-template-columns: minmax(0, 1fr); }
+  .slotcalc output { text-align: left; }
+  table.expect thead { display: none; }
+  table.expect tr { display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  table.expect td { border: 0; padding: 6px 12px; }
+  table.expect td[data-label]::before { content: attr(data-label); display: block; font: 600 0.68rem/1.4 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<main>
+
+<header class="hero col">
+  <div class="hero-top">
+    <p class="eyebrow">Advance Backend · Bài 06 / 16 · Cụm 2 · sau Bài 07</p>
+    <button type="button" class="theme-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">Sáng / Tối</button>
+  </div>
+  <h1>Bài 06 · Redis — đo trên máy bạn</h1>
+  <p class="lead">Bạn sẽ làm cả Redis đứng hình bằng một lệnh, đếm xem khóa nào sống sót khi bộ nhớ đầy, giết tiến trình giữa chừng để xem RDB và AOF mất gì, rồi tự viết khóa phân tán cho ghế A34_S012C sao cho không bao giờ có hai người cùng giữ. Mọi kết quả đo trong trang đều chạy trên Redis 7.2.3 trong container trên máy bạn, và mỗi kết quả có nhãn ngày chạy.</p>
+  <div class="hero-meta">
+    <span><b>46</b> slide</span><span><b>9</b> chặng</span><span><b>295</b> phút lõi + 70 tùy chọn</span><span><b>redis-cli</b> + Git Bash</span><span><b>36</b> câu quiz + <b>10</b> câu phỏng vấn</span>
+  </div>
+  <p class="epigraph">"It does not matter how slowly you go as long as you do not stop." · Confucius · slide 1</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Slide viết cho Redis nói chung, còn bạn chạy Redis 7.2.3. Mỗi slide có một nhãn: <span class="vchip ok">Đúng trên Redis 7.2</span> <span class="vchip diff">Đúng một phần</span> <span class="vchip fix">Cần sửa</span>. Nhãn nào cũng dẫn tới một lần chạy thật, hoặc ghi rõ "chưa đo trực tiếp" khi máy này không dựng được thí nghiệm đó.</p>
+  <p>Nhịp mỗi chặng: đọc 3 dòng LÀ GÌ / TẠI SAO / KHI NÀO KHÔNG, đọc tình huống, dán lệnh vào <code>redis-cli</code>, so với kết quả đã ghi trên máy bạn, bấm widget, trả lời câu 30 giây, làm phần "Tự làm", rồi quiz. Cuối mỗi chặng có khối <b>Kiểm chứng</b>: vài lệnh đọc thường (<code>EXISTS</code>, <code>TTL</code>, <code>OBJECT ENCODING</code>…) đặt cạnh bảng giá trị mong đợi. Terminal của bạn khớp bảng là xong chặng.</p>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_01_img_01.png" alt="Slide 1: trang bìa bài Redis" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 1 · Redis</figcaption></figure>
+  <div class="callout">
+    <span class="tag">Slide 1–3 · trang tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Outline: 1. Introduction → 2. How Redis Works? (vì sao nhanh, lưu dữ liệu thế nào, xóa khóa hết hạn, bền vững dữ liệu) → 3. In Practices (cấu trúc dữ liệu, thực hành).</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định kỹ thuật nào để đo. Bài đi theo thứ tự đó, riêng phần kiến trúc (slide 6–9) dời xuống chặng 7 vì cần container phụ.</p></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="plan">
+      <thead><tr><th>Chặng</th><th>Nội dung</th><th>Slide</th><th>Thời gian</th><th>File lab</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Bật container, nạp dữ liệu mẫu, chạy check, khởi động</td><td>1–3</td><td class="n">10 phút</td><td>00-containers.sh, 00-seed.redis, check.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-1">1</a></td><td>Vì sao nhanh: một luồng, I/O threads, RTT và pipelining, kích thước value (đo kích thước: nếu còn sức, 5 phút)</td><td>4, 5, 10–14</td><td class="n">35 + 10 phút</td><td>01-why-fast, 01-block.A/B, 01-bench.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-2">2</a></td><td>Dict, encoding, slide 30 Hash hay JSON và lost update</td><td>15, 16, 29–31</td><td class="n">30 phút</td><td>02-encodings, 02-json-race.A/B</td></tr>
+        <tr><td><a class="stage-link" href="#chang-3">3</a></td><td>Expire dict, xóa thụ động và chủ động, các chính sách eviction</td><td>17–23</td><td class="n">35 + 10 phút</td><td>03-expiry, 03-eviction.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-4">4</a></td><td>RDB, AOF, hybrid, giết tiến trình rồi khởi động lại</td><td>24–27</td><td class="n">25 + 5 phút</td><td>04-persistence.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-5">5</a></td><td>Bộ đếm String, hàng đợi List, giỏ hàng Hash, Set, bảng xếp hạng ZSET</td><td>28, 32–35</td><td class="n">30 + 10 phút</td><td>05-structures, 05-queue.A/B, 05-counter.A/B</td></tr>
+        <tr><td><a class="stage-link" href="#chang-6">6</a></td><td>Delay task và claim nguyên tử, big key: DEL hay UNLINK</td><td>36–38</td><td class="n">30 + 5 phút</td><td>06-practices, 06-delay.A/B, 06-delay-lua.A/B.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-7">7</a></td><td>Replica đọc cũ, WAIT, failover tay, Sentinel (sơ đồ), slot, hashtag, CROSSSLOT</td><td>6–9, 39</td><td class="n">35 + 10 phút</td><td>07-architecture.sh, 07-cluster</td></tr>
+        <tr><td><a class="stage-link" href="#chang-8">8</a></td><td>Capstone khóa phân tán: không khóa, NX, lỗi TTL + DEL, compare-and-delete, fencing</td><td>40</td><td class="n">40 + 5 phút</td><td>08-lock.A/B, 08-lock-lua.A/B.sh</td></tr>
+        <tr><td><a class="stage-link" href="#chang-9">9</a></td><td>Cầu nối OmniPOS M2: token bucket, idempotency, best practices (xem lại drill: nếu còn sức, 10 phút)</td><td>41</td><td class="n">25 phút</td><td>09-bridge, 09-bucket.A/B, 09-bucket-lua.A/B.sh</td></tr>
+        <tr><td><a class="stage-link" href="#cheat-sheet">+</a></td><td>Tổng kết, phỏng vấn, cheat sheet, tham khảo</td><td>42, 44–46</td><td class="n">15 phút</td><td>—</td></tr>
+        <tr data-spill><td><a class="stage-link" href="#bai-tap">+</a></td><td>Buổi tối: bài tập khóa phân tán đặt ghế (slide 43)</td><td>43</td><td class="n">45 phút</td><td>hw-check.sh</td></tr>
+        <tr data-total><td></td><td>Tổng: lõi 310 phút; bỏ 2 mục "nếu còn sức" còn lõi chắc 295 phút (4 giờ 55) · tùy chọn 70 phút (gồm 15 phút "nếu còn sức") · bài tập tối 45 phút</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h4>Chuẩn bị (10 phút)</h4>
+    <ol>
+      <li>Bật Docker Desktop. Mở Git Bash ở thư mục repo <code>advance-be</code> rồi chạy lệnh 1 bên dưới. Script tạo (hoặc giữ nguyên nếu đã đúng) container <code>advance-be-redis</code> chạy <code>redis:7.2.3</code>, gắn thư mục lab vào <code>/lab</code> chỉ đọc, nối mạng <code>advance-be-l06</code>. Container phụ (replica, cluster, evict, rdb, aof) chỉ bật khi tới chặng cần chúng.</li>
+      <li>Nạp dữ liệu mẫu bằng lệnh 2. Seed xóa rồi tạo lại đúng các khóa mẫu (<code>l06:user:1</code>, <code>l06:cart:u1</code>, <code>l06:followers:*</code>, <code>l06:board:bestseller</code>), chạy lại bao nhiêu lần cũng được, và không bao giờ đụng <code>l06:my:*</code> (thí nghiệm riêng của bạn) hay <code>l06:hw:*</code> (bài tập).</li>
+      <li>Chạy lệnh 3. Các dòng của main (C01, C07–C15) phải là ✔. Các dòng C02–C06 của container phụ là <code>–</code> cho tới khi bạn bật chúng ở chặng của mình; <code>–</code> không tính là lỗi. Mã thoát của script bằng số dòng ✘.</li>
+    </ol>
+    <div class="code"><pre><code>bash labs/lesson-06-redis/00-containers.sh up main                              # 1
+grep -v '^#' labs/lesson-06-redis/00-seed.redis | docker exec -i advance-be-redis redis-cli   # 2
+bash labs/lesson-06-redis/check.sh                                              # 3</code></pre></div>
+<!--@RUN check.after-seed@-->
+    <p>Container main chỉ publish cổng trên <code>127.0.0.1:6379</code>, nên máy khác trong mạng LAN không chạm được Redis không đặt mật khẩu này. Mọi client chạy trên máy host (DBX, bài tập, driver drill) đều dùng <code>127.0.0.1:6379</code>, không dùng <code>localhost</code>: trên Windows, <code>localhost</code> có thể thử <code>::1</code> trước rồi báo <code>ECONNREFUSED</code>.</p>
+
+    <h4>Cách chạy lệnh</h4>
+    <ul>
+      <li><b>Cách chính: <code>redis-cli</code> tương tác trong container.</b> Trong PowerShell hoặc Windows Terminal: <code>docker exec -it advance-be-redis redis-cli</code>. Trong Git Bash (mintty) phải thêm <code>winpty</code>: <code>winpty docker exec -it advance-be-redis redis-cli</code>, thiếu nó sẽ báo <code>the input device is not a TTY</code>. Dán cả khối lệnh của guide vào dấu nhắc <code>127.0.0.1:6379&gt;</code>.</li>
+      <li><b>Khối dài: pipe cả file.</b> <code>grep -v '^#' labs/lesson-06-redis/&lt;file&gt;.redis | docker exec -i advance-be-redis redis-cli</code>. Phải lọc dòng <code>#</code> vì redis-cli gửi chúng như một lệnh và trả <code>ERR unknown command '#'</code> (đã thử trên máy bạn). Vì thế khối lệnh trong guide đã bỏ sẵn dòng chú thích; file trong <code>labs/</code> vẫn giữ chú thích tiếng Việt để bạn đọc.</li>
+      <li><b>File <code>.sh</code>:</b> dán từng dòng vào Git Bash. Mỗi dòng là một lệnh trọn vẹn, không có heredoc hay <code>if</code>/<code>for</code> nhiều dòng. Mỗi region có một dòng <code>set -u</code>: shell dừng khi gặp biến chưa gán, nên gõ thiếu là lộ ngay. Dòng đó còn bật trong tab sau khi region chạy xong và có thể làm hỏng tab-completion của git (<code>unbound variable</code> khi bấm Tab): xong chặng thì gõ <code>set +u</code> hoặc mở tab mới.</li>
+      <li><b>DBX, kết nối <code>ADVANCE_BE_REDIS</code> (host <code>127.0.0.1</code>, cổng 6379):</b> dùng để duyệt khóa (kiểu, TTL, bộ nhớ) và gõ <b>từng lệnh một</b>. DBX không chạy được khối nhiều dòng: đã thử gửi hai dòng (<code>SET</code> rồi <code>INCR</code>) trong một lần chạy, DBX gửi cả hai thành một lệnh, trả <code>ResponseError: syntax error</code> và không ghi khóa nào. Khối nhiều dòng luôn dán vào redis-cli.</li>
+    </ul>
+
+    <h4>Git Bash và đường dẫn trong container</h4>
+    <p>Git Bash tự đổi mọi tham số bắt đầu bằng <code>/</code> thành đường dẫn Windows trước khi gọi <code>docker</code>: <code>/lab/x</code> tới container thành <code>D:/Git/lab/x</code>. Vì vậy dòng nào truyền đường dẫn trong container (<code>/lab/…</code>, <code>/data/…</code>) đều bắt đầu bằng <code>MSYS_NO_PATHCONV=1</code>. Dán nguyên dòng, đừng bỏ tiền tố. Script công cụ (<code>00-containers.sh</code>, <code>check.sh</code>, <code>hw-check.sh</code>, <code>99-cleanup.sh</code>) tự <code>export MSYS_NO_PATHCONV=1</code> ở dòng 2, nên gọi chúng bình thường. PowerShell không đổi đường dẫn và không cần tiền tố này.</p>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 31/10/2026 · <code>run-method-smoke</code> (S7)</div>
+    <div class="code terminal"><pre class="code terminal" data-run="run-method-smoke">$ docker exec advance-be-redis echo /lab/x
+D:/Git/lab/x
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis echo /lab/x
+/lab/x</pre></div>
+
+    <h4>Thí nghiệm hai terminal (A và B)</h4>
+    <p>Mở hai tab, mỗi tab một phiên <code>redis-cli</code> như trên, đặt tên A và B. Thứ tự luôn là:</p>
+    <ol>
+      <li>Chạy region <code>…-reset</code> (nằm trong file A) để đưa khóa của kịch bản về trạng thái đầu.</li>
+      <li>Bắt đầu B. Lệnh đầu của B là <code>BLPOP l06:barrier:&lt;kịch bản&gt; 5</code>, nên B đứng chờ tối đa 5 giây. Khối <code>.sh</code> (Git Bash): dán cả khối B, các dòng sau tự đợi tới lượt. Khối <code>.redis</code> (redis-cli): <b>chỉ dán dòng BLPOP của B</b>; các dòng sau của B dán từng dòng theo bảng từng bước của chặng.</li>
+      <li>Trong 5 giây đó, dán khối A. Lệnh đầu của A là <code>RPUSH l06:barrier:&lt;kịch bản&gt; go</code>, thả B chạy. Với khối <code>.sh</code>, các bước <code>sleep</code> nằm sẵn trong file và tính từ lúc này, nên nhịp giống lần đã ghi. Với khối <code>.redis</code> (dán vào <code>redis-cli</code>), không có <code>sleep</code>: dán từng dòng của A và B theo đúng thứ tự và nhịp ghi trong bảng từng bước. Dán cả khối B một lần thì các dòng sau xếp hàng sau BLPOP và chạy dồn ngay khi BLPOP trả về, nên thứ tự không còn giống lần đã ghi.</li>
+    </ol>
+    <p>Nếu B in <code>(nil)</code> trước khi bạn kịp dán A, nghĩa là đã quá 5 giây: chạy lại từ bước 1.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">Nhắc nhanh Bài 02</span>
+    <p>Bài 02 đã dạy những thứ này, bài này chỉ đo lại trên Redis thật chứ không giảng lại:</p>
+    <ul>
+      <li><code>SET key token NX PX ms</code> để giữ khóa có hạn, và nhả khóa bằng compare-and-delete (chỉ xóa khi token còn là của mình) (<a href="lesson_02_caching_teacher_guide.html#chang-4">Bài 02 chặng 4</a>).</li>
+      <li>TTL cộng jitter để hàng loạt khóa không hết hạn cùng lúc, và singleflight/mutex để một khóa nóng hết hạn chỉ nạp lại một lần (<a href="lesson_02_caching_teacher_guide.html#chang-4">chặng 4</a>, lab ở <a href="lesson_02_caching_teacher_guide.html#chang-6">chặng 6</a>).</li>
+    </ul>
+    <p>Lab 06 của Bài 02 ghi khóa <code>imdb:*</code> và <code>lock:*</code> vào container cùng tên <code>advance-be-redis</code>. Nếu chúng còn đó, <code>check.sh</code> dòng C07 sẽ liệt kê tiền tố lạ. Xóa đúng tiền tố đó, ví dụ:</p>
+    <div class="code"><pre><code>docker exec advance-be-redis sh -c "redis-cli --scan --pattern 'imdb:*' | xargs -r -n 100 redis-cli UNLINK"</code></pre></div>
+    <p>Không bao giờ dùng <code>FLUSHALL</code>: nó xóa luôn <code>l06:my:*</code> và <code>l06:hw:*</code> của bạn. Nếu container cũ của Bài 02 chạy image khác (<code>redis:7.4-alpine</code>), <code>00-containers.sh up main</code> sẽ tạo lại container và in ghi chú rằng khóa Bài 02 trên đó mất theo.</p>
+  </div>
+
+  <label class="fields"><span class="muted">Ghi chú trước khi học: theo bạn vì sao Redis nhanh, và khóa phân tán bằng <code>SET NX PX</code> rồi <code>DEL</code> sai ở đâu? (sẽ đối chiếu ở cuối bài)</span>
+    <textarea class="field" id="warmup" data-store="l06-warmup" placeholder="Ví dụ: vì chạy trong RAM, vì một luồng nên không cần khóa…"></textarea>
+  </label>
+</section>
+

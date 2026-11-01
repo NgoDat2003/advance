@@ -1,0 +1,9 @@
+# Bài 06 · Chặng 1 — Terminal B: chỉ gửi PING, nhưng phải chờ lệnh chậm của A (slide 13).
+# Dán region ở B TRƯỚC khi dán region cùng tên ở A. BLPOP đứng chờ tới khi A gửi RPUSH (tối đa 5 s).
+# Phần tùy chọn busy của B nằm ở 01-block.B.sh (Git Bash).
+
+# #region sleep · B gửi PING lúc A đang DEBUG SLEEP 2 (slide 13)
+BLPOP l06:barrier:block-sleep 5
+#@ sleep 0.5
+PING
+# #endregion

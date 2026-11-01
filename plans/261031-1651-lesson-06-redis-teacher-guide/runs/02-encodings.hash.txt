@@ -1,0 +1,35 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli UNLINK l06:enc:h l06:enc:hv > /dev/null
+$ seq 1 512 | awk '{print "HSET l06:enc:h f"$1" v"$1}' | docker exec -i advance-be-redis redis-cli > /dev/null
+$ docker exec advance-be-redis redis-cli HLEN l06:enc:h
+512
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:h
+listpack
+$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:enc:h
+6200
+$ docker exec advance-be-redis redis-cli HSET l06:enc:h f513 v513
+1
+$ docker exec advance-be-redis redis-cli HLEN l06:enc:h
+513
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:h
+hashtable
+$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:enc:h
+28824
+$ V64=$(printf '%064d' 0)
+$ docker exec advance-be-redis redis-cli HSET l06:enc:hv f "$V64"
+1
+$ docker exec advance-be-redis redis-cli HSTRLEN l06:enc:hv f
+64
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:hv
+listpack
+$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:enc:hv
+136
+$ docker exec advance-be-redis redis-cli HSET l06:enc:hv f "${V64}x"
+0
+$ docker exec advance-be-redis redis-cli HSTRLEN l06:enc:hv f
+65
+$ docker exec advance-be-redis redis-cli OBJECT ENCODING l06:enc:hv
+hashtable
+$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:enc:hv
+256

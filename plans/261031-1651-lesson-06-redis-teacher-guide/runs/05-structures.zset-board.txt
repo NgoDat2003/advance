@@ -1,0 +1,16 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> ZADD l06:board:bestseller 120 latte 95 cold-brew 80 croissant 60 banh-mi 45 tra-dao
+(integer) 0
+127.0.0.1:6379> ZINCRBY l06:board:bestseller 30 croissant
+"110"
+127.0.0.1:6379> ZRANGE l06:board:bestseller 0 2 REV WITHSCORES
+1) "latte"
+2) "120"
+3) "croissant"
+4) "110"
+5) "cold-brew"
+6) "95"
+127.0.0.1:6379> ZREVRANK l06:board:bestseller croissant
+(integer) 1
+127.0.0.1:6379> ZSCORE l06:board:bestseller croissant
+"110"

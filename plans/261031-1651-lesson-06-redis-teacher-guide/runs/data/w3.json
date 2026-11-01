@@ -1,0 +1,20 @@
+{
+  "sources": [
+    "03-expiry.active"
+  ],
+  "keys_written": 10000,
+  "px_ms": 1000,
+  "wait_s": 3,
+  "before": {
+    "expired_keys": 1004,
+    "keys": 10029,
+    "expires": 10000
+  },
+  "after": {
+    "expired_keys": 11004,
+    "keys": 29,
+    "expires": 0
+  },
+  "expired_stale_perc": 3.4,
+  "expire_cycle_cpu_milliseconds": 24
+}

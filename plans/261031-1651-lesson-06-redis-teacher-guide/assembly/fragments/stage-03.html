@@ -1,0 +1,389 @@
+<section id="chang-3" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">03</span>
+    <div>
+      <div class="stage-meta"><span>Slide 17–23</span><span>35 phút + 10 tùy chọn</span><span>lõi</span></div>
+      <h2>Khóa hết hạn đi đâu, và khi RAM đầy thì Redis bỏ khóa nào</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> thấy bảng <code>expires</code> riêng, thấy khóa hết hạn vẫn chiếm RAM khi không ai đọc và chu kỳ nền dọn chúng ra sao, rồi cho một container riêng đầy bộ nhớ dưới 5 chính sách eviction và đếm khóa sống sót.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Khóa có TTL nằm ở hai bảng: bảng chính và <code>expires</code>. Khóa hết hạn bị xóa khi có người đọc (passive) hoặc bởi chu kỳ nền quét dần bảng <code>expires</code> (active). Chạm <code>maxmemory</code> thì chính sách eviction chọn bỏ khóa nào, hoặc từ chối ghi.</dd>
+    <dt>TẠI SAO?</dt><dd>Hết hạn chưa chắc đã trả RAM ngay. Chọn sai chính sách thì hoặc mất khóa quan trọng, hoặc POS không ghi được giỏ hàng.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng dùng TTL làm bộ hẹn giờ chính xác (hủy đơn sau 10 phút dùng Sorted Set, <a href="#chang-6">chặng 6</a>). Đừng dùng <code>allkeys-*</code> cho Redis giữ thứ không được mất (idempotency, hàng đợi).</dd>
+  </dl>
+
+  <div class="story">
+    <span class="tag">Tình huống · voucher không ai mở lại</span>
+    <p>Chiến dịch 20/10 phát cho mỗi khách một voucher, mỗi mã là một khóa có TTL, và phần lớn khách không mở lại. Bạn vận hành hỏi hai câu: hết hạn rồi RAM có tự trả không? Và nếu giờ cao điểm bộ nhớ đầy, Redis bỏ voucher đi hay từ chối ghi giỏ hàng của POS?</p>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_18_img_01.png" alt="Slide 18: redisDb có hai con trỏ dict và expire; dict giữ khóa và value, expire giữ khóa và thời điểm hết hạn kiểu long long" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 18 · dict (khóa → value) và expire (khóa → thời điểm hết hạn)</figcaption></figure>
+
+  <figure style="margin:16px 0">
+    <svg viewBox="0 0 360 300" role="img" aria-labelledby="c3-cycle-title" style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto">
+      <title id="c3-cycle-title">Chu kỳ xóa chủ động Redis 7.2: quét tiếp khoảng 20 khóa có TTL từ con trỏ của lần trước, xóa khóa hết hạn, lặp khi hơn 10% khóa vừa quét đã hết hạn, dừng khi dưới ngưỡng hoặc chạm trần 25% CPU</title>
+      <g text-anchor="middle" style="font:600 12px var(--font-body)">
+        <rect x="8" y="8" width="344" height="40" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+        <text x="180" y="33" style="fill:var(--fg)">Chu kỳ nền chạy theo hz (10 lần mỗi giây)</text>
+        <rect x="8" y="64" width="344" height="40" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <text x="180" y="89" style="fill:var(--accent)">Quét tiếp 20 khóa có TTL từ con trỏ lần trước</text>
+        <rect x="8" y="120" width="344" height="40" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+        <text x="180" y="145" style="fill:var(--fg)">Xóa những khóa vừa quét đã hết hạn</text>
+        <rect x="8" y="176" width="344" height="52" rx="8" style="fill:var(--warn-soft);stroke:var(--warn)"/>
+        <text x="180" y="198" style="fill:var(--fg)">Hơn 10% khóa vừa quét đã hết hạn? (slide 20: 25%)</text>
+        <text x="180" y="216" style="fill:var(--muted);font-weight:500">có → quét tiếp · không → đợi chu kỳ sau</text>
+        <rect x="8" y="244" width="344" height="48" rx="8" style="fill:var(--surface);stroke:var(--bad);stroke-dasharray:5 4"/>
+        <text x="180" y="264" style="fill:var(--bad)">Trần thời gian: tối đa 25% CPU</text>
+        <text x="180" y="282" style="fill:var(--muted);font-weight:500">chạm trần thì dừng dù còn khóa hết hạn</text>
+      </g>
+      <path d="M180 48V64M180 104V120M180 160V176" style="stroke:var(--muted);stroke-width:2;fill:none"/>
+      <path d="M352 202H356V84H352" style="stroke:var(--warn);stroke-width:2;fill:none"/>
+    </svg>
+    <figcaption class="muted" style="font-size:0.8rem">Sơ đồ tự vẽ theo <code>src/expire.c</code> của Redis 7.2.3, mức <code>active-expire-effort</code> mặc định. Con trỏ là <code>db-&gt;expires_cursor</code> đi qua bảng expires bằng <code>dictScan</code>: mỗi chu kỳ nối tiếp chỗ lần trước dừng. Chỉ replica cho phép ghi mới lấy khóa ngẫu nhiên.</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table class="stats">
+    <caption>Đo trên máy bạn ngày 01/11/2026 · số đếm không phụ thuộc máy; CPU và số khóa sống sau eviction lệch chút ít mỗi lần chạy</caption>
+    <thead><tr><th>Thí nghiệm</th><th>Kết quả đã ghi</th><th>Nói lên điều gì</th></tr></thead>
+    <tbody>
+      <tr><td>Một khóa thường, một khóa <code>EX 10</code></td><td><b class="m" data-run="03-expiry.expire-dict">db0:keys=30,expires=1,avg_ttl=0</b> · TTL <b class="m" data-run="03-expiry.expire-dict">(integer) -1</b> / <b class="m" data-run="03-expiry.expire-dict">(integer) -2</b></td><td>Chỉ khóa có TTL vào bảng expires</td></tr>
+      <tr><td>Passive: 1000 khóa <code>PX 100</code>, tắt active, đợi 0,5 s</td><td><b class="m" data-run="03-expiry.passive">db0:keys=1029,expires=1000,avg_ttl=0</b>; đọc 1 khóa: <b class="m" data-run="03-expiry.passive">expired_keys:4</b> → <b class="m" data-run="03-expiry.passive">expired_keys:5</b></td><td>Khóa chết vẫn chiếm RAM tới khi bị đọc</td></tr>
+      <tr><td>Active: 10000 khóa <code>PX 1000</code>, không ai đọc, đợi 3 s</td><td><b class="m" data-run="03-expiry.active">db0:keys=10029,expires=10000,avg_ttl=898</b> → <b class="m" data-run="03-expiry.active">db0:keys=29,expires=0,avg_ttl=0</b></td><td>Chu kỳ nền tự dọn sạch</td></tr>
+      <tr><td>Cái giá của chu kỳ nền (phụ thuộc máy)</td><td><b class="m" data-run="03-expiry.active">expired_stale_perc:3.40</b> · <b class="m" data-run="03-expiry.active">expire_cycle_cpu_milliseconds:24</b></td><td>Ít CPU; số stale là ước lượng trễ (trung bình trượt), thực tế đã <code>expires=0</code></td></tr>
+      <tr><td><code>noeviction</code> (mặc định)</td><td><b class="m" data-run="03-eviction.noeviction">OOM command not allowed when used memory &gt; 'maxmemory'.</b> · <b class="m" data-run="03-eviction.noeviction">hot=300/300 cold=600/600</b></td><td>Không mất khóa, nhưng từ chối ghi</td></tr>
+      <tr><td><code>allkeys-lru</code></td><td><b class="m" data-run="03-eviction.allkeys-lru">hot=66/300 cold=58/600</b> · <b class="m" data-run="03-eviction.allkeys-lru">evicted_keys:925</b></td><td>Khóa mới ghi đẩy cả hot ra</td></tr>
+      <tr><td><code>allkeys-lfu</code></td><td><b class="m" data-run="03-eviction.allkeys-lfu">hot=300/300 cold=306/600</b> · <b class="m" data-run="03-eviction.allkeys-lfu">evicted_keys:923</b></td><td>Đếm tần suất, giữ trọn hot</td></tr>
+      <tr><td>Tùy chọn: <code>volatile-ttl</code></td><td><b class="m" data-run="03-eviction.volatile-ttl">hot=300/300 cold=600/600 ttl=0/200</b>, rồi OOM</td><td>Chỉ bỏ khóa có TTL</td></tr>
+      <tr><td>Tùy chọn: <code>allkeys-random</code></td><td><b class="m" data-run="03-eviction.allkeys-random">hot=167/300 cold=326/600</b></td><td>Hot hay cold như nhau</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="check30">
+    <span class="tag">Câu hỏi 30 giây</span>
+    <p>Ghi 10000 voucher <code>PX 1000</code>, không ai đọc lại. 3 giây sau, <code>INFO keyspace</code> còn bao nhiêu khóa có TTL?</p>
+    <details><summary>Xem đáp án</summary>
+      <p>Không còn: <b class="m" data-run="03-expiry.active">db0:keys=29,expires=0,avg_ttl=0</b>. Chu kỳ nền tự dọn, không cần ai đọc; 29 khóa còn lại là khóa không TTL của seed.</p>
+    </details>
+  </div>
+
+  <div class="callout">
+    <span class="tag">Slide 17, 22 · slide tiêu đề</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>2.3 Expired Deletion; "What happens when Redis memory is full?"</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Không có khẳng định để đo. Câu hỏi của slide 22 được trả lời ở Làm mẫu 4.</p></div>
+    </div>
+  </div>
+
+  <div class="callout teacher">
+    <span class="tag">Làm mẫu 1 · hai bảng: khóa chính và expires</span>
+    <p>Dán vào <code>redis-cli</code> trên main. Nhìn dòng <code>db0:</code>, ba câu <code>TTL</code>, và mục <code>db.0</code> của <code>MEMORY STATS</code>.</p>
+  </div>
+  <div class="code"><pre data-cmd="03-expiry.redis#expire-dict"><code>SET l06:exp:persist v
+SET l06:exp:ttl v EX 10
+INFO keyspace
+TTL l06:exp:persist
+TTL l06:exp:ttl
+TTL l06:exp:missing
+MEMORY STATS</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-expiry.expire-dict</code></div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-expiry.expire-dict">127.0.0.1:6379&gt; INFO keyspace
+# Keyspace
+db0:keys=30,expires=1,avg_ttl=0
+127.0.0.1:6379&gt; TTL l06:exp:persist
+(integer) -1
+127.0.0.1:6379&gt; TTL l06:exp:ttl
+(integer) 10
+127.0.0.1:6379&gt; TTL l06:exp:missing
+(integer) -2
+127.0.0.1:6379&gt; MEMORY STATS
+…
+21) "db.0"
+22) 1) "overhead.hashtable.main"
+    2) (integer) 1456
+    3) "overhead.hashtable.expires"
+    4) (integer) 56
+…</pre></div>
+  <p>TTL <code>-1</code>: có khóa, không hết hạn; số dương: số giây còn lại; <code>-2</code>: không có khóa. <code>overhead.hashtable.expires</code> là bộ nhớ của bảng expires, một hash table.</p>
+  <div class="callout key">
+    <span class="tag">Slide 18 · <span class="vchip ok">Đúng trên Redis 7.2</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Hai dictionary: key và expire. Khi truy cập, Redis xem khóa có trong expire không; có thì so với giờ hiện tại, quá hạn thì trả null.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Đúng: <b class="m" data-run="03-expiry.expire-dict">db0:keys=30,expires=1,avg_ttl=0</b>, 30 khóa ở bảng chính, 1 khóa ở bảng expires, và <code>MEMORY STATS</code> tách riêng bộ nhớ hai bảng.</p></div>
+    </div>
+  </div>
+
+  <h3>Làm mẫu 2 · passive: hết hạn rồi mà vẫn nằm đó</h3>
+  <p>Đợi hơn 10 giây sau Làm mẫu 1 (cho <code>l06:exp:ttl</code> hết hạn), rồi dán từng dòng vào Git Bash. <code>DEBUG SET-ACTIVE-EXPIRE 0</code> tắt chu kỳ nền chỉ để học; dòng cuối bật lại.</p>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_19_img_01.png" alt="Slide 19: cùng sơ đồ redisDb với dict và expire như slide 18" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 19 · passive: chỉ kiểm tra hạn khi khóa được truy cập</figcaption></figure>
+  <div class="code"><pre data-cmd="03-expiry.sh#passive"><code># #region passive · Tắt active expiry: khóa hết hạn vẫn nằm đó cho tới khi bị đọc (slide 19)
+set -u
+# DEBUG SET-ACTIVE-EXPIRE 0 tắt chu kỳ xóa nền (chỉ để học). Cuối region bật lại bằng ... 1.
+docker exec advance-be-redis redis-cli DEBUG SET-ACTIVE-EXPIRE 0
+seq 1 1000 | awk '{print "SET l06:exp:p:"$1" v PX 100"}' | docker exec -i advance-be-redis redis-cli &gt; /dev/null
+docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+sleep 0.5
+# Đã quá 100 ms nhưng expires vẫn = 1000: không ai xóa vì không ai đọc.
+docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+# Đọc 1 khóa: Redis thấy nó hết hạn, xóa ngay, trả nil (dòng trống), expired_keys tăng đúng 1.
+docker exec advance-be-redis redis-cli GET l06:exp:p:1
+docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+docker exec advance-be-redis redis-cli DEBUG SET-ACTIVE-EXPIRE 1
+# #endregion</code></pre></div>
+<!--@RUN 03-expiry.passive@-->
+  <p>Quá 100 ms từ lâu mà vẫn <code>expires=1000</code>: không ai đọc thì không ai xóa. Đọc một khóa thì Redis xóa nó, trả nil (dòng trống, vì redis-cli không TTY), và <code>expired_keys</code> tăng đúng một.</p>
+  <div class="callout" id="sl-19">
+    <span class="tag">Slide 19 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Passive: khóa không bị xóa ngay khi hết hạn; khi được truy cập mà đã hết hạn thì xóa (bất đồng bộ). Vấn đề: khóa không ai đọc lại thì phí bộ nhớ.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Cơ chế đúng: <b class="m" data-run="03-expiry.passive">db0:keys=1029,expires=1000,avg_ttl=0</b>, rồi một lần đọc xóa một khóa. Nhưng "phí mãi" chỉ xảy ra vì ta tắt chu kỳ nền; bình thường slide 20 dọn chúng. "Bất đồng bộ": khóa bị xóa ngay trong lệnh GET; việc trả bộ nhớ ở luồng nền tùy <code>lazyfree-lazy-expire</code>, chưa đo ở đây.</p></div>
+    </div>
+  </div>
+
+  <h3>Làm mẫu 3 · active: chu kỳ nền tự dọn</h3>
+  <p>Ghi 10000 khóa sống 1 giây bằng <code>--pipe</code>, không đọc lại, đợi 3 giây rồi đếm.</p>
+  <div class="code"><pre data-cmd="03-expiry.sh#active"><code># #region active · 10000 khóa PX 1000, không ai đọc: chu kỳ nền tự dọn (slide 20, 21)
+set -u
+docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+# --pipe đẩy 10000 lệnh trong vài chục ms, để khóa đầu chưa kịp hết hạn khi khóa cuối được ghi.
+seq 1 10000 | awk '{print "SET l06:exp:a:"$1" v PX 1000"}' | docker exec -i advance-be-redis redis-cli --pipe
+docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+sleep 3
+# Chu kỳ nền 7.2 quét dần bảng expires bằng con trỏ (khoảng 20 khóa mỗi vòng, nối tiếp chỗ lần trước dừng),
+# lặp khi > 10 % khóa vừa quét đã hết hạn, tối đa khoảng 25 % CPU.
+# expired_stale_perc = trung bình trượt (mỗi chu kỳ nặng 5 %) tỉ lệ khóa hết hạn trong các lần quét gần đây: số trễ, không phải
+# % khóa đang sót lúc này (dòng db0 bên dưới mới là thực tế). expire_cycle_cpu_milliseconds = CPU đã dùng cho chu kỳ.
+docker exec advance-be-redis redis-cli INFO stats | grep -E '^(expired_keys|expired_stale_perc|expire_cycle_cpu_milliseconds):'
+docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+docker exec advance-be-redis redis-cli MEMORY STATS
+# #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-expiry.active</code> (cắt bớt MEMORY STATS)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-expiry.active">$ docker exec advance-be-redis redis-cli INFO stats | grep ^expired_keys
+expired_keys:1004
+…
+errors: 0, replies: 10000
+$ docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+db0:keys=10029,expires=10000,avg_ttl=898
+$ sleep 3
+…
+expired_keys:11004
+expired_stale_perc:3.40
+expire_cycle_cpu_milliseconds:24
+$ docker exec advance-be-redis redis-cli INFO keyspace | grep ^db0
+db0:keys=29,expires=0,avg_ttl=0
+$ docker exec advance-be-redis redis-cli MEMORY STATS
+…
+overhead.hashtable.expires
+32
+…</pre></div>
+  <p><b class="m" data-run="03-expiry.active">expired_keys:1004</b> → <b class="m" data-run="03-expiry.active">expired_keys:11004</b>: đủ 10000 khóa bị chu kỳ nền xóa trong 3 giây. Số đầu lớn hơn 5 của Làm mẫu 2 vì khi active expiry bật lại, nó dọn nốt khóa passive còn sót. Không có ZSET nào trong <code>MEMORY STATS</code>.</p>
+
+  <div class="widget" id="w3">
+    <div class="widget-head"><h4>W3 · Chu kỳ xóa chủ động: 20 khóa mỗi vòng (mô hình)</h4><span class="eyebrow">run-w3 · 03-expiry.active</span></div>
+    <div class="widget-body">
+      <p><b>Mô phỏng, không phải số đo.</b> Mô hình rút ngẫu nhiên 20 khóa mỗi vòng; bản thật 7.2 quét theo con trỏ, nhưng ngưỡng lặp và trần giống nhau. Chọn bao nhiêu phần trăm khóa có TTL đã hết hạn, chọn ngưỡng của slide hoặc của 7.2, chạy vài chu kỳ, rồi so phần trăm khóa chết còn sót.</p>
+      <div class="btns" id="w3-modes" role="group" aria-label="Chọn ngưỡng lặp"></div>
+      <label style="display:grid;gap:4px;font-weight:600">Tỉ lệ khóa đã hết hạn lúc đầu (%): <output id="w3-stale-val"></output><input type="range" id="w3-stale" min="10" max="100" step="10" value="50" style="width:100%;min-height:44px"></label>
+      <div class="btns"><button type="button" class="btn primary" id="w3-one">Chạy 1 chu kỳ</button><button type="button" class="btn" id="w3-ten">Chạy 10 chu kỳ (1 giây)</button><button type="button" class="btn" id="w3-reset">Làm lại</button></div>
+      <div class="out" id="w3-out" aria-live="polite"></div>
+      <div class="out" id="w3-rec"></div>
+    </div>
+  </div>
+
+  <div class="callout" id="sl-20">
+    <span class="tag">Slide 20 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Job định kỳ 10 lần/giây: lấy ngẫu nhiên 20 khóa trong expire dictionary, xóa khóa hết hạn; quá 25% mẫu hết hạn thì lặp. Job dài sẽ chặn request khác, nên đặt timeout.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>10 lần/giây khớp <b class="m" data-run="01-why-fast.threads">hz:10</b>, 20 khóa mỗi vòng khớp mã nguồn. "Ngẫu nhiên" là cách tài liệu redis.io mô tả; mã 7.2.3 quét bảng expires bằng con trỏ <code>dictScan</code>, mỗi chu kỳ nối tiếp chỗ lần trước dừng. Con số 25% thì sai chỗ: ở <code>active-expire-effort</code> mặc định, 7.2 lặp khi <b>quá 10%</b> khóa vừa quét đã hết hạn; 25 là <b>trần 25% CPU</b>, chính là "timeout" của slide. Đo được: 10000 khóa hết trong 3 giây với <b class="m" data-run="03-expiry.active">expire_cycle_cpu_milliseconds:24</b>. <b class="m" data-run="03-expiry.active">expired_stale_perc:3.40</b> là trung bình trượt (mỗi chu kỳ nặng 5 %) của tỉ lệ khóa hết hạn trong các lần quét gần đây, nên trễ hơn thực tế: cùng run đã in <b class="m" data-run="03-expiry.active">db0:keys=29,expires=0,avg_ttl=0</b>.</p></div>
+    </div>
+  </div>
+  <div class="callout warn" id="sl-21">
+    <span class="tag">Slide 21 · <span class="vchip fix">Cần sửa</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Kết hợp passive và active. Cách mới: lưu hạn trong Sorted Set (ZSET) để tìm khóa hết hạn hiệu quả hơn.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p>Kết hợp hai cách: đúng. ZSET: sai với 7.2. Bảng expires là hash table (<code>overhead.hashtable.expires</code> trong cả hai lần <code>MEMORY STATS</code>), không có ZSET nào. Redis cố ý quét dần từng phần, có trần CPU: không tìm hết trong một lượt, đổi lại ít CPU. "ZSET theo thời điểm" là kỹ thuật tầng ứng dụng cho delay task, ở <a href="#chang-6">chặng 6</a>.</p></div>
+    </div>
+  </div>
+
+  <h3>Làm mẫu 4 · đầy bộ nhớ: 5 chính sách trên container riêng</h3>
+  <div class="callout warn">
+    <span class="tag">An toàn</span>
+    <p>Mọi lệnh ở đây chạy trên <code>advance-be-redis-evict</code>. Mỗi region in <code>→ advance-be-redis-evict</code> trước, mọi lệnh ghi rõ tên container đó. Region có <code>FLUSHALL</code> và <code>CONFIG SET maxmemory</code>: đừng dán vào terminal A/B đang mở trên main. Bật container trước:</p>
+    <div class="code"><pre><code>bash labs/lesson-06-redis/00-containers.sh up evict</code></pre></div>
+  </div>
+  <p>Mỗi region khoảng 35 giây, cùng kịch bản: <code>MAX</code> = bộ nhớ đang dùng + 2 MB; 300 khóa hot 1 KB; 600 khóa cold (vẫn dưới MAX); đọc hot 10 vòng cách nhau 2 giây; ghi tràn 1500 khóa; đếm khóa sống; trả cấu hình về mặc định. Dán từng dòng vào Git Bash.</p>
+  <div class="code"><pre data-cmd="03-eviction.sh#noeviction"><code># #region noeviction · Mặc định noeviction: hết chỗ thì từ chối ghi, đọc vẫn được (slide 23)
+echo "→ advance-be-redis-evict"
+set -u
+docker exec advance-be-redis-evict redis-cli FLUSHALL
+# RESETSTAT đưa evicted_keys về 0 (FLUSHALL không xóa bộ đếm thống kê).
+docker exec advance-be-redis-evict redis-cli CONFIG RESETSTAT
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+# Đọc chính sách mặc định trước khi đổi gì.
+docker exec advance-be-redis-evict redis-cli CONFIG GET maxmemory-policy
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy noeviction
+BASE=$(docker exec advance-be-redis-evict redis-cli INFO memory | tr -d '\r' | sed -n 's/^used_memory://p'); MAX=$((BASE + 2097152)); echo "BASE=$BASE MAX=$MAX"
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory "$MAX"
+seq 1 300 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:hot:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null
+sleep 2
+seq 1 600 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:cold:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null
+EV=$(docker exec advance-be-redis-evict redis-cli INFO stats | tr -d '\r' | sed -n 's/^evicted_keys://p'); echo "evicted_keys:$EV"; [ "$EV" = 0 ] || echo "LỖI: đợt ghi cold đã bị evict, giảm số khóa cold"
+sleep 2
+for r in $(seq 10); do seq 1 300 | awk '{print "GET l06:ev:hot:"$1}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null; sleep 2; done
+# Ghi tràn: sort -u gom 1500 câu trả lời thành vài dòng khác nhau (OK và lỗi OOM).
+seq 1 1500 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:over:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli | sort -u
+echo "hot=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:hot:*' | wc -l)/300 cold=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:cold:*' | wc -l)/600"; docker exec advance-be-redis-evict redis-cli INFO stats | grep ^evicted_keys
+# Đọc vẫn chạy bình thường khi đầy (in ra 1024 chữ số 0).
+docker exec advance-be-redis-evict redis-cli GET l06:ev:hot:1
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy noeviction
+# #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-eviction.noeviction</code> (chỉ giữ dòng in ra)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-eviction.noeviction">→ advance-be-redis-evict
+…
+maxmemory-policy
+noeviction
+…
+BASE=978408 MAX=3075560
+…
+evicted_keys:0
+…
+OK
+OOM command not allowed when used memory &gt; 'maxmemory'.
+…
+hot=300/300 cold=600/600
+evicted_keys:0
+…</pre></div>
+  <p>Container mới trả <code>noeviction</code>. Khi đầy, lệnh ghi tràn nhận OOM (<code>sort -u</code> gom 1500 câu trả lời còn một dòng <code>OK</code> và một dòng lỗi), không khóa nào mất, <code>GET</code> cuối vẫn đọc được. Với POS: đọc giá món vẫn chạy, ghi giỏ hàng thì lỗi.</p>
+  <label class="fields"><span class="muted">Đoán trước khi chạy allkeys-lru: hot còn bao nhiêu trên 300? cold trên 600?</span>
+    <textarea class="field" data-store="l06-c3-predict-lru" placeholder="hot …/300, cold …/600, vì …"></textarea>
+  </label>
+  <div class="code"><pre data-cmd="03-eviction.sh#allkeys-lru"><code># #region allkeys-lru · allkeys-lru: bỏ khóa lâu không ai dùng nhất (xấp xỉ, lấy mẫu) (slide 23)
+echo "→ advance-be-redis-evict"
+set -u
+docker exec advance-be-redis-evict redis-cli FLUSHALL
+# RESETSTAT đưa evicted_keys về 0 (FLUSHALL không xóa bộ đếm thống kê).
+docker exec advance-be-redis-evict redis-cli CONFIG RESETSTAT
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy allkeys-lru
+BASE=$(docker exec advance-be-redis-evict redis-cli INFO memory | tr -d '\r' | sed -n 's/^used_memory://p'); MAX=$((BASE + 2097152)); echo "BASE=$BASE MAX=$MAX"
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory "$MAX"
+seq 1 300 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:hot:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null
+sleep 2
+seq 1 600 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:cold:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null
+EV=$(docker exec advance-be-redis-evict redis-cli INFO stats | tr -d '\r' | sed -n 's/^evicted_keys://p'); echo "evicted_keys:$EV"; [ "$EV" = 0 ] || echo "LỖI: đợt ghi cold đã bị evict, giảm số khóa cold"
+sleep 2
+for r in $(seq 10); do seq 1 300 | awk '{print "GET l06:ev:hot:"$1}' | docker exec -i advance-be-redis-evict redis-cli &gt; /dev/null; sleep 2; done
+seq 1 1500 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:over:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli | sort -u
+echo "hot=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:hot:*' | wc -l)/300 cold=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:cold:*' | wc -l)/600"; docker exec advance-be-redis-evict redis-cli INFO stats | grep ^evicted_keys
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy noeviction
+# #endregion</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-eviction.allkeys-lru</code> (chỉ giữ dòng in ra)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-eviction.allkeys-lru">→ advance-be-redis-evict
+…
+BASE=953720 MAX=3050872
+…
+evicted_keys:0
+…
+OK
+hot=66/300 cold=58/600
+evicted_keys:925</pre></div>
+  <p>Region <code>allkeys-lfu</code> giống <code>allkeys-lru</code> từng dòng, chỉ khác tên chính sách. Dòng dưới in nó từ file lab để bạn dán (hoặc thêm <code>| bash</code> để chạy luôn):</p>
+  <div class="code"><pre><code>sed -n '/#region allkeys-lfu /,/#endregion/p' labs/lesson-06-redis/03-eviction.sh</code></pre></div>
+  <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-eviction.allkeys-lfu</code> (chỉ giữ dòng in ra)</div>
+  <div class="code terminal"><pre class="code terminal" data-run="03-eviction.allkeys-lfu">→ advance-be-redis-evict
+…
+evicted_keys:0
+…
+hot=300/300 cold=306/600
+evicted_keys:923</pre></div>
+  <p>LRU dễ gây bất ngờ: <b class="m" data-run="03-eviction.allkeys-lru">hot=66/300 cold=58/600</b>. Hot vẫn sống tỉ lệ cao hơn cold, nhưng phần lớn đã bị bỏ, vì LRU chỉ nhớ <b>lần chạm cuối</b> và 1500 khóa ghi tràn là khóa mới chạm nhất. LRU của Redis còn là xấp xỉ: mỗi lần chỉ lấy mẫu vài khóa (<code>maxmemory-samples</code>). LFU đếm <b>số lần dùng</b>, nên hot đọc 10 vòng sống trọn: <b class="m" data-run="03-eviction.allkeys-lfu">hot=300/300 cold=306/600</b>.</p>
+
+  <details class="fold"><summary>Tùy chọn (10 phút) · volatile-ttl và allkeys-random</summary><div class="fold-body">
+    <p><code>volatile-ttl</code> chỉ được bỏ khóa có TTL, TTL ngắn trước. Region giống <code>allkeys-lru</code> nhưng ghi thêm 200 khóa <code>l06:ev:ttl:*</code> có TTL và đếm cả nhóm đó. Dòng dưới in nó từ file lab:</p>
+    <div class="code"><pre><code>sed -n '/#region volatile-ttl/,/#endregion/p' labs/lesson-06-redis/03-eviction.sh</code></pre></div>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-eviction.volatile-ttl</code> (chỉ giữ dòng in ra)</div>
+    <div class="code terminal"><pre class="code terminal" data-run="03-eviction.volatile-ttl">→ advance-be-redis-evict
+…
+evicted_keys:0
+…
+OK
+OOM command not allowed when used memory &gt; 'maxmemory'.
+…
+hot=300/300 cold=600/600 ttl=0/200
+evicted_keys:200
+…</pre></div>
+    <p>Khóa không TTL sống trọn, cả 200 khóa TTL bị bỏ (<b class="m" data-run="03-eviction.volatile-ttl">evicted_keys:200</b>), rồi hết khóa TTL thì Redis quay về OOM. Thứ tự "TTL ngắn trước" không thấy được vì tràn đủ nhiều để mất hết; phần Tự làm của chặng có cách xem thứ tự.</p>
+    <p><code>allkeys-random</code> cũng chỉ khác <code>allkeys-lru</code> ở tên chính sách:</p>
+    <div class="code"><pre><code>sed -n '/#region allkeys-random /,/#endregion/p' labs/lesson-06-redis/03-eviction.sh</code></pre></div>
+    <div class="run-label">Kết quả đã chạy trên máy bạn ngày 01/11/2026 · <code>03-eviction.allkeys-random</code> (chỉ giữ dòng in ra)</div>
+    <div class="code terminal"><pre class="code terminal" data-run="03-eviction.allkeys-random">hot=167/300 cold=326/600
+evicted_keys:924</pre></div>
+    <p>Ngẫu nhiên thì hot và cold sống với tỉ lệ gần nhau. Lần chạy của bạn sẽ ra số hơi khác, nhưng vẫn gần nhau như vậy.</p>
+  </div></details>
+
+  <div class="widget" id="w4">
+    <div class="widget-head"><h4>W4 · Đầy bộ nhớ: chính sách nào giữ khóa nào</h4><span class="eyebrow">run-w4 · 03-eviction.*</span></div>
+    <div class="widget-body">
+      <p>Bấm một chính sách để xem lần chạy thật trên <code>advance-be-redis-evict</code>: hot (đọc 10 vòng) và cold (không ai đọc) còn sống bao nhiêu, và lệnh ghi có bị từ chối không.</p>
+      <div class="btns" id="w4-pol" role="group" aria-label="Chọn chính sách eviction"></div>
+      <div class="out" id="w4-out" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="callout" id="sl-23">
+    <span class="tag">Slide 23 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Eviction: noeviction (mặc định), random, TTL (bỏ khóa sắp hết hạn trước), LRU, LFU.</p></div>
+      <div><h5>Redis 7.2.3 đo được</h5><p><code>noeviction</code> là mặc định (<b class="m" data-run="03-eviction.noeviction">noeviction</b>) và nó từ chối ghi chứ không bỏ khóa. Slide thiếu một nửa: 7.2 có 8 chính sách, vì LRU, LFU, random đều có bản <code>allkeys-*</code> và <code>volatile-*</code> (chỉ khóa có TTL); TTL chỉ có <code>volatile-ttl</code>. LRU/LFU là xấp xỉ bằng lấy mẫu, và LRU có thể bỏ cả khóa hot. Thêm nữa: <code>maxmemory</code> mặc định <code>0</code> (không giới hạn), không đặt thì chính sách nào cũng không chạy và container có thể bị hệ điều hành giết vì hết RAM.</p></div>
+    </div>
+  </div>
+
+  <h3>Kiểm chứng chặng 3</h3>
+  <p>Dán vào <code>redis-cli</code> trên main (hơn 10 giây sau Làm mẫu 1). Khối này chỉ đọc.</p>
+  <div class="code"><pre data-cmd="03-expiry.redis#kiem-chung"><code>TTL l06:exp:persist
+EXISTS l06:exp:ttl
+EXISTS l06:exp:p:1 l06:exp:a:1
+CONFIG GET maxmemory
+CONFIG GET maxmemory-policy</code></pre></div>
+  <div class="table-wrap"><table class="expect">
+    <thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Lệnh"><code>TTL l06:exp:persist</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="03-expiry.kiem-chung">(integer) -1</b></td><td data-label="Ý nghĩa">Khóa không TTL vẫn còn</td></tr>
+      <tr><td data-label="Lệnh"><code>EXISTS l06:exp:ttl</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="03-expiry.kiem-chung">(integer) 0</b></td><td data-label="Ý nghĩa">Khóa <code>EX 10</code> đã hết hạn và bị xóa</td></tr>
+      <tr><td data-label="Lệnh"><code>EXISTS l06:exp:p:1 l06:exp:a:1</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="03-expiry.kiem-chung">(integer) 0</b></td><td data-label="Ý nghĩa">Khóa passive và active đều đã được dọn</td></tr>
+      <tr><td data-label="Lệnh"><code>CONFIG GET maxmemory</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="03-expiry.kiem-chung">2) "0"</b></td><td data-label="Ý nghĩa">Main không bị đặt giới hạn: eviction chỉ thử trên evict</td></tr>
+      <tr><td data-label="Lệnh"><code>CONFIG GET maxmemory-policy</code></td><td data-label="Giá trị mong đợi"><b class="m" data-run="03-expiry.kiem-chung">2) "noeviction"</b></td><td data-label="Ý nghĩa">Chính sách của main vẫn là mặc định</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout challenge" id="chang-3-tu-lam">
+    <span class="tag">Tự làm · chặng 3</span>
+    <p><b>Đề:</b> chạy kịch bản đầy bộ nhớ với <code>volatile-lru</code> trên <code>advance-be-redis-evict</code>. Đoán khóa nào sống, chạy, rồi trả cấu hình về mặc định.</p>
+    <ol>
+      <li>Region <code>volatile-ttl</code> có đủ ba nhóm (hot và cold không TTL, 200 khóa có TTL). Dòng dưới in nó ra và đổi đúng một chữ trong <code>CONFIG SET maxmemory-policy</code>: <code>volatile-ttl</code> → <code>volatile-lru</code>. Đọc lại khối trước khi chạy.</li>
+      <li>Ghi dự đoán vào ô.</li>
+      <li>Dán từng dòng vào Git Bash (hoặc thêm <code>| bash</code> vào cuối dòng <code>sed</code>). Dòng đầu phải in <code>→ advance-be-redis-evict</code>, mọi lệnh có tên container đó. Không chạy trong terminal A/B trên main.</li>
+    </ol>
+    <div class="code"><pre><code>sed -n '/#region volatile-ttl/,/#endregion/p' labs/lesson-06-redis/03-eviction.sh | sed 's/maxmemory-policy volatile-ttl/maxmemory-policy volatile-lru/'</code></pre></div>
+    <label class="fields"><span class="muted">Dự đoán: hot …/300, cold …/600, ttl …/200, có OOM không? Vì sao?</span>
+      <textarea class="field" data-store="l06-c3-volatile-lru" placeholder="hot …/300 cold …/600 ttl …/200, OOM: có/không, vì …"></textarea>
+    </label>
+    <p>Tự kiểm sau khi chạy:</p>
+    <div class="code"><pre><code>echo "→ advance-be-redis-evict"
+docker exec advance-be-redis-evict redis-cli CONFIG GET maxmemory-policy
+docker exec advance-be-redis-evict redis-cli CONFIG GET maxmemory
+bash labs/lesson-06-redis/00-containers.sh down evict</code></pre></div>
+    <p><b>PASS khi:</b> dòng đếm in <code>hot=300/300 cold=600/600</code> (khóa không TTL sống 100%), <code>ttl=</code> nhỏ hơn 200, và hai lệnh tự kiểm trả <code>noeviction</code> và <code>0</code> trước khi tắt container.</p>
+    <details class="fold"><summary>Đáp án và giải thích</summary><div class="fold-body">
+      <p><code>volatile-*</code> chỉ được bỏ khóa có TTL, nên hot và cold không bao giờ bị đụng. Trong 200 khóa TTL, <code>volatile-lru</code> bỏ khóa lâu không chạm trước; vì đợt tràn lớn hơn hẳn 200 khóa đó, chúng hết sạch rồi Redis quay về OOM, giống <b class="m" data-run="03-eviction.volatile-ttl">hot=300/300 cold=600/600 ttl=0/200</b> của volatile-ttl. Khác nhau chỉ ở <b>thứ tự</b> bỏ. Muốn thấy thứ tự, đợt tràn phải lớn hơn chỗ trống còn lại nhưng nhỏ hơn chỗ trống cộng 200 khóa TTL. Với <code>MAX = BASE + 2 MB</code> và khóa 1 KB, đổi <code>seq 1 1500</code> thành <code>seq 1 450</code> là vừa: chỉ một phần khóa TTL bị bỏ. Region chỉ in số đếm, nên liệt kê khóa TTL còn sống theo số thứ tự trước khi tắt container:</p>
+      <div class="code"><pre><code>sed -n '/#region volatile-ttl/,/#endregion/p' labs/lesson-06-redis/03-eviction.sh | sed 's/maxmemory-policy volatile-ttl/maxmemory-policy volatile-lru/; s/seq 1 1500/seq 1 450/' | bash
+docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:ttl:*' | sort -t: -k4 -n | head</code></pre></div>
+      <p>Khóa số nhỏ có TTL ngắn hơn (<code>EX 60+2×số</code>). Với <code>volatile-ttl</code>, phần lớn khóa số nhỏ mất trước (vẫn sót vài khóa vì Redis cũng chỉ lấy mẫu). Với <code>volatile-lru</code>, khóa mất rải rác: 200 khóa TTL được ghi trong cùng một giây, đồng hồ LRU của Redis không phân biệt được khóa nào "cũ" hơn.</p>
+      <p>Thiết kế: Redis vừa làm cache vừa giữ dữ liệu không được mất thì dùng <code>volatile-lru</code>/<code>volatile-lfu</code> và chỉ gắn TTL cho cache. Tốt hơn nữa là tách hai Redis.</p>
+    </div></details>
+  </div>
+
+  <div class="quiz" data-quiz="3"></div>
+</section>

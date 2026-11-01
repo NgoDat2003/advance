@@ -1,0 +1,14 @@
+# chạy lúc 01/11/2026 09:28 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis sh -c 'ls /proc/1/task | wc -l'
+6
+$ docker exec advance-be-redis sh -c 'cat /proc/1/task/*/comm'
+redis-server
+bio_close_file
+bio_aof
+bio_lazy_free
+jemalloc_bg_thd
+jemalloc_bg_thd
+$ docker exec advance-be-redis redis-cli CONFIG GET io-threads
+io-threads
+1

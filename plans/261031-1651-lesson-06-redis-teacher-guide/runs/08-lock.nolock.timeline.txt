@@ -1,0 +1,23 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:lock-nolock 5
++   252 A > RPUSH l06:barrier:lock-nolock go
++   253 A < (integer) 1
++   253 A > GET l06:seat:FA634:A34_S012C
++   253 B < 1) "l06:barrier:lock-nolock"
++   253 B < 2) "go"
++   253 B > GET l06:seat:FA634:A34_S012C
++   254 A < (nil)
++   254 B < (nil)
++   761 A > SET l06:seat:FA634:A34_S012C A
++   763 A < OK
++   763 A > RPUSH l06:seat:FA634:log BOOKED:A
++   765 A < (integer) 1
++   962 B > SET l06:seat:FA634:A34_S012C B
++   965 B < OK
++   965 B > RPUSH l06:seat:FA634:log BOOKED:B
++   967 B < (integer) 2
++  1269 B > GET l06:seat:FA634:A34_S012C
++  1272 B < "B"
++  1272 B > LRANGE l06:seat:FA634:log 0 -1
++  1275 B < 1) "BOOKED:A"
++  1275 B < 2) "BOOKED:B"

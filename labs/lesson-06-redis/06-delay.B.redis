@@ -1,0 +1,9 @@
+# Bài 06 · Chặng 6 — Terminal B: poller thứ hai, cùng code với A (slide 37). Dán ở B TRƯỚC khi dán ở A.
+
+# #region naive · B cũng thấy o1 trước khi A kịp ZREM (slide 37)
+BLPOP l06:barrier:delay-naive 5
+ZRANGE l06:delay:orders -inf 2000000000 BYSCORE LIMIT 0 1
+#@ sleep 0.7
+RPUSH l06:delay:done o1
+ZREM l06:delay:orders o1
+# #endregion

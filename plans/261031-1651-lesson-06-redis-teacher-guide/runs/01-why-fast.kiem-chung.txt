@@ -1,0 +1,14 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> CONFIG GET io-threads
+1) "io-threads"
+2) "1"
+127.0.0.1:6379> CONFIG GET latency-monitor-threshold
+1) "latency-monitor-threshold"
+2) "0"
+127.0.0.1:6379> CONFIG GET slowlog-log-slower-than
+1) "slowlog-log-slower-than"
+2) "10000"
+127.0.0.1:6379> EXISTS l06:bench:small l06:bench:big
+(integer) 2
+127.0.0.1:6379> STRLEN l06:bench:big
+(integer) 102400

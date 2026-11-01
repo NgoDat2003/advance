@@ -1,0 +1,15 @@
+# chạy lúc 01/11/2026 09:40 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis-rdb redis-cli DBSIZE
+1000
+$ docker exec advance-be-redis-aof redis-cli DBSIZE
+1500
+$ docker exec advance-be-redis-aof redis-cli CONFIG GET aof-use-rdb-preamble
+aof-use-rdb-preamble
+yes
+$ docker exec advance-be-redis redis-cli CONFIG GET appendonly
+appendonly
+no
+$ docker exec advance-be-redis redis-cli CONFIG GET save
+save
+3600 1 300 100 60 10000

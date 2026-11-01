@@ -1,0 +1,32 @@
+# Bài 06 · Chặng 7 — Hash slot trên một cluster 1 node (giữ đủ 16384 slot). Dán trong redis-cli của container cluster:
+#   PowerShell: docker exec -it advance-be-redis-cluster redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis-cluster redis-cli
+# Bật trước: bash labs/lesson-06-redis/00-containers.sh up cluster
+
+# #region keyslot · CRC16(key) mod 16384; chỉ phần trong {…} đầu tiên được băm (slide 9)
+#@ ct advance-be-redis-cluster
+CLUSTER INFO
+CLUSTER KEYSLOT foo
+CLUSTER KEYSLOT l06:user_profile:{34}
+CLUSTER KEYSLOT l06:user_session:{34}
+CLUSTER KEYSLOT l06:a
+CLUSTER KEYSLOT l06:b
+# {} rỗng không phải hashtag → băm cả khóa. {a}{b} → chỉ lấy "a".
+CLUSTER KEYSLOT l06:{}x
+CLUSTER KEYSLOT l06:{a}{b}
+CLUSTER KEYSLOT a
+# #endregion
+
+# #region crossslot · Lệnh nhiều khóa chỉ chạy khi mọi khóa cùng slot (slide 39)
+#@ ct advance-be-redis-cluster
+DEL l06:a
+DEL l06:b
+SADD l06:a u1 u2 u3
+SADD l06:b u2 u3 u4
+# Hai khóa khác slot → lỗi CROSSSLOT, kể cả khi cả hai cùng nằm trên 1 node.
+SINTER l06:a l06:b
+# Cùng hashtag {34} → cùng slot → chạy được.
+DEL l06:{34}:a l06:{34}:b
+SADD l06:{34}:a u1 u2 u3
+SADD l06:{34}:b u2 u3 u4
+SINTER l06:{34}:a l06:{34}:b
+# #endregion

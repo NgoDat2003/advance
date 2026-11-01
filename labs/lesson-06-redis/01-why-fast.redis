@@ -1,0 +1,34 @@
+# Bài 06 · Chặng 1 — Vì sao Redis nhanh: đo ngay trên máy bạn.
+# Cách chạy: mở redis-cli trong container rồi dán khối lệnh guide hiển thị (guide đã bỏ các dòng #, vì redis-cli gửi cả dòng # như một lệnh).
+#   PowerShell / Windows Terminal: docker exec -it advance-be-redis redis-cli
+#   Git Bash (mintty):             winpty docker exec -it advance-be-redis redis-cli
+# Khối dài thì pipe: grep -v '^#' labs/lesson-06-redis/01-why-fast.redis | docker exec -i advance-be-redis redis-cli
+
+# #region threads · Một luồng chạy lệnh, I/O threads đang tắt (slide 13)
+# multiplexing_api:epoll = một luồng theo dõi cùng lúc hàng nghìn socket (I/O multiplexing).
+# io_threads_active:0 + io-threads 1 = Redis 6+ CÓ I/O threads nhưng mặc định TẮT.
+INFO server
+CONFIG GET io-threads
+# #endregion
+
+# #region slowlog · Tìm lệnh chậm bằng SLOWLOG và LATENCY (slide 13)
+# DEBUG SLEEP 0.5 giả một lệnh chạy 0,5 s. Trong 0,5 s đó mọi client khác phải chờ (cùng một luồng).
+# SLOWLOG ghi lệnh chạy lâu hơn slowlog-log-slower-than (mặc định 10000 µs = 10 ms).
+# LATENCY chỉ ghi khi bật latency-monitor-threshold (ms); đo xong trả về 0 như mặc định.
+CONFIG SET latency-monitor-threshold 100
+LATENCY RESET
+SLOWLOG RESET
+DEBUG SLEEP 0.5
+SLOWLOG GET 1
+LATENCY LATEST
+CONFIG SET latency-monitor-threshold 0
+# #endregion
+
+# #region kiem-chung · Kiểm chứng chặng 1 (slide 12, 13, 14)
+# Chỉ đọc. So từng dòng với bảng "Giá trị mong đợi" trong guide.
+CONFIG GET io-threads
+CONFIG GET latency-monitor-threshold
+CONFIG GET slowlog-log-slower-than
+EXISTS l06:bench:small l06:bench:big
+STRLEN l06:bench:big
+# #endregion

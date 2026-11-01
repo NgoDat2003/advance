@@ -1,0 +1,36 @@
+[
+  {
+    "q": "Hai client cùng GET bộ đếm (đang là 0), mỗi bên tự cộng 1 rồi SET. GET cuối cùng trả gì?",
+    "opts": ["\"1\"", "\"2\"", "(error) WRONGTYPE", "(nil)"],
+    "ans": 0,
+    "why": "Run 05-counter.getset.timeline: cả A và B đọc \"0\", cùng SET 1, GET cuối \"1\": mất một lượt. Run 05-counter.incr.timeline dùng INCR thì ra \"2\"."
+  },
+  {
+    "q": "A chạy LPUSH l06:q:orders o1 o2 trong lúc B đang chặn ở BRPOP. B nhận order nào?",
+    "opts": ["o1, vì LPUSH đẩy vào đầu trái còn BRPOP lấy đầu phải", "o2, vì nó được đẩy sau cùng", "Cả o1 và o2", "Không nhận gì, BRPOP chỉ thấy phần tử có sẵn từ trước"],
+    "ans": 0,
+    "why": "Run 05-queue.brpop.timeline: B nhận 2) \"o1\" ở +1243 ms, sau LPUSH ở +1241 ms; A làm consumer thứ hai nhận \"o2\". Đẩy trái, lấy phải là FIFO."
+  },
+  {
+    "q": "Vì sao hàng đợi bếp nên dùng BLMOVE sang l06:q:processing thay vì BRPOP?",
+    "opts": [
+      "Việc được chuyển sang processing trong cùng một lệnh và ở đó tới khi LREM ack, nên worker sập không làm mất việc",
+      "BLMOVE nhanh hơn BRPOP nhiều lần",
+      "BLMOVE cho nhiều consumer cùng nhận một việc",
+      "BRPOP không chặn được"
+    ],
+    "ans": 0,
+    "why": "Run 05-structures.list-reliable: BLMOVE trả \"job-1\", LRANGE processing vẫn thấy job-1, LREM trả (integer) 1 rồi LLEN processing về 0."
+  },
+  {
+    "q": "Trong run zset-board, ZADD năm món trả (integer) 0. Điều đó nghĩa là gì?",
+    "opts": [
+      "Không có món nào mới; năm món đã có từ seed, ZADD chỉ đặt lại điểm",
+      "ZADD thất bại, không đổi điểm nào",
+      "Bảng đang rỗng",
+      "Redis từ chối vì điểm trùng nhau"
+    ],
+    "ans": 0,
+    "why": "Run 05-structures.zset-board: ZADD trả số món mới thêm (0); ngay sau đó ZINCRBY croissant ra \"110\" và top 3 là latte 120, croissant 110, cold-brew 95."
+  }
+]

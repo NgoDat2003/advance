@@ -1,0 +1,10 @@
+# Fixture hai client: A nhả barrier rồi đặt khóa.
+# #region a-reset · dựng trạng thái đầu (slide 1)
+UNLINK l06:barrier:fixture l06:fixture:ab
+# #endregion
+# #region a · A nhả barrier (slide 1)
+RPUSH l06:barrier:fixture go
+SET l06:fixture:ab A
+#@ sleep 1
+UNLINK l06:fixture:ab
+# #endregion

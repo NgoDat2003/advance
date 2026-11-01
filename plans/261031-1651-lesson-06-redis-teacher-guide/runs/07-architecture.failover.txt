@@ -1,0 +1,26 @@
+# chạy lúc 01/11/2026 09:49 +0700 · Redis 7.2.3 · advance-be-redis-replica
+$ echo "→ advance-be-redis-replica"
+→ advance-be-redis-replica
+$ set -u
+$ printf 'SET l06:rep:main-write before\nWAIT 1 1000\n' | docker exec -i advance-be-redis redis-cli
+OK
+1
+$ docker exec advance-be-redis-replica redis-cli REPLICAOF NO ONE
+OK
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep ^role
+role:master
+$ docker exec advance-be-redis-replica redis-cli SET l06:rep:replica-only x
+OK
+$ docker exec advance-be-redis redis-cli SET l06:rep:main-write after
+OK
+$ docker exec advance-be-redis-replica redis-cli REPLICAOF advance-be-redis 6379
+OK
+$ for i in $(seq 40); do docker exec advance-be-redis-replica redis-cli INFO replication 2>/dev/null | grep -q '^master_link_status:up' && break; sleep 0.5; done; echo "polls=$i"
+polls=8
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep -E '^(role|master_link_status):'
+role:slave
+master_link_status:up
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:replica-only
+
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:main-write
+after

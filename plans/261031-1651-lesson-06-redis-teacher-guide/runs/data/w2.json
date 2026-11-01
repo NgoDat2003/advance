@@ -1,0 +1,88 @@
+{
+  "sources": [
+    "02-encodings.hash",
+    "02-encodings.set-zset-list"
+  ],
+  "rows": [
+    {
+      "type": "hash",
+      "setting": "hash-max-listpack-entries",
+      "below": {
+        "n": 512,
+        "encoding": "listpack"
+      },
+      "above": {
+        "n": 513,
+        "encoding": "hashtable"
+      },
+      "memory_bytes": {
+        "below": 6200,
+        "above": 28824
+      }
+    },
+    {
+      "type": "hash (giá trị)",
+      "setting": "hash-max-listpack-value",
+      "below": {
+        "n": 64,
+        "encoding": "listpack"
+      },
+      "above": {
+        "n": 65,
+        "encoding": "hashtable"
+      },
+      "memory_bytes": {
+        "below": 136,
+        "above": 256
+      }
+    },
+    {
+      "type": "set số",
+      "setting": "set-max-intset-entries",
+      "below": {
+        "n": 512,
+        "encoding": "intset"
+      },
+      "above": {
+        "n": 513,
+        "encoding": "hashtable"
+      }
+    },
+    {
+      "type": "set chuỗi",
+      "setting": "set-max-listpack-entries",
+      "below": {
+        "n": 128,
+        "encoding": "listpack"
+      },
+      "above": {
+        "n": 129,
+        "encoding": "hashtable"
+      }
+    },
+    {
+      "type": "zset",
+      "setting": "zset-max-listpack-entries",
+      "below": {
+        "n": 128,
+        "encoding": "listpack"
+      },
+      "above": {
+        "n": 129,
+        "encoding": "skiplist"
+      }
+    },
+    {
+      "type": "list",
+      "setting": "list-max-listpack-size (byte)",
+      "below": {
+        "n": 10,
+        "encoding": "listpack"
+      },
+      "above": {
+        "n": 3000,
+        "encoding": "quicklist"
+      }
+    }
+  ]
+}

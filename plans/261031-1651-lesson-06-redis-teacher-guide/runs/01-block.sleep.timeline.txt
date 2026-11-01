@@ -1,0 +1,12 @@
+# chạy lúc 01/11/2026 09:29 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:block-sleep 5
++   212 A > RPUSH l06:barrier:block-sleep go
++   213 A < (integer) 1
++   213 A > DEBUG SLEEP 2
++   213 B < 1) "l06:barrier:block-sleep"
++   213 B < 2) "go"
++   716 B > PING
++  2215 A < OK
++  2215 A < (2.00s)
++  2215 B < (1.50s)
++  2215 B < PONG

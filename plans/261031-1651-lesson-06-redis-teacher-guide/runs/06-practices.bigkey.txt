@@ -1,0 +1,47 @@
+# chạy lúc 01/11/2026 09:44 +0700 · Redis 7.2.3 · advance-be-redis
+$ set -u
+$ docker exec advance-be-redis redis-cli UNLINK l06:big:h l06:big:h2 > /dev/null
+$ seq 0 999 | awk '{f=""; for(i=1;i<=1000;i++) f=f" f"($1*1000+i)" v"; print "HSET l06:big:h"f}' | docker exec -i advance-be-redis redis-cli --pipe
+All data transferred. Waiting for the last reply...
+Last reply received from server.
+errors: 0, replies: 1000
+$ seq 0 999 | awk '{f=""; for(i=1;i<=1000;i++) f=f" f"($1*1000+i)" v"; print "HSET l06:big:h2"f}' | docker exec -i advance-be-redis redis-cli --pipe
+All data transferred. Waiting for the last reply...
+Last reply received from server.
+errors: 0, replies: 1000
+$ docker exec advance-be-redis redis-cli HLEN l06:big:h
+1000000
+$ docker exec advance-be-redis redis-cli MEMORY USAGE l06:big:h SAMPLES 0
+55588728
+$ docker exec advance-be-redis redis-cli INFO memory | grep ^lazyfreed_objects
+lazyfreed_objects:2
+$ docker exec advance-be-redis redis-cli CONFIG SET slowlog-log-slower-than 0
+OK
+$ docker exec advance-be-redis redis-cli SLOWLOG RESET
+OK
+$ docker exec advance-be-redis redis-cli DEL l06:big:h
+1
+$ docker exec advance-be-redis redis-cli SLOWLOG GET 1
+32
+1793501078
+165363
+DEL
+l06:big:h
+127.0.0.1:40402
+
+$ docker exec advance-be-redis redis-cli SLOWLOG RESET
+OK
+$ docker exec advance-be-redis redis-cli UNLINK l06:big:h2
+1
+$ docker exec advance-be-redis redis-cli SLOWLOG GET 1
+35
+1793501078
+22
+UNLINK
+l06:big:h2
+127.0.0.1:34246
+
+$ docker exec advance-be-redis redis-cli CONFIG SET slowlog-log-slower-than 10000
+OK
+$ docker exec advance-be-redis redis-cli INFO memory | grep ^lazyfreed_objects
+lazyfreed_objects:3

@@ -1,0 +1,28 @@
+# chạy lúc 01/11/2026 11:46 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
+# lua lock-acquire-fenced.lua sha256=1c92c9845d00f3098b1428a130620680dc39758bb9c0a1b9be25eda4406ad515
+# lua fenced-write.lua sha256=cf11a412654735da7442d421ee1317b1d739e5ae5f0a2c7d52d2fbad3a01f116
+# lua lock-release.lua sha256=d8705959f9404e159b1925459258c25c8ec7276452eba9aa25472be137b6e406
++     0 B > $ docker exec advance-be-redis redis-cli BLPOP l06:barrier:lock-fencing 5
++   362 A > $ docker exec advance-be-redis redis-cli RPUSH l06:barrier:lock-fencing go
++   546 A < 1
++   546 B < l06:barrier:lock-fencing
++   546 B < go
++   557 B > $ set -u
++   557 B > $ sleep 2.8
++   558 A > $ set -u
++   558 A > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/lock-acquire-fenced.lua l06:lock:FA634:A34_S012C l06:fence:A34_S012C , tokA 2000
++   740 A < 1
++   751 A > $ sleep 4
++  3383 B > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/lock-acquire-fenced.lua l06:lock:FA634:A34_S012C l06:fence:A34_S012C , tokB 5000
++  3580 B < 2
++  3592 B > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/fenced-write.lua l06:seat:FA634:A34_S012C:row , 2 B
++  3756 B < OK
++  3768 B > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/lock-release.lua l06:lock:FA634:A34_S012C , tokB
++  3936 B < 1
++  4780 A > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/fenced-write.lua l06:seat:FA634:A34_S012C:row , 1 A
++  4972 A < STALE 2
++  4983 A > $ docker exec advance-be-redis redis-cli HGETALL l06:seat:FA634:A34_S012C:row
++  5157 A < owner
++  5157 A < B
++  5157 A < token
++  5157 A < 2

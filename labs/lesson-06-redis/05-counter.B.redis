@@ -1,0 +1,14 @@
+# Bài 06 · Chặng 5 — Terminal B: lượt xem thứ hai, cùng lúc với A (slide 31). Dán ở B TRƯỚC khi dán ở A.
+
+# #region getset · B cũng đọc 0 và ghi 1 (slide 31)
+BLPOP l06:barrier:counter-getset 5
+GET l06:cnt:views
+#@ sleep 0.6
+SET l06:cnt:views 1
+# #endregion
+
+# #region incr · B chậm hơn A 0,2 s để lần nào chạy cũng cùng thứ tự (slide 31)
+BLPOP l06:barrier:counter-incr 5
+#@ sleep 0.2
+INCR l06:cnt:views
+# #endregion

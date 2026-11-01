@@ -1,0 +1,12 @@
+# Bài 06 · Chặng 9 — Kiểm chứng sau token bucket và Idempotency-Key. Dán trong redis-cli.
+#   PowerShell: docker exec -it advance-be-redis redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis redis-cli
+# Thí nghiệm nằm ở 09-bridge.sh, 09-bucket.{A,B}.redis và 09-bucket-lua.{A,B}.sh.
+
+# #region kiem-chung · Kiểm chứng chặng 9 (slide 41)
+EXISTS l06:tb:store:7
+HGET l06:idem:pay-001 status
+HGET l06:idem:pay-001 hash
+HGET l06:idem:pay-001 resp
+GET l06:tb:naive:7
+EXISTS l06:tb:store:8
+# #endregion

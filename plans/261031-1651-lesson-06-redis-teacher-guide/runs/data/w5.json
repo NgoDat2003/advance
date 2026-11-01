@@ -1,0 +1,19 @@
+{
+  "sources": [
+    "04-persistence.rdb-loss",
+    "04-persistence.aof-loss"
+  ],
+  "modes": [
+    {
+      "mode": "RDB (BGSAVE lúc 1000 khóa, save \"\")",
+      "written": 1500,
+      "snapshot": 1000,
+      "after_restart": 1000
+    },
+    {
+      "mode": "AOF everysec (đợi 2 s rồi kill)",
+      "written": 1500,
+      "after_restart": 1500
+    }
+  ]
+}

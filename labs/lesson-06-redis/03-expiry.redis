@@ -1,0 +1,24 @@
+# Bài 06 · Chặng 3 — Khóa có TTL nằm trong "expire dictionary". Dán trong redis-cli.
+#   PowerShell: docker exec -it advance-be-redis redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis redis-cli
+# Phần passive / active expiry cần 1000–10000 khóa: xem 03-expiry.sh.
+
+# #region expire-dict · Bảng khóa chính và bảng hết hạn riêng (slide 18)
+# Khóa không TTL chỉ nằm ở bảng chính; khóa có TTL nằm ở CẢ bảng chính lẫn bảng expires.
+SET l06:exp:persist v
+# TTL ngắn (10 s) để không làm lệch số đếm của thí nghiệm passive/active ngay sau.
+SET l06:exp:ttl v EX 10
+INFO keyspace
+TTL l06:exp:persist
+TTL l06:exp:ttl
+TTL l06:exp:missing
+# overhead.hashtable.expires = bộ nhớ của bảng expires (một hash table, không phải ZSET).
+MEMORY STATS
+# #endregion
+
+# #region kiem-chung · Kiểm chứng chặng 3 (slide 18, 19, 20, 23)
+TTL l06:exp:persist
+EXISTS l06:exp:ttl
+EXISTS l06:exp:p:1 l06:exp:a:1
+CONFIG GET maxmemory
+CONFIG GET maxmemory-policy
+# #endregion

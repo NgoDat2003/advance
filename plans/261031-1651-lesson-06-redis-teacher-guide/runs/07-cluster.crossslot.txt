@@ -1,0 +1,20 @@
+# chạy lúc 01/11/2026 09:45 +0700 · Redis 7.2.3 · advance-be-redis-cluster
+127.0.0.1:6379> DEL l06:a
+(integer) 0
+127.0.0.1:6379> DEL l06:b
+(integer) 0
+127.0.0.1:6379> SADD l06:a u1 u2 u3
+(integer) 3
+127.0.0.1:6379> SADD l06:b u2 u3 u4
+(integer) 3
+127.0.0.1:6379> SINTER l06:a l06:b
+(error) CROSSSLOT Keys in request don't hash to the same slot
+127.0.0.1:6379> DEL l06:{34}:a l06:{34}:b
+(integer) 0
+127.0.0.1:6379> SADD l06:{34}:a u1 u2 u3
+(integer) 3
+127.0.0.1:6379> SADD l06:{34}:b u2 u3 u4
+(integer) 3
+127.0.0.1:6379> SINTER l06:{34}:a l06:{34}:b
+1) "u2"
+2) "u3"

@@ -1,0 +1,34 @@
+# verify-full · chạy lúc 01/11/2026 12:22 +0700 · sau phase 08 (sửa theo code-review ultra U01–U30)
+## verify-guide 
+✔ không có lỗi
+## verify-guide --runs
+✔ không có lỗi
+## verify-guide --data
+✔ không có lỗi
+## verify-guide --lint
+✔ không có lỗi
+## verify-guide --selftest
+selftest V07 số chỉ có trong dòng lệnh "$ seq 1 1500" → bắt: đúng (V07 09-fx.seq: giá trị "1500" không có trong phần output của run (dòng lệnh đã gõ không tính))
+selftest V16 số không có trong run được trích → bắt: đúng (V16 "1498" không có trong run được trích (09-fx.seq): "Run 09-fx.seq: DBSIZE còn 1498.…")
+selftest V16 số 3 chữ số không có trong run được trích → bắt: đúng (V16 "743" không có trong run được trích (09-fx.seq): "Run 09-fx.seq: gửi lúc +743 ms.…")
+selftest V16 đổi chỗ hai số của cụm hot=…/300 → bắt: đúng (V16 "hot=58/300" không có trong run được trích (09-fx.seq): "Run 09-fx.seq: hot=58/300 cold=66/600.…" | V16 "cold=66/600" không có trong run được trích (09-fx.seq): "Run 09-fx.seq: hot=58/300 cold=66/600.…")
+selftest V16 số có trong run được trích → qua: đúng (không lỗi)
+selftest V16 câu không trích run nào → bắt: đúng (V16 câu không trích run nào có file: "Vì Redis nhanh, 1499 khóa.…")
+selftest V20 sed in region có thật → qua: đúng (không lỗi)
+selftest V20 sed in region không có → bắt: đúng (V20 sed in region "zz" nhưng x.redis không có region đó: sed -n '/#region zz /,/#endregion/p' labs/lesson-06-redis/x.redis)
+selftest V20 sed s/A/B/ mà region không có A → bắt: đúng (V20 sed 's/khong-co-chu-nay/…/' không đổi gì: region a của x.redis không có "khong-co-chu-nay")
+selftest V21 ô nhập chỉ có placeholder → bắt: đúng (V21 <input class="field" placeholder="ghi lại"> không có nhãn (label / aria-label); placeholder không thay được nhãn)
+selftest V21 ô nhập trong label / có aria-label → qua: đúng (không lỗi)
+✔ không có lỗi
+## negative-tests
+26/26 ca đỏ đúng thiết kế · 0 SKIP · tổng 26 ca
+## widget-smoke
+W6 slot: 8/8 khóa khớp CLUSTER KEYSLOT
+quiz: 9 khối, đã trả lời 1 câu ở 9, giải thích hiện: 9
+phỏng vấn: 10 câu · bản đồ slide: 46 chip
+✔ không có exception, widget có nội dung
+## render-check: light 0 errors, 0 warnings · dark 0 errors, 0 warnings (375/768/1440)
+## check.sh ×2: rc 0/0, giống hệt nhau, 10 ✔ · 5 – · 0 ✘
+## hw-check: solution 5/5 ✔ · bad ✘ H1 H2 H5 · bad-del ✘ H5
+## fingerprint: ✔ fingerprint khớp baseline
+## size: 487 KB ≤ 520 KB

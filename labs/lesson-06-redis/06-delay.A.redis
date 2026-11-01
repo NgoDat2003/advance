@@ -1,0 +1,17 @@
+# Bài 06 · Chặng 6 — Terminal A: poller ngây thơ đọc việc đến hạn rồi mới xóa (slide 37).
+# Thứ tự: (1) naive-reset ở A, (2) naive ở B (B đứng chờ), (3) naive ở A. "#@ sleep 0.5" = tự đợi 0,5 s.
+
+# #region naive-reset · Chuẩn bị: 1 việc đã đến hạn (o1) và 2 việc năm 2100 (o2, o3) (slide 37)
+UNLINK l06:delay:orders l06:delay:done l06:barrier:delay-naive
+# 1704790435 là giờ trên slide (đã qua); 4102444800 = 01/01/2100 (chưa tới).
+ZADD l06:delay:orders 1704790435 o1 4102444800 o2 4102444800 o3
+# #endregion
+
+# #region naive · Đọc việc đến hạn, xử lý, rồi mới ZREM: hai poller cùng lấy o1 (slide 37)
+RPUSH l06:barrier:delay-naive go
+# 2000000000 (năm 2033) là mốc "bây giờ" cố định cho dễ đọc: mọi việc có điểm nhỏ hơn là đã đến hạn.
+ZRANGE l06:delay:orders -inf 2000000000 BYSCORE LIMIT 0 1
+#@ sleep 0.5
+RPUSH l06:delay:done o1
+ZREM l06:delay:orders o1
+# #endregion

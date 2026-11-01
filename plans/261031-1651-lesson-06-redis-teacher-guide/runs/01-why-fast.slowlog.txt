@@ -1,0 +1,26 @@
+# chạy lúc 01/11/2026 09:28 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> CONFIG SET latency-monitor-threshold 100
+OK
+127.0.0.1:6379> LATENCY RESET
+(integer) 0
+127.0.0.1:6379> SLOWLOG RESET
+OK
+127.0.0.1:6379> DEBUG SLEEP 0.5
+OK
+(0.50s)
+127.0.0.1:6379> SLOWLOG GET 1
+1) 1) (integer) 21
+   2) (integer) 1793500136
+   3) (integer) 500094
+   4) 1) "DEBUG"
+      2) "SLEEP"
+      3) "0.5"
+   5) "127.0.0.1:37256"
+   6) ""
+127.0.0.1:6379> LATENCY LATEST
+1) 1) "command"
+   2) (integer) 1793500136
+   3) (integer) 500
+   4) (integer) 500
+127.0.0.1:6379> CONFIG SET latency-monitor-threshold 0
+OK

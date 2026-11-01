@@ -1,0 +1,14 @@
+# Bài 06 · Chặng 9 — Terminal A: token bucket kiểu ngây thơ (GET, tính trong code, SET) (slide 41).
+# Thứ tự: (1) naive-reset ở A, (2) naive ở B (B đứng chờ), (3) naive ở A. "#@ sleep 0.5" = tự đợi 0,5 s.
+
+# #region naive-reset · Chuẩn bị: bucket còn đúng 1 token (slide 41)
+SET l06:tb:naive:7 1
+UNLINK l06:barrier:bucket-naive
+# #endregion
+
+# #region naive · A đọc 1 token, code thấy đủ nên cho qua và ghi 0 (slide 41)
+RPUSH l06:barrier:bucket-naive go
+GET l06:tb:naive:7
+#@ sleep 0.5
+SET l06:tb:naive:7 0
+# #endregion

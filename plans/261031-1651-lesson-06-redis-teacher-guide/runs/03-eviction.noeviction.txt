@@ -1,0 +1,39 @@
+# chạy lúc 01/11/2026 09:41 +0700 · Redis 7.2.3 · advance-be-redis-evict
+$ echo "→ advance-be-redis-evict"
+→ advance-be-redis-evict
+$ set -u
+$ docker exec advance-be-redis-evict redis-cli FLUSHALL
+OK
+$ docker exec advance-be-redis-evict redis-cli CONFIG RESETSTAT
+OK
+$ docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+OK
+$ docker exec advance-be-redis-evict redis-cli CONFIG GET maxmemory-policy
+maxmemory-policy
+noeviction
+$ docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy noeviction
+OK
+$ BASE=$(docker exec advance-be-redis-evict redis-cli INFO memory | tr -d '\r' | sed -n 's/^used_memory://p'); MAX=$((BASE + 2097152)); echo "BASE=$BASE MAX=$MAX"
+BASE=978408 MAX=3075560
+$ docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory "$MAX"
+OK
+$ seq 1 300 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:hot:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli > /dev/null
+$ sleep 2
+$ seq 1 600 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:cold:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli > /dev/null
+$ EV=$(docker exec advance-be-redis-evict redis-cli INFO stats | tr -d '\r' | sed -n 's/^evicted_keys://p'); echo "evicted_keys:$EV"; [ "$EV" = 0 ] || echo "LỖI: đợt ghi cold đã bị evict, giảm số khóa cold"
+evicted_keys:0
+$ sleep 2
+$ for r in $(seq 10); do seq 1 300 | awk '{print "GET l06:ev:hot:"$1}' | docker exec -i advance-be-redis-evict redis-cli > /dev/null; sleep 2; done
+$ seq 1 1500 | awk 'BEGIN{v=sprintf("%01024d",0)} {print "SET l06:ev:over:"$1" "v}' | docker exec -i advance-be-redis-evict redis-cli | sort -u
+
+OK
+OOM command not allowed when used memory > 'maxmemory'.
+$ echo "hot=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:hot:*' | wc -l)/300 cold=$(docker exec advance-be-redis-evict redis-cli --scan --pattern 'l06:ev:cold:*' | wc -l)/600"; docker exec advance-be-redis-evict redis-cli INFO stats | grep ^evicted_keys
+hot=300/300 cold=600/600
+evicted_keys:0
+$ docker exec advance-be-redis-evict redis-cli GET l06:ev:hot:1
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+$ docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory 0
+OK
+$ docker exec advance-be-redis-evict redis-cli CONFIG SET maxmemory-policy noeviction
+OK

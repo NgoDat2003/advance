@@ -1,0 +1,33 @@
+# chạy lúc 01/11/2026 09:49 +0700 · Redis 7.2.3 · advance-be-redis-replica
+$ echo "→ advance-be-redis-replica"
+→ advance-be-redis-replica
+$ set -u
+$ printf 'SET l06:rep:price 100\nWAIT 1 1000\n' | docker exec -i advance-be-redis redis-cli
+OK
+1
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:price
+100
+$ docker network disconnect advance-be-l06 advance-be-redis-replica
+$ printf 'SET l06:rep:price 120\nWAIT 1 500\n' | docker exec -i advance-be-redis redis-cli
+OK
+0
+$ docker exec advance-be-redis redis-cli WAIT 1 500
+1
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:price
+100
+$ docker network connect advance-be-l06 advance-be-redis-replica
+$ docker restart advance-be-redis-replica
+advance-be-redis-replica
+$ for i in $(seq 40); do docker exec advance-be-redis-replica redis-cli INFO replication 2>/dev/null | grep -q '^master_link_status:up' && break; sleep 0.5; done; echo "polls=$i"
+polls=1
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep ^master_link_status
+master_link_status:up
+$ docker exec advance-be-redis-replica redis-cli GET l06:rep:price
+120
+$ docker exec advance-be-redis redis-cli INFO replication | grep ^master_repl_offset
+master_repl_offset:15361
+$ docker exec advance-be-redis-replica redis-cli INFO replication | grep ^slave_repl_offset
+slave_repl_offset:15361
+$ docker exec advance-be-redis redis-cli INFO stats | grep -E '^(sync_full|sync_partial_ok):'
+sync_full:3
+sync_partial_ok:3

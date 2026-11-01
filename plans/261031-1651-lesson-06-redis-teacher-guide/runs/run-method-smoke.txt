@@ -1,0 +1,48 @@
+# chạy lúc 31/10/2026 18:30 +0700 · Redis 7.2.3 · advance-be-redis (Git Bash, chỉ dùng khóa l06:smoke)
+S1 pipe: printf 'SET l06:smoke 1\nGET l06:smoke\n' | docker exec -i advance-be-redis redis-cli --no-raw
+OK
+"1"
+→ dán/pipe nhiều lệnh vào một phiên redis-cli chạy được, --no-raw cho dạng giống terminal tương tác.
+
+S2 streaming: (echo PING; sleep 1; echo PING) | docker exec -i advance-be-redis redis-cli  (node đóng dấu ms lúc từng dòng tới)
++    0 ms PONG
++  854 ms PONG
+→ hai câu trả lời cách nhau ~1 s (854 ms vì PING đầu chờ docker exec khởi động ~150 ms rồi mới tới, còn sleep 1 đã bắt đầu đếm).
+  redis-cli xử lý stdin từng dòng khi dòng tới, nên runner điều nhịp lệnh trong MỘT phiên được.
+
+S3 dòng comment: printf '# x\nPING\n' | docker exec -i advance-be-redis redis-cli --no-raw
+(error) ERR unknown command '#', with args beginning with: 'x'
+PONG
+→ redis-cli gửi dòng '#' như một lệnh. lab-text.mjs bỏ dòng '#' khi hiển thị/chạy; pipe form dùng grep -v '^#'.
+
+S4 UTF-8: printf 'ECHO "Đạt"\n' | docker exec -i advance-be-redis redis-cli --no-raw
+"\xc4\x90\xe1\xba\xa1t"
+→ --no-raw escape byte không phải ASCII. Giá trị lab ghi vào Redis chỉ dùng ASCII; tiếng Việt chỉ ở comment và lời giảng.
+
+S5 DBX (ADVANCE_BE_REDIS, 127.0.0.1:6379): CHƯA KIỂM — phiên thực thi này không được cấp công cụ DBX MCP (Redis console).
+→ Theo quy tắc quyết định: DBX chỉ dùng để duyệt khóa (type, TTL, memory) và gửi từng lệnh đơn; không dùng cho khối nhiều dòng.
+  Nếu sau này controller thử tay thấy DBX chạy được khối nhiều dòng, contract §5 có thể thêm DBX làm cách phụ cho snippet một client.
+
+S6 TTY: docker exec -it advance-be-redis redis-cli PING (chạy headless, không có mintty thật)
+the input device is not a TTY.  If you are using mintty, try prefixing the command with 'winpty'
+→ CHƯA KIỂM được trong terminal thật. winpty có sẵn (/usr/bin/winpty). Guide ghi cả hai dạng:
+  PowerShell / Windows Terminal: docker exec -it advance-be-redis redis-cli
+  Git Bash (mintty):            winpty docker exec -it advance-be-redis redis-cli
+
+S7 Git Bash đổi đường dẫn:
+$ docker exec advance-be-redis echo /lab/x
+D:/Git/lab/x
+$ MSYS_NO_PATHCONV=1 docker exec advance-be-redis echo /lab/x
+/lab/x
+$ docker exec advance-be-redis echo //lab/x
+//lab/x
+→ Git Bash viết lại tham số bắt đầu bằng '/' thành D:/Git/... trước khi tới docker. Mọi dòng .sh truyền đường dẫn
+  tuyệt đối trong container phải có tiền tố 'MSYS_NO_PATHCONV=1 ' (hoặc viết '//path'; Linux coi //lab/x như /lab/x).
+
+Dọn: docker exec advance-be-redis redis-cli UNLINK l06:smoke → 1; EXISTS l06:smoke → 0
+
+Quyết định (contract §5):
+- Cách chính: redis-cli tương tác trong container, dán cả khối (PowerShell: docker exec -it …; Git Bash: winpty docker exec -it …).
+- Khối dài: grep -v '^#' labs/lesson-06-redis/<file> | docker exec -i advance-be-redis redis-cli
+- DBX: chỉ duyệt khóa và lệnh đơn (S5 chưa kiểm). Mọi client phía host dùng 127.0.0.1:6379, không dùng localhost.
+- Hai client: hai tab terminal A và B.

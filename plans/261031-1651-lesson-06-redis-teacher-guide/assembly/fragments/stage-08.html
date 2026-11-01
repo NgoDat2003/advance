@@ -1,0 +1,256 @@
+<section id="chang-8" class="stage col">
+<div class="stage-head">
+<span class="stage-no">08</span>
+<div>
+<div class="stage-meta"><span>Slide 40</span><span>40 phút + 5 tùy chọn</span><span>lõi · capstone</span></div>
+<h2>Khóa phân tán: hai request, một ghế A34_S012C</h2>
+</div>
+</div>
+<p class="goal"><b>Mục tiêu:</b> chạy năm kịch bản trên cùng một ghế, từ không khóa tới fencing token, và tận mắt thấy cách slide 40 (<code>SET NX PX</code> rồi <code>DEL</code>) cho <b>hai người cùng giữ khóa</b>. Bạn sửa nó bằng compare-and-delete (Lua), rồi chặn cả người giữ khóa đã hết hạn bằng fencing token, cùng ý với cột <code>version</code> của Bài 14.</p>
+<dl class="wwh">
+<dt>LÀ GÌ?</dt><dd>Khóa phân tán là một khóa Redis mà mọi instance app cùng tôn trọng: <code>SET khóa token NX PX ms</code> chỉ thành công cho một người, và tự hết hạn nếu người đó chết. Token là chuỗi riêng của mỗi lần giữ khóa.</dd>
+<dt>TẠI SAO?</dt><dd>Khi hai request chạy trên hai instance NestJS khác nhau, mutex trong bộ nhớ không thấy nhau. Redis là chỗ chung để chỉ một request được làm việc trên ghế, voucher hay đơn hàng tại một thời điểm.</dd>
+<dt>KHI NÀO KHÔNG?</dt><dd>Khi chỉ cần đúng dữ liệu trong một database: khóa dòng <code>FOR UPDATE</code> hay <code>UPDATE … WHERE version = $v</code> (Bài 14) đơn giản và chắc hơn. Khóa Redis có TTL nên luôn có thể hết hạn giữa chừng; đừng dựa vào nó một mình cho tiền hay tồn kho.</dd>
+</dl>
+
+<div class="story">
+<span class="tag">Tình huống</span>
+<p>Hai thu ngân ở hai quầy cùng bấm "đặt ghế <code>A34_S012C</code> chuyến <code>FA634</code>" cho hai khách khác nhau (bài tập slide 43; ở chuỗi F&amp;B thì là bàn cuối cùng của ca tối, hay suất combo cuối cùng). Hai request tới hai instance khác nhau trong cùng một giây. Không khóa thì cả hai thấy ghế trống và cùng đặt. Có khóa kiểu slide 40 thì chạy ổn cho tới hôm request đầu bị chậm (GC pause, gọi cổng thanh toán lâu): khóa hết hạn, người thứ hai vào, và lúc người đầu tỉnh dậy gọi <code>DEL</code>, nó xóa luôn khóa của người thứ hai.</p>
+</div>
+
+<figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/6_Redis/page_40_img_01.png" alt="Slide 40: hai request cùng lúc, request 1 SET khóa NX PX 10000 thành công, request 2 thất bại, request 1 xong việc thì DEL khóa" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 40 · SET lock_key value NX PX 10000, rồi DEL (UNLINK) lock_key</figcaption></figure>
+
+<figure>
+<svg viewBox="0 0 640 220" role="img" aria-labelledby="c8-ttl-title" style="max-width:100%;height:auto;display:block">
+<title id="c8-ttl-title">Kịch bản ttldel: khóa của A hết hạn sau PX 2000 trong khi A còn làm việc; B lấy khóa; DEL của A xóa khóa của B; request thứ ba lấy được khóa</title>
+<text x="10" y="20" style="fill:var(--muted);font:12px var(--font-mono)">theo kịch bản 08-lock#ttldel (giây kể từ lúc A lấy khóa)</text>
+<line x1="80" y1="196" x2="620" y2="196" style="stroke:var(--line);stroke-width:1"></line>
+<text x="80" y="214" style="fill:var(--muted);font:11px var(--font-mono)">0</text>
+<text x="210" y="214" style="fill:var(--muted);font:11px var(--font-mono)">1</text>
+<text x="340" y="214" style="fill:var(--muted);font:11px var(--font-mono)">2</text>
+<text x="470" y="214" style="fill:var(--muted);font:11px var(--font-mono)">3</text>
+<text x="600" y="214" style="fill:var(--muted);font:11px var(--font-mono)">4</text>
+<text x="10" y="52" style="fill:var(--fg);font:600 13px var(--font-body)">A tưởng</text>
+<rect x="80" y="40" width="429" height="16" rx="3" style="fill:none;stroke:var(--fg);stroke-width:1.5;stroke-dasharray:5 3"></rect>
+<text x="515" y="53" style="fill:var(--bad);font:12px var(--font-mono)">DEL</text>
+<text x="10" y="82" style="fill:var(--fg);font:600 13px var(--font-body)">tokA</text>
+<rect x="80" y="70" width="260" height="16" rx="3" style="fill:var(--accent)"></rect>
+<text x="346" y="83" style="fill:var(--muted);font:12px var(--font-mono)">hết hạn (PX 2000)</text>
+<text x="10" y="112" style="fill:var(--fg);font:600 13px var(--font-body)">tokB</text>
+<rect x="444" y="100" width="65" height="16" rx="3" style="fill:var(--ok)"></rect>
+<text x="515" y="113" style="fill:var(--bad);font:12px var(--font-mono)">bị A xóa</text>
+<text x="10" y="142" style="fill:var(--fg);font:600 13px var(--font-body)">tokC</text>
+<rect x="548" y="130" width="72" height="16" rx="3" style="fill:var(--warn)"></rect>
+<rect x="548" y="160" width="72" height="22" rx="3" style="fill:var(--bad-soft);stroke:var(--bad)"></rect>
+<text x="300" y="176" style="fill:var(--bad);font:600 12px var(--font-body)">B vẫn đang làm + C vừa vào → 2 người</text>
+</svg>
+<figcaption class="muted">Thanh liền = khóa thật trong Redis; khung nét đứt = A tưởng mình còn giữ khóa. Mốc 2,8 s và 3,3 s là các bước <code>sleep</code> của lab; giờ thật đã ghi nằm trong bảng dưới và W8.</figcaption>
+</figure>
+
+<div class="table-wrap"><table class="stats">
+<caption>Đo trên máy bạn ngày 01/11/2026 · Redis 7.2.3 · advance-be-redis · ms host tính từ sự kiện đầu của mỗi cặp A+B</caption>
+<thead><tr><th>Kịch bản</th><th>Kết quả đã ghi</th><th>Run</th></tr></thead>
+<tbody>
+<tr><td>1 · Không khóa</td><td>A GET <b class="m" data-run="08-lock.nolock.timeline">(nil)</b>, B GET <b class="m" data-run="08-lock.nolock.timeline">(nil)</b>; sổ đặt chỗ <b class="m" data-run="08-lock.nolock.timeline">1) "BOOKED:A"</b> <b class="m" data-run="08-lock.nolock.timeline">2) "BOOKED:B"</b>; ghế cuối là <b class="m" data-run="08-lock.nolock.timeline">"B"</b></td><td><code>08-lock.nolock.timeline</code></td></tr>
+<tr><td>2 · SET NX PX</td><td>A <b class="m" data-run="08-lock.nx.timeline">OK</b>, B <b class="m" data-run="08-lock.nx.timeline">(nil)</b></td><td><code>08-lock.nx.timeline</code></td></tr>
+<tr><td>3 · TTL + DEL (slide 40)</td><td>A lấy khóa lúc +<b class="m" data-run="08-lock.ttldel.timeline">258</b>; B lấy được lúc +<b class="m" data-run="08-lock.ttldel.timeline">3058</b>; A gọi DEL lúc +<b class="m" data-run="08-lock.ttldel.timeline">3571</b> → <b class="m" data-run="08-lock.ttldel.timeline">(integer) 1</b> (xóa khóa của B); tokC lấy được lúc +<b class="m" data-run="08-lock.ttldel.timeline">3868</b>, GET → <b class="m" data-run="08-lock.ttldel.timeline">"tokC"</b></td><td><code>08-lock.ttldel.timeline</code></td></tr>
+<tr><td>4 · Compare-and-delete (Lua)</td><td>A trả khóa lúc +<b class="m" data-run="08-lock-lua.cad.timeline">4227</b> → <b class="m" data-run="08-lock-lua.cad.timeline">0</b>; GET → <b class="m" data-run="08-lock-lua.cad.timeline">tokB</b>; B tự trả → <b class="m" data-run="08-lock-lua.cad.timeline">1</b></td><td><code>08-lock-lua.cad.timeline</code></td></tr>
+<tr><td>5 · Fencing token (Lua)</td><td>Token cấp cùng lúc với khóa (<code>lock-acquire-fenced.lua</code>): A <b class="m" data-run="08-lock-lua.fencing.timeline">1</b>, B <b class="m" data-run="08-lock-lua.fencing.timeline">2</b>; B ghi <b class="m" data-run="08-lock-lua.fencing.timeline">OK</b>; A ghi muộn lúc +<b class="m" data-run="08-lock-lua.fencing.timeline">4780</b> → <b class="m" data-run="08-lock-lua.fencing.timeline">STALE 2</b></td><td><code>08-lock-lua.fencing.timeline</code></td></tr>
+</tbody>
+</table></div>
+
+<div class="check30">
+<span class="tag">Kiểm tra 30 giây</span>
+<p>A giữ khóa <code>PX 2000</code> nhưng làm việc 3,3 giây rồi gọi <code>DEL</code>. Lúc đó khóa trong Redis là của ai?</p>
+<details><summary>Xem đáp án</summary>
+<p>Của B. Khóa của A đã hết hạn, B lấy được (<code>SET … tokB NX</code> trả <code>OK</code> lúc +<b class="m" data-run="08-lock.ttldel.timeline">3058</b>). <code>DEL</code> không hỏi khóa là của ai, nên trả <b class="m" data-run="08-lock.ttldel.timeline">(integer) 1</b> và xóa khóa của B. Ngay sau đó request thứ ba lấy được khóa: B đang làm, C cũng đang làm.</p>
+</details>
+</div>
+
+<div class="callout warn" id="sl-40">
+<span class="tag">Slide 40 · <span class="vchip fix">Cần sửa</span></span>
+<div class="sayvs">
+<div><h5>Slide nói</h5><p>Hai request chạy cùng lúc, muốn mỗi lúc chỉ một request được xử lý. Dùng SETNX: <code>SET lock_key value NX PX 10000</code>, xong việc thì <code>DEL</code> (<code>UNLINK</code>) <code>lock_key</code>.</p></div>
+<div><h5>Redis 7.2.3 đo được</h5><p>Nửa đầu đúng: <code>SET … NX PX</code> chỉ cho một người, B nhận <b class="m" data-run="08-lock.nx.timeline">(nil)</b>. Nửa sau sai: khi việc kéo dài quá TTL, <code>DEL</code> trơn xóa khóa của người khác (<b class="m" data-run="08-lock.ttldel.timeline">(integer) 1</b> ở run <code>08-lock.ttldel.timeline</code>) và hai người cùng giữ khóa. <code>UNLINK</code> cũng vậy, nó chỉ giải phóng bộ nhớ ở luồng nền.</p></div>
+</div>
+<p><b>Sửa:</b> (1) <code>value</code> phải là token riêng cho mỗi lần lấy khóa, không phải một hằng số. (2) Trả khóa bằng compare-and-delete trong Lua: chỉ <code>DEL</code> khi <code>GET</code> còn bằng token của mình (A nhận <b class="m" data-run="08-lock-lua.cad.timeline">0</b>, khóa của B còn nguyên). (3) Nếu tài nguyên có thể bị ghi sau khi khóa hết hạn, cấp fencing token trong cùng script với lệnh lấy khóa và kiểm tra token ngay tại chỗ ghi (A nhận <b class="m" data-run="08-lock-lua.fencing.timeline">STALE 2</b>). Bài 02 đã dạy (1) và (2); chặng này đo lại chúng và thêm (3).</p>
+</div>
+
+<div class="callout teacher">
+<span class="tag">Làm mẫu · 5 kịch bản trên cùng một ghế</span>
+<p>Kịch bản 1–3 dùng hai tab <code>redis-cli</code> trên main (A và B, mở như ở <a href="#cach-hoc">Cách học</a>). redis-cli không có lệnh "đợi", nên các dòng <code>#@ sleep</code> trong file lab không có trong khối lệnh: bạn tự dán từng dòng theo bảng, đếm giây bằng đồng hồ. Kịch bản 4–5 là file <code>.sh</code> có <code>sleep</code> thật: dán cả khối vào Git Bash là đúng nhịp. Chạy theo thứ tự 1 → 5 để bảng kiểm chứng cuối chặng khớp.</p>
+</div>
+
+<h3>1 · Không khóa</h3>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>nolock-reset</code>: xóa ghế, sổ đặt chỗ và barrier.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Chỉ dán dòng <code>BLPOP l06:barrier:lock-nolock 5</code>. B đứng chờ.</td><td></td></tr>
+<tr><td>3</td><td>Trong 5 giây: dán <code>RPUSH … go</code> và <code>GET l06:seat:FA634:A34_S012C</code>.</td><td></td><td><input class="field" data-store="l06-c8-nolock-a" placeholder="A thấy ghế = ?"></td></tr>
+<tr><td>4</td><td></td><td>Dán <code>GET</code> ghế (trước khi A ghi).</td><td><input class="field" data-store="l06-c8-nolock-b" placeholder="B thấy ghế = ?"></td></tr>
+<tr><td>5</td><td>Dán <code>SET</code> ghế = A và <code>RPUSH</code> sổ <code>BOOKED:A</code>.</td><td></td><td></td></tr>
+<tr><td>6</td><td></td><td>Dán 4 dòng còn lại: <code>SET</code> ghế = B, <code>RPUSH</code> sổ, <code>GET</code>, <code>LRANGE</code>.</td><td><input class="field" data-store="l06-c8-nolock-log" placeholder="sổ có mấy BOOKED? ghế của ai?"></td></tr>
+</tbody>
+</table></div>
+<details class="fold"><summary>Lệnh của kịch bản 1</summary><div class="fold-body">
+<!--@CMD 08-lock.A.redis#nolock-reset@-->
+<!--@CMD 08-lock.B.redis#nolock@-->
+<!--@CMD 08-lock.A.redis#nolock@-->
+</div></details>
+<!--@RUN 08-lock.nolock.timeline@-->
+<p>Cả hai cùng thấy <code>(nil)</code> trước khi ai kịp ghi, nên cả hai cùng đặt. Ghế thuộc người ghi sau, nhưng sổ có hai lần <code>BOOKED</code>: một khách sẽ đến sân bay mà không có ghế.</p>
+<p><b>Kiểm lại lần chạy của bạn:</b> <code>GET</code> của B ở bước 4 phải in <code>(nil)</code>. Nếu B đã thấy <code>"A"</code> thì A ghi trước khi B đọc, chưa có race (lệnh <code>SET</code> của B được gõ sẵn nên sổ vẫn có hai dòng, nhưng đó không phải lỗi đọc-rồi-ghi): chạy lại region <code>nolock-reset</code> và dán bước 4 trước bước 5.</p>
+
+<h3>2 · SET NX PX</h3>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>nx-reset</code>.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Chỉ dán <code>BLPOP l06:barrier:lock-nx 5</code>.</td><td></td></tr>
+<tr><td>3</td><td>Dán <code>RPUSH … go</code> và <code>SET … tokA NX PX 5000</code>.</td><td></td><td><input class="field" data-store="l06-c8-nx-a" placeholder="A nhận gì?"></td></tr>
+<tr><td>4</td><td></td><td>Dán <code>SET … tokB NX PX 5000</code>.</td><td><input class="field" data-store="l06-c8-nx-b" placeholder="B nhận gì?"></td></tr>
+<tr><td>5</td><td>Dán <code>DEL</code> khóa.</td><td></td><td></td></tr>
+</tbody>
+</table></div>
+<details class="fold"><summary>Lệnh của kịch bản 2</summary><div class="fold-body">
+<!--@CMD 08-lock.A.redis#nx-reset@-->
+<!--@CMD 08-lock.B.redis#nx@-->
+<!--@CMD 08-lock.A.redis#nx@-->
+</div></details>
+<!--@RUN 08-lock.nx.timeline@-->
+<p><code>NX</code> làm đúng việc của nó: đúng một người nhận <code>OK</code>. Ở app thật, người nhận <code>(nil)</code> trả 409 hoặc thử lại sau, không được đặt ghế.</p>
+
+<h3>3 · TTL + DEL: cách của slide 40</h3>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A</th><th>Terminal B</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>ttldel-reset</code>.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Chỉ dán <code>BLPOP l06:barrier:lock-ttldel 5</code>.</td><td></td></tr>
+<tr><td>3</td><td>Dán <code>RPUSH … go</code> và <code>SET … tokA NX PX 2000</code>. Bắt đầu đếm giây.</td><td></td><td><input class="field" data-store="l06-c8-ttl-a" placeholder="A nhận gì?"></td></tr>
+<tr><td>4</td><td></td><td>Đợi khoảng 3 giây (file ghi <code>#@ sleep 2.8</code>), dán <code>SET … tokB NX PX 2000</code>.</td><td><input class="field" data-store="l06-c8-ttl-b" placeholder="B có lấy được không?"></td></tr>
+<tr><td>5</td><td>A "làm xong" (file ghi <code>#@ sleep 3.3</code>): dán <code>DEL</code> khóa.</td><td></td><td><input class="field" data-store="l06-c8-ttl-del" placeholder="DEL trả mấy? xóa khóa của ai?"></td></tr>
+<tr><td>6</td><td></td><td>B đóng vai request thứ ba: dán <code>SET … tokC NX PX 2000</code> và <code>GET</code>.</td><td><input class="field" data-store="l06-c8-ttl-c" placeholder="tokC có vào được không?"></td></tr>
+</tbody>
+</table></div>
+<!--@CMD 08-lock.A.redis#ttldel-reset@-->
+<!--@CMD 08-lock.B.redis#ttldel@-->
+<!--@CMD 08-lock.A.redis#ttldel@-->
+<!--@RUN 08-lock.ttldel.timeline@-->
+<p>Đọc timeline theo thứ tự: B lấy được khóa sau khi khóa của A hết hạn; <code>DEL</code> của A trả <code>(integer) 1</code>, tức là đã xóa đúng một khóa, và khóa đó là của B; tokC vào được ngay. Lúc này B vẫn đang đặt ghế, C cũng đang đặt ghế.</p>
+<p class="muted">B đợi 2,8 giây chứ không sát 2 giây vì đồng hồ máy ảo Docker từng bị chỉnh lùi khi ghi lab, làm khóa sống lâu hơn PX; chi tiết ở đoạn Redlock bên dưới.</p>
+
+<h3>4 · Compare-and-delete bằng Lua</h3>
+<p>Cùng nhịp với kịch bản 3, nhưng A trả khóa bằng <code>lua/lock-release.lua</code>: script đọc khóa, so với token của mình, chỉ xóa khi khớp. Cả script chạy liền một mạch trên server nên không ai chen vào giữa <code>GET</code> và <code>DEL</code>. Hai tab Git Bash, dán cả khối.</p>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A (Git Bash)</th><th>Terminal B (Git Bash)</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>cad-reset</code> của <code>08-lock-lua.A.sh</code>.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Dán cả region <code>cad</code> của <code>08-lock-lua.B.sh</code>. Dòng BLPOP đứng chờ.</td><td></td></tr>
+<tr><td>3</td><td>Trong 5 giây: dán cả region <code>cad</code> của <code>08-lock-lua.A.sh</code>.</td><td></td><td><input class="field" data-store="l06-c8-cad" placeholder="script của A trả mấy? GET thấy token nào?"></td></tr>
+</tbody>
+</table></div>
+<!--@CMD 08-lock-lua.A.sh#cad-reset@-->
+<!--@CMD 08-lock-lua.B.sh#cad@-->
+<!--@CMD 08-lock-lua.A.sh#cad@-->
+<details class="fold"><summary>Script <code>lua/lock-release.lua</code></summary><div class="fold-body">
+<!--@CMD lua/lock-release.lua@-->
+</div></details>
+<!--@RUN 08-lock-lua.cad.timeline@-->
+<p>A nhận <code>0</code>: khóa không còn là của A nên script không đụng vào, và <code>GET</code> vẫn thấy <code>tokB</code>. B sau đó tự trả đúng khóa của mình và nhận <code>1</code>. Lỗi xóa nhầm đã hết. Nhưng trong khoảng A "tưởng" còn giữ khóa, nếu A ghi vào ghế thì sao? Kịch bản 5 trả lời.</p>
+
+<h3>5 · Fencing token</h3>
+<p>Mỗi lần lấy được khóa, người đó nhận một số thứ tự tăng dần (fencing token). Khóa và token được cấp trong <b>cùng một script</b> <code>lua/lock-acquire-fenced.lua</code>: <code>SET NX PX</code> thành công thì <code>INCR</code> bộ đếm và trả số mới, khóa đang có người giữ thì trả nil. Token phải được cấp cùng lúc với khóa, nếu không thứ tự token có thể ngược thứ tự giữ khóa: <code>SET NX</code> xong mới gọi <code>INCR</code> bằng lệnh riêng thì người giữ khóa có thể bị dừng ngay giữa hai lệnh, người sau (B) lấy khóa và <code>INCR</code> trước, nên người giữ khóa cũ (A) tỉnh dậy lại cầm token lớn hơn và được ghi đè. Nơi lưu ghế (<code>lua/fenced-write.lua</code>) nhớ token lớn nhất đã ghi và chỉ nhận token lớn hơn nó. A bị "GC pause" 4 giây; khóa hết hạn; B lấy khóa, nhận token 2 và ghi trước; A tỉnh dậy ghi với token 1.</p>
+<div class="table-wrap"><table class="walk">
+<thead><tr><th>#</th><th>Terminal A (Git Bash)</th><th>Terminal B (Git Bash)</th><th>Ghi lại</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Region <code>fencing-reset</code> của <code>08-lock-lua.A.sh</code>.</td><td></td><td></td></tr>
+<tr><td>2</td><td></td><td>Dán cả region <code>fencing</code> của <code>08-lock-lua.B.sh</code>.</td><td></td></tr>
+<tr><td>3</td><td>Trong 5 giây: dán cả region <code>fencing</code> của <code>08-lock-lua.A.sh</code>.</td><td></td><td><input class="field" data-store="l06-c8-fence" placeholder="A ghi muộn nhận gì? ghế của ai?"></td></tr>
+</tbody>
+</table></div>
+<!--@CMD 08-lock-lua.A.sh#fencing-reset@-->
+<!--@CMD 08-lock-lua.B.sh#fencing@-->
+<!--@CMD 08-lock-lua.A.sh#fencing@-->
+<details class="fold"><summary>Script <code>lua/lock-acquire-fenced.lua</code> (lấy khóa + cấp token)</summary><div class="fold-body">
+<!--@CMD lua/lock-acquire-fenced.lua@-->
+</div></details>
+<details class="fold"><summary>Script <code>lua/fenced-write.lua</code></summary><div class="fold-body">
+<!--@CMD lua/fenced-write.lua@-->
+</div></details>
+<!--@RUN 08-lock-lua.fencing.timeline@-->
+
+<div class="widget" id="w8">
+<div class="widget-head"><h4>W8 · Ai đang giữ khóa? Năm kịch bản trên một trục thời gian</h4><span class="eyebrow">run-w8 · 08-lock*.timeline</span></div>
+<div class="widget-body">
+<p>Chọn kịch bản. Thanh liền là khóa thật trong Redis (từ lúc nhận <code>OK</code> tới lúc bị xóa, tự trả, hoặc hết hạn theo <code>PX</code>); khung nét đứt là lúc người đó còn <b>tưởng</b> mình giữ khóa. Vạch đỏ là câu trả lời bị từ chối. Mốc ms là giờ host đã ghi.</p>
+<div class="btns tabs" id="w8-tabs" role="group" aria-label="Chọn kịch bản khóa"></div>
+<div class="lanes" id="w8-lanes" aria-live="polite"></div>
+<div class="out" id="w8-out" aria-live="polite"></div>
+<div class="table-wrap"><table class="steps" id="w8-events"><thead><tr><th>ms</th><th>Ai</th><th>Gửi / nhận</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
+<div class="callout key">
+<span class="tag">Cầu sang Bài 14 · fencing và cột version</span>
+<p><code>fenced-write.lua</code> cùng ý với cột <code>version</code> ở <a href="lesson_14_locking_teacher_guide.html#chang-7">Bài 14 chặng 7</a>: nơi lưu dữ liệu tự kiểm tra ngay lúc ghi, không tin người đang cầm khóa. Khác ở phép so: <code>UPDATE … WHERE version = $v</code> so <b>bằng</b> với số bạn vừa đọc, còn fencing so <b>lớn hơn</b> token đã ghi gần nhất, vì token chỉ tăng theo thứ tự giữ khóa. Trên Postgres, ghế có cột <code>fence</code> và lệnh ghi là <code>UPDATE seats SET owner = $1, fence = $2 WHERE id = $3 AND fence &lt; $2</code>: không dòng nào bị đổi nghĩa là token không mới hơn. Script Lua so cùng chiều (token bằng token đã ghi cũng bị trả <code>STALE</code>), nên mỗi lần giữ khóa chỉ ghi một lần. Với Prisma thì dùng <code>updateMany</code> có điều kiện <code>fence: { lt: token }</code> và xem <code>count</code> bằng 0 hay không.</p>
+<p>Từ đó ra quy tắc dùng trong phỏng vấn: <b>khóa Redis để tránh làm trùng việc (hiệu năng); điều kiện ở database để giữ đúng dữ liệu (tính đúng)</b>. Ghế, tiền, tồn kho cần cả hai, hoặc chỉ cần cái thứ hai.</p>
+</div>
+
+<details class="fold"><summary>Tùy chọn 5 phút · Redlock, nói thật</summary><div class="fold-body">
+<p><b>Redlock</b> là thuật toán của antirez: lấy cùng một khóa trên N master Redis độc lập (thường là 5), coi là giữ được khi lấy xong ở đa số node trong thời gian ngắn hơn TTL. Mục đích là khóa vẫn sống khi một node Redis chết.</p>
+<p><b>Phản biện của Martin Kleppmann</b> ("How to do distributed locking", 2016): Redlock dựa vào giả định thời gian. Nó cần tiến trình không bị dừng quá lâu, mạng không trễ quá lâu, và đồng hồ các node không lệch quá nhiều. Khi giả định sai, hai client vẫn cùng tin mình giữ khóa, và Redlock không cấp fencing token nào để nơi lưu dữ liệu chặn người đến muộn. antirez đã viết bài trả lời; hai bên không thống nhất.</p>
+<p><b>Bằng chứng ngay trên máy bạn:</b> khi ghi lab này, đồng hồ máy ảo Docker chạy nhanh hơn Windows và bị chỉnh lùi theo đợt, nên có lần khóa <code>PX 2000</code> sống lâu hơn dự kiến tính theo đồng hồ host. TTL đo bằng đồng hồ của server Redis, không phải của bạn. Thêm 4 node nữa không sửa được điều đó.</p>
+<p><b>Kết luận dùng được:</b> cần khóa để tránh làm trùng việc thì một Redis + <code>SET NX PX</code> + compare-and-delete là đủ. Cần đúng dữ liệu thì thêm fencing token hoặc điều kiện <code>version</code> ở nơi ghi (kịch bản 5). Redlock tốn 5 node mà không cho thêm cái nào trong hai thứ đó.</p>
+</div></details>
+
+<div class="callout challenge" id="chang-8-tu-lam">
+<span class="tag">Tự làm · chặng 8</span>
+<p><b>Đề:</b> viết <code>labs/lesson-06-redis/lua/my-lock-renew.lua</code> để gia hạn khóa (<code>PEXPIRE</code>) <b>chỉ khi</b> khóa vẫn là của mình: <code>KEYS[1]</code> = khóa, <code>ARGV[1]</code> = token, <code>ARGV[2]</code> = số ms. File trên máy bạn hiện ngay trong container ở <code>/lab/lua/</code> (mount chỉ đọc). Chạy bằng:</p>
+<div class="code"><pre><code>MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/my-lock-renew.lua &lt;key&gt; , &lt;token&gt; &lt;ms&gt;</code></pre></div>
+<p><b>PASS khi</b> (ghi lại trong terminal của bạn, dùng khóa <code>l06:my:lock:seat</code>; lấy khóa 10 000 ms, gia hạn thử lên 60 000 ms để thấy rõ khác biệt):</p>
+<ul>
+<li><code>PTTL</code> thứ nhất (ngay sau <code>SET</code>) nằm trong khoảng 9 000–10 000.</li>
+<li>Gọi với token của người khác → <code>0</code>, và <code>PTTL</code> thứ hai nhỏ hơn hoặc bằng <code>PTTL</code> thứ nhất (không tăng, vẫn dưới 10 000).</li>
+<li>Gọi với đúng token → <code>1</code>, và <code>PTTL</code> thứ ba lớn hơn 50 000. Script quên <code>PEXPIRE</code> sẽ trượt đúng dòng này.</li>
+<li>Bạn trả lời được: gia hạn có thay được fencing token không?</li>
+</ul>
+<div class="code"><pre><code>docker exec advance-be-redis redis-cli SET l06:my:lock:seat tokMe NX PX 10000
+docker exec advance-be-redis redis-cli PTTL l06:my:lock:seat
+MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/my-lock-renew.lua l06:my:lock:seat , tokOther 60000
+docker exec advance-be-redis redis-cli PTTL l06:my:lock:seat
+MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/my-lock-renew.lua l06:my:lock:seat , tokMe 60000
+docker exec advance-be-redis redis-cli PTTL l06:my:lock:seat</code></pre></div>
+<label class="fields"><span class="muted">Dán kết quả 6 dòng và câu trả lời</span>
+<textarea class="field" data-store="l06-c8-renew" placeholder="OK / PTTL … / 0 / PTTL … / 1 / PTTL … · gia hạn có thay fencing không? …"></textarea>
+</label>
+<details class="fold"><summary>Đáp án</summary><div class="fold-body">
+<div class="code"><pre><code>-- Gia hạn khóa chỉ khi khóa vẫn là của mình (cùng khuôn với lock-release.lua).
+-- KEYS[1] = khóa, ARGV[1] = token của mình, ARGV[2] = số ms gia hạn.
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+end
+return 0</code></pre></div>
+<p>Script giống <code>lock-release.lua</code>, chỉ đổi <code>DEL</code> thành <code>PEXPIRE</code>. Nếu viết thành hai lệnh <code>GET</code> rồi <code>PEXPIRE</code> từ app, khóa có thể đổi chủ giữa hai lệnh và bạn gia hạn khóa của người khác.</p>
+<p><b>Không thay được fencing.</b> Gia hạn chỉ chạy khi tiến trình còn tỉnh. Nếu A bị dừng lâu hơn TTL (đúng kịch bản 5), A không kịp gọi renew, khóa vẫn hết hạn, B vẫn vào. Renew làm hiếm sự cố đi; fencing ở chỗ ghi mới chặn được nó.</p>
+<p>Dọn khóa thử: <code>docker exec advance-be-redis redis-cli UNLINK l06:my:lock:seat</code>.</p>
+</div></details>
+</div>
+
+<h3>Kiểm chứng chặng 8</h3>
+<p>Dán vào redis-cli của main sau khi chạy 5 kịch bản theo thứ tự.</p>
+<!--@CMD 08-lock.A.redis#kiem-chung@-->
+<div class="table-wrap"><table class="expect">
+<thead><tr><th>Lệnh</th><th>Giá trị mong đợi</th><th>Ý nghĩa</th></tr></thead>
+<tbody>
+<tr><td><code>EXISTS l06:lock:FA634:A34_S012C</code></td><td><b class="m" data-run="08-lock.kiem-chung">(integer) 0</b></td><td>Không còn khóa nào sót lại: khóa cuối của B đã được tự trả bằng Lua.</td></tr>
+<tr><td><code>GET l06:seat:FA634:A34_S012C</code></td><td><b class="m" data-run="08-lock.kiem-chung">"B"</b></td><td>Kịch bản không khóa: ghế thuộc người <code>SET</code> sau cùng (nếu bạn dán B trước A thì là <code>"A"</code>).</td></tr>
+<tr><td><code>LRANGE l06:seat:FA634:log 0 -1</code></td><td><b class="m" data-run="08-lock.kiem-chung">1) "BOOKED:A"</b> <b class="m" data-run="08-lock.kiem-chung">2) "BOOKED:B"</b></td><td>Hai lần đặt cho một ghế: đúng lỗi mà khóa phải chặn.</td></tr>
+<tr><td><code>GET l06:fence:A34_S012C</code></td><td><b class="m" data-run="08-lock.kiem-chung">"2"</b></td><td>Đã cấp hai fencing token: 1 cho A, 2 cho B.</td></tr>
+<tr><td><code>HGETALL l06:seat:FA634:A34_S012C:row</code></td><td><b class="m" data-run="08-lock.kiem-chung">2) "B"</b> · <b class="m" data-run="08-lock.kiem-chung">4) "2"</b></td><td>Bản ghi ghế giữ chủ B với token 2; lần ghi muộn token 1 của A bị từ chối.</td></tr>
+</tbody>
+</table></div>
+<p>Bài tập về nhà (<a href="#bai-tap">slide 43</a>) dùng đúng những gì bạn vừa đo: token ngẫu nhiên, compare-and-delete, và vòng 11 cố tình cho khóa hết hạn giữa chừng.</p>
+
+<div class="quiz" data-quiz="8"></div>
+</section>

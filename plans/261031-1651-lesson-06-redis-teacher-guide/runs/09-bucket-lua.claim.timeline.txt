@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 11:46 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
+# lua token-bucket.lua sha256=4387e1d485aad6a61f38ebb472e79ac97e92123dd73c72f02f2fedb0552fdc23
++     0 B > $ docker exec advance-be-redis redis-cli BLPOP l06:barrier:bucket-lua 5
++   341 A > $ docker exec advance-be-redis redis-cli RPUSH l06:barrier:bucket-lua go
++   518 A < 1
++   519 B < l06:barrier:bucket-lua
++   519 B < go
++   529 B > $ set -u
++   529 B > $ sleep 0.2
++   530 A > $ set -u
++   530 A > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/token-bucket.lua l06:tb:store:8 , 1 0.001
++   687 A < 1
++   687 A < 0
++   687 A < 0
++   750 B > $ MSYS_NO_PATHCONV=1 docker exec advance-be-redis redis-cli --eval /lab/lua/token-bucket.lua l06:tb:store:8 , 1 0.001
++   915 B < 0
++   915 B < 0
++   915 B < 1000000

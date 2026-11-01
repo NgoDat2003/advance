@@ -1,0 +1,18 @@
+# chạy lúc 01/11/2026 11:44 +0700 · Redis 7.2.3 · advance-be-redis
+chấm: HW_CMD=node D:/study/advance-be/labs/lesson-06-redis/hw-solution.mjs · 10 vòng + vòng H5
+vòng 1: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 2: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 3: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 4: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 5: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 6: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 7: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 8: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 9: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng 10: sổ +1, BOOKED=1 REJECTED=1, khóa còn=0, token khác nhau=2
+vòng H5: người giữ thứ hai seen=260 pttl=49 tok=b2248de0-1249-461b-b1b7-4b377e977f55 set=OK · khóa sau khi chương trình trả = hw-check-holder2
+✔ H1 sổ đặt chỗ tăng đúng 1 mỗi vòng · 10/10 vòng
+✔ H2 mỗi vòng 1 BOOKED + 1 REJECTED · 10/10 vòng
+✔ H3 không còn khóa sau mỗi vòng · 10/10 vòng
+✔ H4 giá trị khóa = token riêng mỗi lần giữ · 20/20 token khác nhau, khóa vòng H5 = token BOOKED
+✔ H5 trả khóa compare-and-delete · thấy khóa PTTL 49 ms, khóa sau cùng = hw-check-holder2

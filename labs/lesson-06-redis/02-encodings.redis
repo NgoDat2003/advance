@@ -1,0 +1,59 @@
+# Bài 06 · Chặng 2 — Một kiểu dữ liệu, nhiều cách lưu bên trong (encoding). Dán trong redis-cli.
+#   PowerShell: docker exec -it advance-be-redis redis-cli    ·    Git Bash: winpty docker exec -it advance-be-redis redis-cli
+# Các ngưỡng 512 / 128 / 64 cần hàng trăm lệnh: xem 02-encodings.sh (dựng bằng seq | awk).
+
+# #region string · String: int, embstr (≤ 44 byte), raw (slide 31)
+SET l06:enc:n 12345
+OBJECT ENCODING l06:enc:n
+# Chuỗi 44 byte: vừa một khối bộ nhớ cùng đối tượng → embstr.
+SET l06:enc:s44 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGH
+STRLEN l06:enc:s44
+OBJECT ENCODING l06:enc:s44
+MEMORY USAGE l06:enc:s44
+# Thêm 1 byte (45) → raw: chuỗi nằm ở khối bộ nhớ riêng.
+SET l06:enc:s45 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHI
+STRLEN l06:enc:s45
+OBJECT ENCODING l06:enc:s45
+MEMORY USAGE l06:enc:s45
+# APPEND luôn đổi embstr thành raw, kể cả chuỗi rất ngắn (embstr là chỉ-đọc).
+SET l06:enc:app hi
+OBJECT ENCODING l06:enc:app
+APPEND l06:enc:app !
+STRLEN l06:enc:app
+OBJECT ENCODING l06:enc:app
+# #endregion
+
+# #region slide30-memory · Slide 30: cùng một user, Hash hay chuỗi JSON tốn bao nhiêu byte (slide 30)
+HLEN l06:user:1
+OBJECT ENCODING l06:user:1
+MEMORY USAGE l06:user:1
+STRLEN l06:user:1:json
+OBJECT ENCODING l06:user:1:json
+MEMORY USAGE l06:user:1:json
+# #endregion
+
+# #region slide30-ops · Slide 30: ba thao tác C1 lấy 1 trường, C2 tăng tuổi, C3 lấy cả object (slide 30)
+# C1: Hash trả đúng 1 giá trị; JSON phải tải cả chuỗi rồi tự parse.
+HGET l06:user:1 email
+GET l06:user:1:json
+STRLEN l06:user:1:json
+# C2: đặt lại tuổi 30 rồi tăng 1 ngay trên server, không cần đọc-sửa-ghi.
+HSET l06:user:1 age 30
+HINCRBY l06:user:1 age 1
+# C3: lấy cả object = 4 cặp trường/giá trị = 8 dòng.
+HGETALL l06:user:1
+# Trả tuổi về 30 như seed.
+HSET l06:user:1 age 30
+# #endregion
+
+# #region kiem-chung · Kiểm chứng chặng 2 (slide 16, 30, 31, 33, 34, 35)
+OBJECT ENCODING l06:user:1
+HLEN l06:user:1
+STRLEN l06:user:1:json
+OBJECT ENCODING l06:enc:s45
+OBJECT ENCODING l06:enc:h
+HLEN l06:enc:h
+OBJECT ENCODING l06:enc:si
+OBJECT ENCODING l06:enc:z
+OBJECT ENCODING l06:enc:l
+# #endregion

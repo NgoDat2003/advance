@@ -1,0 +1,23 @@
+# chạy lúc 01/11/2026 09:35 +0700 · Redis 7.2.3 · advance-be-redis · timeline A+B (ms host tính từ sự kiện đầu)
++     0 B > BLPOP l06:barrier:json-race 5
++   227 A > RPUSH l06:barrier:json-race go
++   228 A < (integer) 1
++   228 A > GET l06:user:1:json
++   228 B < 1) "l06:barrier:json-race"
++   228 B < 2) "go"
++   228 B > GET l06:user:1:json
++   229 A < "{\"id\":1,\"name\":\"Dat\",\"age\":30,\"email\":\"dat@abc.vn\"}"
++   230 B < "{\"id\":1,\"name\":\"Dat\",\"age\":30,\"email\":\"dat@abc.vn\"}"
++   743 A > SET l06:user:1:json '{"id":1,"name":"Dat","age":31,"email":"dat@abc.vn"}'
++   744 A < OK
++  1237 B > SET l06:user:1:json '{"id":1,"name":"Dat","age":30,"email":"dat@xyz.vn"}'
++  1238 B < OK
++  1452 B > GET l06:user:1:json
++  1454 B < "{\"id\":1,\"name\":\"Dat\",\"age\":30,\"email\":\"dat@xyz.vn\"}"
++  1745 A > HINCRBY l06:user:1 age 1
++  1747 A < (integer) 31
++  2463 B > HSET l06:user:1 email dat@xyz.vn
++  2464 B < (integer) 0
++  2774 B > HMGET l06:user:1 age email
++  2776 B < 1) "31"
++  2776 B < 2) "dat@xyz.vn"

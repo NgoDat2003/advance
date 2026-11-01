@@ -1,0 +1,10 @@
+# chạy lúc 01/11/2026 10:06 +0700 · Redis 7.2.3 · advance-be-redis
+127.0.0.1:6379> BLPOP l06:barrier:lock-ttldel 5
+1) "l06:barrier:lock-ttldel"
+2) "go"
+127.0.0.1:6379> SET l06:lock:FA634:A34_S012C tokB NX PX 2000
+OK
+127.0.0.1:6379> SET l06:lock:FA634:A34_S012C tokC NX PX 2000
+OK
+127.0.0.1:6379> GET l06:lock:FA634:A34_S012C
+"tokC"

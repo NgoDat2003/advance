@@ -1,0 +1,20 @@
+# Bài 06 · Chặng 2 — Terminal A: sửa user lưu dạng JSON bị mất cập nhật (slide 30).
+# Thứ tự: (1) region lost-reset ở A, (2) region lost ở B (đứng chờ BLPOP), (3) region lost ở A.
+# "#@ sleep 0.5" = tự đợi khoảng 0,5 s rồi gõ lệnh kế.
+
+# #region lost-reset · Chuẩn bị: user về đúng seed, xóa barrier (slide 30)
+UNLINK l06:barrier:json-race
+SET l06:user:1:json '{"id":1,"name":"Dat","age":30,"email":"dat@abc.vn"}'
+HSET l06:user:1 id 1 name Dat age 30 email dat@abc.vn
+# #endregion
+
+# #region lost · A tăng tuổi; B đổi email cùng lúc (slide 30)
+RPUSH l06:barrier:json-race go
+# Kiểu JSON: A đọc cả chuỗi, sửa age 30 → 31 trong code, ghi đè cả chuỗi.
+GET l06:user:1:json
+#@ sleep 0.5
+SET l06:user:1:json '{"id":1,"name":"Dat","age":31,"email":"dat@abc.vn"}'
+# Kiểu Hash: A chỉ tăng đúng trường age trên server.
+#@ sleep 1
+HINCRBY l06:user:1 age 1
+# #endregion

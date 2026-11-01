@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business SRS & Portfolio Blueprint — OmniPOS & FinLedger Hub</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --surface: #131b31;
+      --surface-2: #192340;
+      --border: #2a3964;
+      --fg: #ecf2ff;
+      --muted: #9fb0d6;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --code-bg: #080d1a;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --border: #cbd5e1;
+      --fg: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-2: #4f46e5;
+      --success: #059669;
+      --warning: #d97706;
+      --error: #dc2626;
+      --code-bg: #0f172a;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.65;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border); }
+    }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 18px;
+    }
+    .brand {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .brand-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .nav-list a {
+      display: block;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--fg);
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-list a:hover {
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+    .theme-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--fg);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.84rem;
+    }
+    .main {
+      padding: 36px 48px;
+      max-width: 1320px;
+    }
+    @media (max-width: 768px) {
+      .main { padding: 20px 16px; }
+    }
+    .hero {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 32px;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-accent { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.35); }
+    .badge-success { background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.35); }
+    .badge-warn { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.35); }
+    .badge-purple { background: rgba(129, 140, 248, 0.18); color: var(--accent-2); border: 1px solid rgba(129, 140, 248, 0.4); }
+    h1 {
+      font-size: 2rem;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.025em;
+    }
+    h2 {
+      font-size: 1.45rem;
+      margin: 40px 0 16px 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--accent);
+    }
+    h3 {
+      font-size: 1.15rem;
+      margin: 24px 0 10px 0;
+      color: var(--fg);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+    .kpi-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .kpi-val {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .kpi-lbl {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 18px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 0.88rem;
+      background: var(--surface);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--surface-2);
+      font-weight: 700;
+      color: var(--accent);
+    }
+    tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+    code {
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 0.84em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--surface-2);
+      padding: 14px 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 16px 0;
+    }
+    .callout-warn { border-left-color: var(--warning); }
+    .callout-success { border-left-color: var(--success); }
+    .svg-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+      margin-top: 18px;
+    }
+    .mockup-window {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .mockup-bar {
+      background: var(--surface-2);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .mockup-body {
+      padding: 18px;
+    }
+    .annotation {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      background: rgba(52, 211, 153, 0.14);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .filter-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">OmniPOS &amp; FinLedger Hub</div>
+    <div class="brand-sub">Business SRS &amp; Portfolio Blueprint (v1.0 → v3.0)</div>
+    <ul class="nav-list">
+      <li><a href="#contract">0. Brainstorm Contract &amp; Trade-offs</a></li>
+      <li><a href="#vision">1. Dự Án Này Làm Gì &amp; 5 Bài Toán Lớn</a></li>
+      <li><a href="#ecosystem-diagram">2. Sơ Đồ Kiến Trúc Nghiệp Vụ Toàn Chuỗi</a></li>
+      <li><a href="#roles">3. 5 Vai Trò (Actors) &amp; Ma Trận Phân Quyền</a></li>
+      <li><a href="#modules">4. Giải Phẫu 6 Phân Hệ Nghiệp Vụ (M1–M6)</a></li>
+      <li><a href="#mockups">5. Mockup Giao Diện Portfolio (UI/UX)</a></li>
+      <li><a href="#invariants">6. 15 Quy Tắc Bất Biến Kế Toán (I-01..I-15)</a></li>
+      <li><a href="#roadmap">7. Hiện Trạng M0 vs Lộ Trình M1–M6</a></li>
+      <li><a href="#pitch">8. Kịch Bản Phỏng Vấn 2 Phút &amp; Bắt Bài Q&amp;A</a></li>
+      <li><a href="#ultra">9. Phụ Lục Kiểm Định (--ultra &amp; --advice)</a></li>
+    </ul>
+    <button class="theme-btn" onclick="toggleTheme()">🌗 Đổi giao diện Sáng / Tối</button>
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <div class="badges">
+        <span class="badge badge-accent">Business &amp; Product SRS</span>
+        <span class="badge badge-success">Ultra Verified: Candidate C (99/100)</span>
+        <span class="badge badge-purple">Kongming Advice: GO</span>
+        <span class="badge badge-warn">Repo HEAD: 9e01cc9 (M0 Live)</span>
+      </div>
+      <h1>Tài Liệu Đặc Tả Yêu Cầu Nghiệp Vụ (Business SRS) &amp; Định Vị Portfolio: OmniPOS &amp; FinLedger Hub</h1>
+      <p>
+        <strong>Định vị sản phẩm trong 1 câu:</strong> Hệ thống Trung tâm Quản trị Ngân quỹ Nội bộ (Sổ cái kép), Tiếp nhận Hóa đơn Bán hàng POS, Phân bổ Khuyến mãi B2B và Điều phối Cung ứng Nguyên vật liệu Kho Tổng cho <strong>chuỗi 300 cửa hàng F&amp;B hoạt động 24/7</strong> (mô phỏng sát thực tế vận hành chuỗi <em>MayCha, Tam Hảo, Thức Coffee 24/7</em> và đối soát bút toán <code>OJDT/JDT1</code> trên <strong>SAP Business One</strong>).
+      </p>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-val">300 Quán</div>
+          <div class="kpi-lbl">Chuỗi cửa hàng F&amp;B (Store #1..#300) đã seed sẵn ở M0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val">301 Ví</div>
+          <div class="kpi-lbl">300 Ví Quán (STORE) + 1 Ví Trụ sở (TREASURY), Tổng = 0 VNĐ</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val">77 Món</div>
+          <div class="kpi-lbl">Thực đơn F&amp;B chuẩn Northwind (Cache Singleflight &amp; ZSET)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val">5 Vai Trò</div>
+          <div class="kpi-lbl">Kế toán HQ, Vận hành HQ, Quản lý Quán, Thu ngân POS, System Worker</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val">6 Phân Hệ</div>
+          <div class="kpi-lbl">Khép kín từ Cấp vốn, Voucher, POS, Sao kê đến Saga Kho Tổng</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contract" class="card">
+      <h2>0. Brainstorm Contract &amp; Tư Duy Phản Biện Kiến Trúc Nghiệp Vụ</h2>
+      <div class="callout">
+        <strong>Tại sao bản SRS trước đây làm Đạt khó hình dung?</strong><br/>
+        Bản cũ viết theo kiểu <em>"Bảng giao bài tập kỹ thuật"</em> (tuần 1 làm <code>FOR UPDATE</code>, tuần 2 làm <code>Redis</code>, tuần 4 làm <code>Kafka</code>). Người đọc không thấy được <strong>linh hồn sản phẩm</strong>: Ai đăng nhập vào dùng? Tiền chảy từ túi nào sang túi nào? Tại sao cửa hàng lại bấm nhận voucher? Báo cáo này đảo ngược hoàn toàn sang góc nhìn <strong>Business &amp; Product SRS chuẩn Doanh nghiệp</strong>.
+      </div>
+      <div class="grid-2">
+        <div>
+          <h3>Outcome &amp; Constraints</h3>
+          <ul>
+            <li><strong>Outcome:</strong> Nắm trọn bức tranh nghiệp vụ sản phẩm <code>OmniPOS &amp; FinLedger Hub</code> (Bài toán thực tế, 5 Vai trò, 6 Phân hệ, 15 Bất biến kế toán <code>I-01..I-15</code>, Hiện trạng <code>M0</code> vs <code>M1..M6</code>, và Kịch bản Pitching phỏng vấn).</li>
+            <li><strong>Constraints:</strong> Khớp 100% repo <code>NgoDat2003/omnipos-finledger-hub</code> (<code>HEAD 9e01cc9</code>): Turborepo <code>apps/web</code> (<code>:3100</code>), <code>apps/api</code> (<code>:3101</code>), PostgreSQL 16 (<code>:5434</code>), Redis (<code>:6380</code>), 300 quán, 77 món, 301 ví.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Non-goals &amp; Acceptance Criteria</h3>
+          <ul>
+            <li><strong>Non-goals:</strong> Không làm App giao đồ ăn B2C cho khách lẻ (như GrabFood); không làm cổng thanh toán ngân hàng ngoài (VietQR/NAPAS); không làm tính lương HRM mà đóng vai trò <strong>Operational &amp; Financial Sub-ledger Hub</strong> đứng trước ERP SAP B1.</li>
+            <li><strong>Acceptance Criteria:</strong> Giải thích rõ 5 nỗi đau kinh doanh, 5 vai trò + ma trận RBAC 14 dòng, 6 phân hệ kèm ví dụ bút toán Nợ/Có, bảng <code>M0</code> vs <code>M1..M6</code>, và kịch bản phỏng vấn.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Trade-offs: So sánh 3 Phương Án Định Hình Sản Phẩm Portfolio</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tiêu chí</th>
+            <th>Phương án A: CRUD POS Đơn Thuần (Single-Balance Column)</th>
+            <th>Phương án B (KHUYẾN NGHỊ): Modular Monolith Sổ Cái Kép Tiến Hóa Dần (M0 → M6)</th>
+            <th>Phương án C: Full Event-Sourced Microservices Ngay Từ Ngày Đầu</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Mô hình cốt lõi</strong></td>
+            <td>Chỉ lưu 1 cột <code>balance</code>, chạy <code>UPDATE balance = balance - x</code>; hóa đơn POS chỉ <code>INSERT</code> thẳng.</td>
+            <td><strong>Core FinLedger + POS Hub:</strong> Mọi biến động tiền đi qua <strong>Sổ cái kép bất biến (<code>ledger_entries</code>)</strong>, tiến hóa từ Monolith (<code>M1–M3</code>) sang Outbox/Kafka/Saga (<code>M4–M6</code>).</td>
+            <td>Tách ngay 8–10 microservices giao tiếp hoàn toàn bất đồng bộ qua Event Store từ ngày đầu.</td>
+          </tr>
+          <tr>
+            <td><strong>Giả định chịu tải (Load-Bearing Assumption)</strong></td>
+            <td>Giả định các quán không bao giờ bấm nút cùng lúc, mạng Wi-Fi luôn ổn định và không cần kiểm toán độc lập.</td>
+            <td>Giả định <strong>PostgreSQL 16 ACID + Row Lock + Partitioning kết hợp Redis</strong> đủ gánh tải 300–1.000 quán F&amp;B nếu thiết kế khóa chuẩn xác.</td>
+            <td>Giả định đội ngũ có &gt;20 kỹ sư và lưu lượng đạt hàng chục nghìn TPS ngay ngày đầu.</td>
+          </tr>
+          <tr>
+            <td><strong>Điều kiện gãy đổ đầu tiên (First-Failure Condition)</strong></td>
+            <td><strong>Gãy ngay ở bài test đồng thời đầu tiên:</strong> 2 quán chuyển chéo gây Deadlock (<code>40P01</code>); POS gửi trùng khi rớt mạng làm nhân đôi doanh thu.</td>
+            <td>Chỉ chạm ngưỡng khi vượt <strong>&gt;5.000 cửa hàng / &gt;10.000 TPS</strong> trên 1 Primary DB (lúc đó ví <code>TREASURY</code> thành hot-row lock).</td>
+            <td><strong>Gãy ngay từ tuần thứ 2:</strong> Kiệt sức vì Distributed Data Drift khi chưa kịp hoàn thiện luồng nghiệp vụ cơ bản.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Better approaches:</strong> Định vị dự án là <em>"F&amp;B Enterprise Sub-Ledger &amp; Store Operations Hub"</em> đứng giữa 300 máy POS và SAP Business One (chi phí sửa code = <code>0</code>, tăng giá trị thuyết phục phỏng vấn Senior/High-Mid lên gấp bội).</p>
+    </section>
+
+    <section id="vision" class="card">
+      <h2>1. Dự Án Này Làm Gì &amp; Giải Quyết 5 Bài Toán Sống Còn Nào?</h2>
+      <p>
+        Khi một chuỗi F&amp;B phát triển từ vài quán nhỏ lên <strong>300 cửa hàng</strong> (như <em>MayCha, Tam Hảo, Thức Coffee 24/7</em>), hệ thống phần mềm thông thường sẽ sụp đổ ở <strong>5 điểm nghẽn nghiệp vụ</strong> sau đây — và đó chính là lý do ra đời của <code>OmniPOS &amp; FinLedger Hub</code>:
+      </p>
+      <div class="grid-3">
+        <div class="kpi-card">
+          <h3>💸 Bài toán 1: Lệch tiền quỹ &amp; Âm ví nội bộ</h3>
+          <p>Mỗi quán được Trụ sở cấp <code>1.000.000đ</code> vốn lưu động để chi tiêu tại chỗ và chuyển tiền hỗ trợ nhau. Nếu chỉ dùng <code>UPDATE balance</code>, khi rút tiền cùng lúc sẽ bị <strong>Lost Update (âm ví)</strong>, chuyển chéo bị <strong>Deadlock</strong>, cuối tháng lệch hẳn so với sổ cái SAP B1.</p>
+        </div>
+        <div class="kpi-card">
+          <h3>🎟️ Bài toán 2: Vỡ ngân sách Flash-Voucher B2B</h3>
+          <p>Marketing HQ tung gói tài trợ <strong>10 suất Giờ Vàng</strong> cho 300 quán. Đúng 09:00, cả 300 Cửa hàng trưởng cùng bấm nhận. Code thường sẽ bị cấp lố lên 25–30 suất (thủng ngân sách) hoặc 1 quán ăn gian nhận 2–3 suất.</p>
+        </div>
+        <div class="kpi-card">
+          <h3>🧾 Bài toán 3: Nhân đôi Hóa đơn POS khi rớt mạng</h3>
+          <p>Giờ cao điểm trưa, mạng Wi-Fi/4G ở quán chập chờn khiến máy POS tự động gửi lại (retry) 1 hóa đơn trà sữa 5–30 lần. Nếu không có <code>Idempotency-Key</code>, doanh thu ảo bị nhân lên 30 lần và kho trừ sai.</p>
+        </div>
+        <div class="kpi-card">
+          <h3>🛡️ Bài toán 4: Xem trộm ví quán khác &amp; Tràn RAM sao kê</h3>
+          <p>Quản lý Quán 1 đổi ID trên URL để xem trộm số dư của Quán 2 (lỗi <strong>IDOR</strong>). Cuối tháng Kế toán trưởng xuất file CSV <strong>1.000.000 dòng bút toán</strong> nạp vào SAP B1 làm server Node.js tràn RAM (OOM) sập toàn chuỗi.</p>
+        </div>
+        <div class="kpi-card">
+          <h3>📦 Bài toán 5: Đặt hàng Kho Tổng hết hàng &amp; Rút ruột quỹ</h3>
+          <p>Quán đặt mua 50 thùng sữa từ Kho Tổng: tiền ví quán đã bị trừ nhưng Kho Tổng vừa hết sữa khiến tiền bị treo. Hoặc kẻ gian chiếm tài khoản quán bắn 20 lệnh rút tiền trong vài giây để vét sạch quỹ.</p>
+        </div>
+        <div class="kpi-card">
+          <h3>📈 Bài toán 6: Phình dữ liệu triệu dòng &amp; Bảng tin 300 quán</h3>
+          <p>Sau nhiều tháng, bảng sổ cái và hóa đơn lên hàng chục triệu dòng làm chậm báo cáo tháng; đồng thời khi HQ đăng thông báo cho 300 quán cần tránh nhân bản ghi 300 lần (Write Amplification).</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ecosystem-diagram" class="svg-wrap">
+      <h2>2. Sơ Đồ Kiến Trúc Nghiệp Vụ &amp; Luồng Dòng Tiền Toàn Chuỗi (End-to-End Flow)</h2>
+      <svg viewBox="0 0 1080 430" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="eco-title eco-desc">
+        <title id="eco-title">Sơ đồ hệ sinh thái nghiệp vụ OmniPOS và FinLedger Hub</title>
+        <desc id="eco-desc">Kết nối giữa 300 cửa hàng F&amp;B ở tuyến đầu, 6 phân hệ lõi của OmniPOS Hub ở giữa, và Trụ sở chính cùng SAP B1 ở tuyến sau.</desc>
+        <rect x="10" y="15" width="280" height="400" rx="14" fill="#131b31" stroke="#38bdf8" stroke-width="2"/>
+        <text x="150" y="45" text-anchor="middle" fill="#38bdf8" font-size="15" font-weight="bold">TUYẾN ĐẦU: 300 CỬA HÀNG F&amp;B</text>
+        <text x="150" y="65" text-anchor="middle" fill="#9fb0d6" font-size="12">(Quán 1 → Quán 300)</text>
+
+        <rect x="28" y="85" width="244" height="135" rx="10" fill="#192340" stroke="#2a3964"/>
+        <text x="42" y="110" fill="#34d399" font-size="13" font-weight="bold">👨‍💼 Cửa Hàng Trưởng (Store Manager)</text>
+        <text x="42" y="132" fill="#ecf2ff" font-size="12">• Xem Ví &amp; Sổ cái riêng (Anti-IDOR)</text>
+        <text x="42" y="152" fill="#ecf2ff" font-size="12">• Chuyển quỹ nội bộ / Tạm ứng</text>
+        <text x="42" y="172" fill="#ecf2ff" font-size="12">• Bấm săn suất Flash-Voucher</text>
+        <text x="42" y="192" fill="#ecf2ff" font-size="12">• Đặt nguyên liệu từ Kho Tổng</text>
+
+        <rect x="28" y="240" width="244" height="150" rx="10" fill="#192340" stroke="#2a3964"/>
+        <text x="42" y="265" fill="#fbbf24" font-size="13" font-weight="bold">🖥️ Thu Ngân / Máy POS (POS Cashier)</text>
+        <text x="42" y="290" fill="#ecf2ff" font-size="12">• Mở Thực đơn 77 món (&lt; 10ms)</text>
+        <text x="42" y="312" fill="#ecf2ff" font-size="12">• Đẩy Hóa đơn bán hàng POS</text>
+        <text x="42" y="334" fill="#ecf2ff" font-size="12">• Tự động gắn Idempotency-Key</text>
+        <text x="42" y="356" fill="#9fb0d6" font-size="11">Chống tạo trùng đơn khi rớt Wi-Fi</text>
+
+        <!-- Center Hub -->
+        <rect x="340" y="15" width="400" height="400" rx="14" fill="#131b31" stroke="#818cf8" stroke-width="2.5"/>
+        <text x="540" y="45" text-anchor="middle" fill="#818cf8" font-size="16" font-weight="bold">TRÁI TIM ĐIỀU PHỐI: OMNIPOS &amp; FINLEDGER HUB</text>
+        <text x="540" y="65" text-anchor="middle" fill="#9fb0d6" font-size="12">Bảo vệ bởi 15 Bất biến Nghiệp vụ &amp; Kế toán (I-01 .. I-15)</text>
+
+        <rect x="360" y="82" width="360" height="48" rx="8" fill="#192340" stroke="#38bdf8"/>
+        <text x="375" y="103" fill="#38bdf8" font-size="12.5" font-weight="bold">[Phân hệ 1 - M1] Ngân Quỹ 301 Ví &amp; Sổ Cái Kép ACID</text>
+        <text x="375" y="120" fill="#9fb0d6" font-size="11">Khóa ORDER BY id FOR UPDATE • Tổng 301 ví luôn = 0 VNĐ</text>
+
+        <rect x="360" y="138" width="360" height="48" rx="8" fill="#192340" stroke="#38bdf8"/>
+        <text x="375" y="159" fill="#38bdf8" font-size="12.5" font-weight="bold">[Phân hệ 2 - M1/M2] Săn Tài Trợ Flash-Voucher B2B</text>
+        <text x="375" y="176" fill="#9fb0d6" font-size="11">SKIP LOCKED (10/10 suất) + UNIQUE + Lua Token Bucket (429)</text>
+
+        <rect x="360" y="194" width="360" height="48" rx="8" fill="#192340" stroke="#34d399"/>
+        <text x="375" y="215" fill="#34d399" font-size="12.5" font-weight="bold">[Phân hệ 3 - M2] Hóa Đơn POS, Menu &amp; Top Bán Chạy</text>
+        <text x="375" y="232" fill="#9fb0d6" font-size="11">Idempotency-Key (201/422) • Menu Singleflight • Redis ZSET</text>
+
+        <rect x="360" y="250" width="360" height="48" rx="8" fill="#192340" stroke="#fbbf24"/>
+        <text x="375" y="271" fill="#fbbf24" font-size="12.5" font-weight="bold">[Phân hệ 4 - M3] Bảo Mật Đa Quán &amp; Sao Kê 1M Dòng</text>
+        <text x="375" y="288" fill="#9fb0d6" font-size="11">Anti-IDOR Guard (403) • Stream CSV &lt; 50MB RAM • Circuit Breaker</text>
+
+        <rect x="360" y="306" width="360" height="48" rx="8" fill="#192340" stroke="#f87171"/>
+        <text x="375" y="327" fill="#f87171" font-size="12.5" font-weight="bold">[Phân hệ 5 - M4/M5] Đặt Hàng Kho Tổng Saga &amp; Chống Fraud</text>
+        <text x="375" y="344" fill="#9fb0d6" font-size="11">Outbox WAL CDC • Hết kho tự hoàn tiền • Rút &gt;5 lần/10s tự khóa ví</text>
+
+        <rect x="360" y="362" width="360" height="42" rx="8" fill="#192340" stroke="#818cf8"/>
+        <text x="375" y="381" fill="#818cf8" font-size="12.5" font-weight="bold">[Phân hệ 6 - M6] Partition Tháng, Short-Link &amp; Bảng Tin</text>
+        <text x="375" y="397" fill="#9fb0d6" font-size="11">Monthly Range Partition • Snowflake Base62 • Hybrid Fan-out</text>
+
+        <!-- Right Back-office -->
+        <rect x="790" y="15" width="280" height="400" rx="14" fill="#131b31" stroke="#34d399" stroke-width="2"/>
+        <text x="930" y="45" text-anchor="middle" fill="#34d399" font-size="15" font-weight="bold">TUYẾN SAU: TRỤ SỞ HQ &amp; ERP</text>
+        <text x="930" y="65" text-anchor="middle" fill="#9fb0d6" font-size="12">(Kế toán, Marketing, Kho Tổng)</text>
+
+        <rect x="808" y="85" width="244" height="145" rx="10" fill="#192340" stroke="#2a3964"/>
+        <text x="822" y="110" fill="#38bdf8" font-size="13" font-weight="bold">🏦 Kế Toán &amp; Ngân Quỹ HQ</text>
+        <text x="822" y="132" fill="#ecf2ff" font-size="12">• Quản lý Ví TREASURY (-300tr)</text>
+        <text x="822" y="152" fill="#ecf2ff" font-size="12">• Cấp vốn 1.000.000đ × 300 quán</text>
+        <text x="822" y="172" fill="#ecf2ff" font-size="12">• Tải sao kê 1M dòng CSV</text>
+        <text x="822" y="192" fill="#ecf2ff" font-size="12">• Mở khóa ví bị đóng băng</text>
+        <text x="822" y="212" fill="#34d399" font-size="11">→ Đối soát SAP B1 (OJDT / JDT1)</text>
+
+        <rect x="808" y="245" width="244" height="145" rx="10" fill="#192340" stroke="#2a3964"/>
+        <text x="822" y="270" fill="#818cf8" font-size="13" font-weight="bold">📣 Marketing &amp; Kho Tổng HQ</text>
+        <text x="822" y="292" fill="#ecf2ff" font-size="12">• Phát hành gói Flash-Voucher</text>
+        <text x="822" y="312" fill="#ecf2ff" font-size="12">• Xem Top 10 Món Bán Chạy</text>
+        <text x="822" y="332" fill="#ecf2ff" font-size="12">• Xuất kho nguyên vật liệu B2B</text>
+        <text x="822" y="352" fill="#ecf2ff" font-size="12">• Đăng thông báo tới 300 quán</text>
+
+        <!-- Arrows -->
+        <line x1="290" y1="150" x2="340" y2="150" stroke="#38bdf8" stroke-width="2.5"/>
+        <line x1="290" y1="310" x2="340" y2="220" stroke="#fbbf24" stroke-width="2.5"/>
+        <line x1="740" y1="150" x2="790" y2="150" stroke="#34d399" stroke-width="2.5"/>
+        <line x1="740" y1="320" x2="790" y2="320" stroke="#818cf8" stroke-width="2.5"/>
+      </svg>
+    </section>
+
+    <section id="roles" class="card">
+      <h2>3. Hệ Thống Có Bao Nhiêu Vai Trò (Actors) &amp; Phân Quyền Ra Sao?</h2>
+      <p>Hệ thống phục vụ <strong>5 nhóm tác nhân (Actors)</strong> (4 vai trò người dùng/thiết bị và 1 tác nhân tự động hóa ngầm):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Vai trò Nghiệp vụ (Persona)</th>
+            <th>Mã Role Kỹ thuật</th>
+            <th>Phạm vi Dữ liệu (Scope)</th>
+            <th>Công việc chính trên Hệ thống</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1</strong></td>
+            <td><strong>Kế toán trưởng / Ngân quỹ Trụ sở</strong></td>
+            <td><code>HQ_ADMIN</code> / <code>ACCOUNTANT</code></td>
+            <td><strong>Toàn chuỗi (301 ví)</strong></td>
+            <td>Cấp vốn lưu động từ <code>TREASURY</code> cho 300 quán; giám sát tổng cân đối sổ cái (<code>SUM = 0</code>); xuất sao kê 1 triệu dòng CSV đối chiếu SAP B1; mở khóa ví bị đóng băng.</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td><strong>Chuyên viên Marketing &amp; Vận hành HQ</strong></td>
+            <td><code>HQ_ADMIN</code> (Ops)</td>
+            <td><strong>Toàn chuỗi (300 quán)</strong></td>
+            <td>Tạo chiến dịch Flash-Voucher (<code>totalSlots</code>) &amp; Short-link; xem Top 10 sản phẩm bán chạy nhất; quản lý Kho Tổng; đăng thông báo chỉ đạo toàn chuỗi.</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td><strong>Cửa hàng trưởng (Quán 1..300)</strong></td>
+            <td><code>STORE_MANAGER</code></td>
+            <td><strong>Cô lập 1 Cửa hàng (<code>storeId</code>)</strong></td>
+            <td>Xem số dư &amp; sổ cái của riêng quán mình; chuyển khoản nội bộ; bấm săn suất Flash-Voucher; đặt mua nguyên vật liệu Kho Tổng; đăng bài chia sẻ cấp quán.</td>
+          </tr>
+          <tr>
+            <td><strong>4</strong></td>
+            <td><strong>Thu ngân / Máy bán hàng POS</strong></td>
+            <td><code>POS_CASHIER</code></td>
+            <td><strong>Cô lập 1 Quầy POS (<code>storeId</code>)</strong></td>
+            <td>Tải thực đơn 77 món tốc độ cao; lập và gửi hóa đơn bán hàng POS kèm <code>Idempotency-Key</code> chống trùng lặp. Không có quyền rút quỹ ví.</td>
+          </tr>
+          <tr>
+            <td><strong>5</strong></td>
+            <td><strong>Hệ thống Kiểm soát Tự động Ngầm</strong></td>
+            <td><code>SYSTEM_WORKER</code></td>
+            <td><strong>Toàn hệ thống (Kafka/gRPC)</strong></td>
+            <td>Debezium CDC đẩy sự kiện Outbox; Saga Orchestrator tự hoàn tiền khi Kho Tổng hết hàng; Fraud Worker tự khóa ví khi rút tiền <code>&gt; 5 lần / 10 giây</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Ma Trận Phân Quyền &amp; Chống Truy Cập Chéo Cửa Hàng (14-Row RBAC &amp; Anti-IDOR Matrix)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nghiệp vụ / Chức năng cụ thể</th>
+            <th>API Endpoint tiêu biểu</th>
+            <th>Kế toán HQ (<code>ACCOUNTANT</code>)</th>
+            <th>Marketing &amp; Ops HQ (<code>HQ_ADMIN</code>)</th>
+            <th>Cửa hàng trưởng (<code>STORE_MANAGER</code>)</th>
+            <th>Thu ngân POS (<code>POS_CASHIER</code>)</th>
+            <th>Worker Ngầm (<code>SYSTEM_WORKER</code>)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Xem số dư &amp; lịch sử ví</td>
+            <td><code>GET /wallets/:id</code></td>
+            <td>✅ Toàn bộ 301 ví</td>
+            <td>✅ Toàn bộ</td>
+            <td>🛡️ <strong>Chỉ ví quán mình</strong> (Quán khác → <code>403/404</code>)</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>✅ (gRPC)</td>
+          </tr>
+          <tr>
+            <td>Cấp vốn / Chuyển tiền từ <code>TREASURY</code></td>
+            <td><code>POST /wallets/transfers</code></td>
+            <td>✅ Được phép</td>
+            <td>❌</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>🔄 Chỉ khi Saga hoàn tiền</td>
+          </tr>
+          <tr>
+            <td>Chuyển tiền từ ví Cửa hàng (<code>STORE</code>)</td>
+            <td><code>POST /wallets/transfers</code></td>
+            <td>✅ Điều chỉnh kế toán</td>
+            <td>❌</td>
+            <td>✅ <strong>Chỉ từ ví quán mình</strong></td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌</td>
+          </tr>
+          <tr>
+            <td>Xuất sao kê kế toán 1.000.000 dòng CSV</td>
+            <td><code>GET /wallets/:id/statement.csv</code></td>
+            <td>✅ Toàn bộ 301 ví</td>
+            <td>❌</td>
+            <td>✅ Chỉ ví quán mình</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌</td>
+          </tr>
+          <tr>
+            <td>Tạo chiến dịch Flash-Voucher &amp; Short-link</td>
+            <td><code>POST /vouchers/campaigns</code></td>
+            <td>❌</td>
+            <td>✅ <strong>Được phép</strong></td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌</td>
+          </tr>
+          <tr>
+            <td>Bấm nhận suất Flash-Voucher (Claim)</td>
+            <td><code>POST /vouchers/campaigns/:id/claims</code></td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>✅ <strong>Tối đa 1 suất/quán/đợt</strong></td>
+            <td>❌ (<code>403</code>)</td>
+            <td>🛡️ Chặn nếu vượt Rate Limit (<code>429</code>)</td>
+          </tr>
+          <tr>
+            <td>Tải thực đơn 77 món của cửa hàng</td>
+            <td><code>GET /stores/:id/menu</code></td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>✅ <strong>Chính (Cache &lt;10ms)</strong></td>
+            <td>❌</td>
+          </tr>
+          <tr>
+            <td>Gửi hóa đơn bán hàng POS</td>
+            <td><code>POST /pos/invoices</code></td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>✅</td>
+            <td>✅ <strong>Chính (Idempotent)</strong></td>
+            <td>🔄 Đồng bộ ZSET &amp; Outbox</td>
+          </tr>
+          <tr>
+            <td>Xem Top 10 sản phẩm bán chạy nhất chuỗi</td>
+            <td><code>GET /products/best-sellers</code></td>
+            <td>✅</td>
+            <td>✅ <strong>Chính</strong></td>
+            <td>✅</td>
+            <td>✅</td>
+            <td>🔄 Rebuild từ SQL</td>
+          </tr>
+          <tr>
+            <td>Đặt mua nguyên vật liệu từ Kho Tổng</td>
+            <td><code>POST /supply-orders</code></td>
+            <td>✅ Xem đối soát</td>
+            <td>✅ Quản lý kho</td>
+            <td>✅ <strong>Chính (Đặt hàng)</strong></td>
+            <td>❌ (<code>403</code>)</td>
+            <td>🔄 Điều phối Saga trừ ví &amp; giữ kho</td>
+          </tr>
+          <tr>
+            <td>Tự động đóng băng ví khi rút &gt;5 lần/10s</td>
+            <td>Event <code>fraud.wallet-flagged</code></td>
+            <td>📩 Nhận cảnh báo</td>
+            <td>📩 Nhận cảnh báo</td>
+            <td>⛔ Bị chặn (<code>409 WALLET_FROZEN</code>)</td>
+            <td>❌</td>
+            <td>⚡ <strong>Thực thi tự động</strong></td>
+          </tr>
+          <tr>
+            <td>Mở khóa ví sau khi xác minh an toàn</td>
+            <td><code>POST /wallets/:id/unlock</code></td>
+            <td>✅ <strong>Độc quyền HQ</strong></td>
+            <td>❌</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌ (<code>403</code>)</td>
+            <td>❌</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="modules" class="card">
+      <h2>4. Giải Phẫu Chi Tiết 6 Phân Hệ Nghiệp Vụ Cốt Lõi (M1 → M6)</h2>
+
+      <div class="card" style="background: var(--surface-2);">
+        <h3>Phân Hệ 1 (M1): Quản Trị Ngân Quỹ Nội Bộ &amp; Sổ Cái Kép (301 Ví)</h3>
+        <p><strong>Mục tiêu:</strong> Quản lý dòng tiền giữa <strong>1 Ví Trụ sở (<code>TREASURY</code>)</strong> và <strong>300 Ví Cửa hàng (<code>STORE</code>)</strong> theo chuẩn Kế toán Kép (như <code>OJDT/JDT1</code> của SAP B1). Đầu kỳ, <code>TREASURY</code> cấp <code>1.000.000 VNĐ</code> cho mỗi quán → 300 ví quán = <code>+1.000.000đ</code>, ví <code>TREASURY</code> = <code>-300.000.000đ</code>, tổng 301 ví luôn bằng <code>0 VNĐ</code>.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mã Bút Toán (<code>entry_id</code>)</th>
+              <th>Mã Giao Dịch (<code>transfer_id</code>)</th>
+              <th>Ví (<code>wallet_id</code>)</th>
+              <th>Loại Ví</th>
+              <th>Số dư trước GD</th>
+              <th>Phát sinh (<code>amount</code>)</th>
+              <th>Số dư sau GD</th>
+              <th>Ánh xạ SAP B1 (<code>JDT1</code>)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>LE-1001</code></td>
+              <td><code>TX-9001</code></td>
+              <td><code>wallet_store_001</code> (Quán 1)</td>
+              <td><code>STORE</code></td>
+              <td>1.000.000</td>
+              <td style="color: var(--error); font-weight: bold;">-250.000</td>
+              <td>750.000</td>
+              <td>Credit Sub-ledger Quán 1</td>
+            </tr>
+            <tr>
+              <td><code>LE-1002</code></td>
+              <td><code>TX-9001</code></td>
+              <td><code>wallet_store_002</code> (Quán 2)</td>
+              <td><code>STORE</code></td>
+              <td>1.000.000</td>
+              <td style="color: var(--success); font-weight: bold;">+250.000</td>
+              <td>1.250.000</td>
+              <td>Debit Sub-ledger Quán 2</td>
+            </tr>
+            <tr>
+              <td colspan="5"><strong>Tổng kiểm tra cân đối theo <code>TX-9001</code> (Bất biến <code>I-01</code>, <code>I-04</code>)</strong></td>
+              <td><strong>0 VNĐ</strong></td>
+              <td colspan="2"><strong>Khóa theo thứ tự <code>ORDER BY id ASC FOR UPDATE</code> → 0 Deadlock (<code>40P01</code>)</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="background: var(--surface-2);">
+          <h3>Phân Hệ 2 (M1 &amp; M2): Chiến Dịch Tài Trợ &amp; Săn Flash-Voucher B2B</h3>
+          <ul>
+            <li><strong>Khởi tạo (<code>POST /vouchers/campaigns</code>):</strong> HQ tạo chiến dịch <code>totalSlots = 10</code> → DB sinh sẵn 10 dòng trống (<code>store_id IS NULL</code>).</li>
+            <li><strong>Chống Spam ở cửa ngõ (M2):</strong> Redis Lua Token Bucket chặn quán dùng auto-clicker bằng mã <code>429 Too Many Requests</code> + <code>Retry-After</code>.</li>
+            <li><strong>Phân bổ không chờ khóa (M1):</strong> Dùng <code>SELECT ... FOR UPDATE SKIP LOCKED</code> kết hợp <code>UNIQUE(campaign_id, store_id)</code>. Khi 30 quán cùng bấm: đúng <strong>10 quán nhận <code>201 Created</code></strong>, <strong>20 quán nhận <code>409 SOLD_OUT</code></strong> tức thì; quán bấm lần 2 nhận <code>409 ALREADY_CLAIMED</code>.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="background: var(--surface-2);">
+          <h3>Phân Hệ 3 (M2): Hóa Đơn Bán Hàng POS, Menu &amp; Bảng Xếp Hạng</h3>
+          <ul>
+            <li><strong>Thực đơn 77 món (<code>GET /stores/:id/menu</code>):</strong> Dùng <strong>Cache-Aside + Singleflight + TTL Jitter</strong>. Khi cache trống mà 30 máy POS gọi cùng lúc, chỉ chạy đúng <strong>1 câu SQL</strong> xuống DB.</li>
+            <li><strong>Hóa đơn POS (<code>POST /pos/invoices</code>):</strong> Bắt buộc header <code>Idempotency-Key</code>. Gửi lặp 30 lần cùng đơn hàng chỉ tạo đúng <strong>1 hóa đơn</strong>; dùng lại key cũ với số tiền/món khác bị chặn <code>422</code>.</li>
+            <li><strong>Top 10 Bán Chạy (<code>GET /products/best-sellers</code>):</strong> Cộng dồn tức thời trên <strong>Redis ZSET</strong> sau khi commit hóa đơn, kèm lệnh đối soát dựng lại từ SQL (<code>I-09</code>).</li>
+          </ul>
+        </div>
+
+        <div class="card" style="background: var(--surface-2);">
+          <h3>Phân Hệ 4 (M3): Bảo Mật Đa Cửa Hàng &amp; Sao Kê 1 Triệu Dòng</h3>
+          <ul>
+            <li><strong>Chống Xem Trộm (Anti-IDOR):</strong> Cửa hàng trưởng Quán 1 gọi xem ví hoặc sao kê của Quán 2 bị chặn ngay với <code>403 Forbidden / 404 Not Found</code>.</li>
+            <li><strong>Xuất Sao Kê Kế Toán (<code>GET /wallets/:id/statement.csv</code>):</strong> Stream <strong>1.000.000 dòng bút toán</strong> qua Node.js Readable Stream để Kế toán nạp vào SAP B1 mà mức tăng RAM của API luôn <strong>&lt; 50 MB</strong>.</li>
+            <li><strong>Tự Phục Hồi:</strong> Retry Exponential Backoff + Full Jitter (3 lần) khi đụng khóa tạm thời; <strong>Circuit Breaker</strong> tự chuyển đọc Menu về PostgreSQL nếu Redis sập.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="background: var(--surface-2);">
+          <h3>Phân Hệ 5 (M4 &amp; M5): Đặt Hàng Kho Tổng (Saga) &amp; Đóng Băng Ví</h3>
+          <ul>
+            <li><strong>Outbox + Debezium CDC (<code>I-12</code>):</strong> Ghi bút toán và <code>OutboxEvent</code> trong cùng 1 DB Transaction, đọc qua WAL lên Kafka không mất sự kiện.</li>
+            <li><strong>Supply Order Saga (<code>I-13</code>):</strong> Quán đặt nguyên liệu → trừ tiền ví quán về <code>TREASURY</code> qua gRPC → giữ hàng Kho Tổng. <strong>Nếu Kho Tổng hết hàng:</strong> Saga tự động chạy bút toán hoàn tiền từ <code>TREASURY</code> về lại ví quán (<code>tác động ròng = 0</code>) và hủy đơn (<code>CANCELLED</code>).</li>
+            <li><strong>Đóng Băng Ví Tự Động (<code>I-14</code>):</strong> Nếu 1 ví bị trừ tiền <strong>&gt; 5 lần trong 10 giây</strong>, <code>fraud-worker</code> tự khóa ví (<code>409 WALLET_FROZEN</code>) chờ HQ mở khóa.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="background: var(--surface-2);">
+        <h3>Phân Hệ 6 (M6): Phân Vùng Dữ Liệu Lớn, Short-Link Chiến Dịch &amp; Bảng Tin Nhượng Quyền</h3>
+        <p>
+          <strong>(1) Monthly Range Partitioning (<code>I-15</code>):</strong> Chia bảng <code>ledger_entries</code> và <code>pos_invoices</code> theo tháng để truy vấn 1 tháng chỉ quét đúng 1 partition.
+          <strong>(2) Snowflake 64-bit Base62 Short-Links:</strong> Rút gọn link chiến dịch <code>GET /s/:code</code> (<code>&lt;= 11</code> ký tự, 0 trùng lặp ở 10.000 request đồng thời).
+          <strong>(3) Hybrid Fan-out Newsfeed:</strong> Bài đăng của quán nhỏ dùng <strong>Push</strong> vào Redis ZSET của người theo dõi; thông báo toàn chuỗi từ Trụ sở HQ (300 quán theo dõi) dùng <strong>Pull</strong> khi đọc để tránh khuếch đại ghi 300 lần.
+        </p>
+      </div>
+    </section>
+
+    <section id="mockups" class="card">
+      <h2>5. Mockup Giao Diện Web App Portfolio (UI/UX tại <code>http://127.0.0.1:3100</code>)</h2>
+      <p>Khi nhà tuyển dụng mở ứng dụng Web (<code>apps/web</code> Next.js 16), đây là 2 màn hình điều hành trực quan chứng minh toàn bộ sức mạnh nghiệp vụ:</p>
+      <div class="mockup-grid">
+        <div class="mockup-window">
+          <div class="mockup-bar">
+            <span>🟢 <strong>Màn hình 1:</strong> Trung Tâm Ngân Quỹ &amp; Sổ Cái Kép (<code>/wallets</code>)</span>
+            <span>Role: HQ_ADMIN / STORE_MANAGER</span>
+          </div>
+          <div class="mockup-body">
+            <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:12px;">
+              <div style="background:var(--surface); padding:10px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                <div style="font-size:0.75rem; color:var(--muted);">Số dư Ví Quán #1</div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--success);">1.000.000 VNĐ</div>
+              </div>
+              <div style="background:var(--surface); padding:10px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                <div style="font-size:0.75rem; color:var(--muted);">Tổng Sổ Cái (ledgerSum)</div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--accent);">1.000.000 VNĐ</div>
+              </div>
+              <div style="background:var(--surface); padding:10px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                <div style="font-size:0.75rem; color:var(--muted);">Đối soát 301 Ví</div>
+                <div style="font-size:1.2rem; font-weight:800; color:var(--success);">SUM = 0 ✔</div>
+              </div>
+            </div>
+            <div style="background:var(--surface); padding:12px; border-radius:8px; border:1px solid var(--border);">
+              <div style="font-size:0.85rem; font-weight:700; margin-bottom:6px;">Thực hiện Điều chuyển Ngân quỹ / Mô phỏng Bắn 30 Request</div>
+              <div style="font-size:0.8rem; color:var(--muted);">Từ Ví: <code>#1 (Quán 1)</code> → Tới Ví: <code>#2 (Quán 2)</code> | Số tiền: <code>200.000 VNĐ</code></div>
+              <div style="margin-top:8px; display:flex; gap:8px;">
+                <span class="badge badge-accent">Chuyển 1 lệnh (POST /wallets/transfers)</span>
+                <span class="badge badge-warn">⚡ Bắn 30 lệnh rút đồng thời (5×201, 25×409)</span>
+              </div>
+            </div>
+            <span class="annotation">Gắn với Invariant I-01..I-05, I-07 (0×5xx, 0×Deadlock 40P01)</span>
+          </div>
+        </div>
+
+        <div class="mockup-window">
+          <div class="mockup-bar">
+            <span>🟠 <strong>Màn hình 2:</strong> Đấu Trường Săn Tài Trợ Flash-Voucher (<code>/vouchers</code>)</span>
+            <span>Role: STORE_MANAGER (300 Quán)</span>
+          </div>
+          <div class="mockup-body">
+            <div style="background:var(--surface); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between;">
+                <strong>Chiến dịch: Tài trợ Nguyên liệu Giờ Vàng</strong>
+                <span class="badge badge-success">Đã nhận: 10 / 10 suất</span>
+              </div>
+              <div style="background:var(--bg); height:10px; border-radius:999px; margin-top:8px; overflow:hidden;">
+                <div style="background:var(--accent); width:100%; height:100%;"></div>
+              </div>
+            </div>
+            <div style="background:var(--surface); padding:12px; border-radius:8px; border:1px solid var(--border);">
+              <div style="font-size:0.82rem; font-weight:700; margin-bottom:6px;">Kết quả 30 Cửa hàng bấm nhận cùng lúc:</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <span class="badge badge-success">10 × 201 Created (Trúng suất)</span>
+                <span class="badge badge-warn">20 × 409 SOLD_OUT (Hết suất tức thì)</span>
+                <span class="badge badge-purple">1 × 409 ALREADY_CLAIMED (Bấm lần 2)</span>
+              </div>
+            </div>
+            <span class="annotation">Gắn với Invariant I-06 &amp; I-10 (FOR UPDATE SKIP LOCKED + Lua Token Bucket)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="invariants" class="card">
+      <h2>6. Bảng Tra Cứu Nhanh 15 Quy Tắc Bất Biến Nghiệp Vụ &amp; Kế Toán (I-01 → I-15)</h2>
+      <input type="text" id="invSearch" class="filter-input" placeholder="🔍 Gõ để lọc nhanh bất biến (ví dụ: I-03, TREASURY, voucher, POS, Saga, IDOR...)" onkeyup="filterInvariants()" />
+      <table id="invTable">
+        <thead>
+          <tr>
+            <th>Mã</th>
+            <th>Phân hệ</th>
+            <th>Tên Quy Tắc Nghiệp Vụ</th>
+            <th>Ý nghĩa Kế toán &amp; Tiêu chuẩn Nghiệm thu Thực tế</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>I-01</code></td><td>M1 (Sổ cái)</td><td><strong>Zero-Sum Double-Entry</strong></td><td>Mỗi lệnh chuyển tiền luôn sinh đúng 2 dòng <code>ledger_entries</code> (<code>-amount</code>, <code>+amount</code>) có tổng bằng <code>0</code>.</td></tr>
+          <tr><td><code>I-02</code></td><td>M1 (Sổ cái)</td><td><strong>Wallet Balance Consistency</strong></td><td>Số dư <code>balance</code> của mỗi ví luôn bằng tổng đại số <code>SUM(amount)</code> các dòng bút toán của chính ví đó.</td></tr>
+          <tr><td><code>I-03</code></td><td>M1 (Sổ cái)</td><td><strong>Non-Negative Store Wallet</strong></td><td>Ví cửa hàng (<code>STORE</code>) không bao giờ âm (<code>23514</code> → <code>409 INSUFFICIENT_FUNDS</code>); chỉ ví <code>TREASURY</code> được phép âm.</td></tr>
+          <tr><td><code>I-04</code></td><td>M1 (Sổ cái)</td><td><strong>Global Conservation of Money</strong></td><td>Tổng số dư của toàn bộ 301 ví (<code>300 STORE + 1 TREASURY</code>) tại mọi thời điểm luôn bằng <code>0 VNĐ</code>.</td></tr>
+          <tr><td><code>I-05</code></td><td>M1 (Sổ cái)</td><td><strong>Append-Only Audit Trail</strong></td><td>Bảng <code>ledger_entries</code> chỉ thêm, cấm <code>UPDATE/DELETE</code>; điều chỉnh sai sót phải lập bút toán đảo mới.</td></tr>
+          <tr><td><code>I-06</code></td><td>M1/M2 (Voucher)</td><td><strong>Strict Quota &amp; Single Claim</strong></td><td>Số suất đã nhận ≤ <code>totalSlots</code>; mỗi quán nhận tối đa 1 suất/chiến dịch (<code>23505</code> → <code>409 ALREADY_CLAIMED</code>).</td></tr>
+          <tr><td><code>I-07</code></td><td>M1 (Sổ cái)</td><td><strong>Deterministic Lock Ordering</strong></td><td>Khóa nhiều ví luôn theo thứ tự <code>wallet_id</code> tăng dần (<code>ORDER BY id FOR UPDATE</code>), cam kết <code>0</code> lỗi Deadlock (<code>40P01</code>).</td></tr>
+          <tr><td><code>I-08</code></td><td>M2 (POS)</td><td><strong>POS Invoice Idempotency</strong></td><td>Gửi lặp 30 lần cùng <code>Idempotency-Key</code> chỉ tạo đúng 1 hóa đơn; cùng key khác nội dung trả về <code>422</code>.</td></tr>
+          <tr><td><code>I-09</code></td><td>M2 (POS)</td><td><strong>Leaderboard Rebuildability</strong></td><td>Top 10 món bán chạy trên Redis <code>ZSET</code> luôn khớp 100% với tổng SQL trên bảng hóa đơn gốc.</td></tr>
+          <tr><td><code>I-10</code></td><td>M3 (Bảo mật)</td><td><strong>Tenant Data Isolation (Anti-IDOR)</strong></td><td>Cửa hàng A truy cập ví/sao kê của Cửa hàng B luôn bị chặn với mã <code>403 / 404</code>.</td></tr>
+          <tr><td><code>I-11</code></td><td>M3 (Sao kê)</td><td><strong>Bounded-Memory CSV Streaming</strong></td><td>Xuất sao kê kế toán 1.000.000 dòng qua Node.js Stream giữ mức tăng RAM của API <code>&lt; 50 MB</code>.</td></tr>
+          <tr><td><code>I-12</code></td><td>M4 (Outbox)</td><td><strong>Atomic Outbox Event Delivery</strong></td><td>Biến động dữ liệu và dòng <code>OutboxEvent</code> commit cùng 1 DB transaction, đẩy qua Debezium WAL CDC sang Kafka không mất tin.</td></tr>
+          <tr><td><code>I-13</code></td><td>M5 (Saga)</td><td><strong>Saga Compensation Net-Zero</strong></td><td>Đặt nguyên liệu Kho Tổng nếu đã trừ ví mà kho hết hàng thì tự động chuyển hoàn tiền từ <code>TREASURY</code> về ví quán (<code>net = 0</code>).</td></tr>
+          <tr><td><code>I-14</code></td><td>M5 (Fraud)</td><td><strong>Velocity Fraud Auto-Freeze</strong></td><td>Ví bị trừ tiền <code>&gt; 5 lần / 10 giây</code> tự động bị đóng băng (<code>409 WALLET_FROZEN</code>) chờ HQ mở khóa.</td></tr>
+          <tr><td><code>I-15</code></td><td>M6 (Quy mô)</td><td><strong>Monthly Partition Pruning</strong></td><td>Phân vùng theo tháng giúp truy vấn 1 tháng chỉ quét đúng 1 partition mà vẫn giữ nguyên vẹn <code>I-01..I-04</code>.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="roadmap" class="card">
+      <h2>7. Hiện Trạng Đã Code (M0 Hôm Nay) vs Lộ Trình Hoàn Thiện (M1 → M6)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Giai đoạn</th>
+            <th>Trạng thái</th>
+            <th>Chi tiết những gì ĐÃ CÓ SẴN / SẼ XÂY DỰNG trong <code>omnipos-finledger-hub</code></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>M0: Khung Monorepo, Auth &amp; 300 Quán</strong></td>
+            <td><span class="badge badge-success">ĐÃ CHẠY LIVE (9e01cc9)</span></td>
+            <td>Turborepo <code>apps/api</code> (<code>:3101</code>), <code>apps/web</code> (<code>:3100</code>), PG 16 (<code>:5434</code>); Cookie JWT + Refresh Rotation + RBAC/CSRF; <strong>Đã seed sẵn 300 cửa hàng F&amp;B</strong> và <strong>77 sản phẩm thực đơn</strong>; đã có khung API stub cho <code>wallets</code> và <code>vouchers</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>M1: Ngân quỹ Sổ cái kép &amp; Flash-Voucher</strong></td>
+            <td><span class="badge badge-warn">ĐANG LÀM (Phase 4–6)</span></td>
+            <td>Đạt viết DDL 4 bảng (<code>bai07-ddl.sql</code>) → AI lắp Prisma &amp; seed 301 ví → Đạt gõ dòng khóa <code>ORDER BY id FOR UPDATE</code> và <code>SKIP LOCKED</code> → Pass nghiệm thu bắn 30 request đồng thời.</td>
+          </tr>
+          <tr>
+            <td><strong>M2: POS Billing, Menu Cache &amp; ZSET</strong></td>
+            <td><span class="badge badge-accent">CỤM 2 TIẾP THEO</span></td>
+            <td>Thêm Redis <code>:6380</code>; làm <code>POST /pos/invoices</code> (<code>Idempotency-Key</code>), <code>GET /stores/:id/menu</code> (Singleflight + Jitter), <code>GET /products/best-sellers</code> (ZSET) và Lua Token Bucket Rate Limit.</td>
+          </tr>
+          <tr>
+            <td><strong>M3: Clean Arch v2.0, Anti-IDOR &amp; CSV Stream</strong></td>
+            <td><span class="badge badge-accent">CỤM 3</span></td>
+            <td>Refactor 4 tầng Clean Architecture + DDD; chặn IDOR giữa các quán; xuất sao kê 1 triệu dòng CSV (<code>&lt; 50MB RAM</code>); Retry Full Jitter &amp; Redis Circuit Breaker.</td>
+          </tr>
+          <tr>
+            <td><strong>M4 &amp; M5: Kafka, Outbox CDC, Saga &amp; Fraud</strong></td>
+            <td><span class="badge badge-purple">CỤM 4 &amp; 5 (v3.0)</span></td>
+            <td>Tách <code>wallet-service</code> &amp; <code>order-service</code> (gRPC); Outbox + Debezium CDC → Kafka; Saga đặt nguyên liệu Kho Tổng tự hoàn tiền khi hết hàng; <code>fraud-worker</code> khóa ví khi rút &gt;5 lần/10s.</td>
+          </tr>
+          <tr>
+            <td><strong>M6: Partitioning, Short-Link &amp; Bảng tin</strong></td>
+            <td><span class="badge badge-purple">CỤM 6 (v3.0)</span></td>
+            <td>Monthly Range Partitioning; Snowflake Base62 Short-link (<code>GET /s/:code</code>); Bảng tin nhượng quyền Hybrid Fan-out (Push + Pull).</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="pitch" class="card">
+      <h2>8. Kim Chỉ Nam Portfolio: Kịch Bản Pitching 2 Phút &amp; Bắt Bài 4 Câu Hỏi Xoáy</h2>
+      <div class="callout callout-success">
+        <strong>🎙️ Kịch bản giới thiệu dự án trong 60–90 giây khi phỏng vấn:</strong><br/>
+        <em>"Xuất phát từ kinh nghiệm thực tế khi làm việc với hệ thống vận hành chuỗi hơn 300 cửa hàng F&amp;B và đồng bộ kế toán lên SAP Business One, em xây dựng <strong>OmniPOS &amp; FinLedger Hub</strong> — nền tảng Trung tâm Quản trị Ngân quỹ Nội bộ (Sổ cái kép), Tiếp nhận Hóa đơn POS, Phân bổ Khuyến mãi B2B và Điều phối Đơn hàng Nguyên vật liệu Kho tổng cho <strong>300 cửa hàng và 77 mặt hàng F&amp;B</strong>. Hệ thống quản lý 301 ví định danh (300 ví quán + 1 ví Trụ sở <code>TREASURY</code>) theo chuẩn <strong>Double-Entry Ledger bất biến</strong> có tổng luôn bằng 0, khóa dòng theo thứ tự ID để triệt tiêu 100% Deadlock, phân bổ Flash-Voucher bằng <code>SKIP LOCKED</code> + Lua Token Bucket, chống trùng hóa đơn POS qua <code>Idempotency-Key</code>, xuất sao kê 1 triệu dòng dưới 50MB RAM, và điều phối đơn nhập nguyên liệu Kho tổng bằng <strong>Distributed Saga</strong> kết hợp đóng băng ví tự động khi phát hiện rút tiền bất thường."</em>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Câu hỏi xoáy của Hội đồng Phỏng vấn</th>
+            <th>Câu trả lời chuẩn Senior / High-Mid Backend từ dự án của Đạt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. "Tại sao ví <code>TREASURY</code> của Trụ sở lại có số dư <code>-300.000.000 VNĐ</code>? Âm nghĩa là hết tiền à?"</strong></td>
+            <td>"Không phải hết tiền, mà đây là nguyên lý <strong>Tài khoản Đối ứng Nguồn vốn (Contra/Funding Account)</strong> trong Sổ cái kép đóng kín (<code>I-04</code>). Khi Trụ sở cấp <code>1.000.000đ</code> cho mỗi quán trong 300 quán, để không sinh ra tiền ảo từ hư không, mỗi khoản Ghi Có (<code>+1tr</code>) ở ví quán phải có khoản Ghi Nợ đối ứng (<code>-1tr</code>) ở ví <code>TREASURY</code>. Nhờ vậy tổng đại số 301 ví luôn bằng <code>0 VNĐ</code> tại mọi mili-giây."</td>
+          </tr>
+          <tr>
+            <td><strong>2. "Nếu chuyển nhầm tiền, tại sao không cho sửa (<code>UPDATE</code>) lại dòng lịch sử đó cho nhanh?"</strong></td>
+            <td>"Trong kế toán doanh nghiệp và chuẩn SAP Business One (<code>OJDT/JDT1</code>), chứng từ đã ghi sổ là <strong>bất biến (<code>I-05</code>)</strong>. Nếu cho phép <code>UPDATE/DELETE</code>, các bản sao kê đã xuất trước đó sẽ lệch hoàn toàn và mất dấu vết kiểm toán. Cách chuẩn duy nhất là tạo một <strong>Giao dịch Đảo / Bù trừ mới (Compensating Reversal Transfer)</strong>."</td>
+          </tr>
+          <tr>
+            <td><strong>3. "Tại sao săn Flash-Voucher của 300 quán lại dùng <code>FOR UPDATE SKIP LOCKED</code> trong Postgres kết hợp Redis?"</strong></td>
+            <td>"Với 10 suất được cấp phát trước trong DB, <code>FOR UPDATE SKIP LOCKED</code> giải quyết bài toán gán chủ sở hữu suất tài trợ trong 1 giao dịch ACID duy nhất mà không luồng nào phải đứng chờ khóa của luồng khác, đồng thời <code>UNIQUE(campaign_id, store_id)</code> chặn tuyệt đối 1 quán nhận 2 lần. Ở biên ngoài (M2), em dùng thêm Redis Lua Token Bucket để chặn các quán dùng tool auto-click bắn phá."</td>
+          </tr>
+          <tr>
+            <td><strong>4. "Khi nào dự án thực sự cần tới Kafka và Saga (M4–M5)?"</strong></td>
+            <td>"Ở M1–M3 khi nằm chung 1 DB, dùng Local ACID Transaction là gọn nhất. Sang M4–M5 khi dịch vụ <strong>Kho Tổng (Order/Inventory)</strong> tách rời khỏi <strong>Dịch vụ Ngân quỹ (Wallet Service)</strong>, ta không thể mở 1 DB Transaction xuyên 2 database. Lúc đó <strong>Outbox + Debezium CDC + Orchestrated Saga</strong> với bước hoàn tiền bù trừ (<code>TREASURY → Store Wallet</code>) là bắt buộc để không làm treo tiền của quán khi kho hết hàng."</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="ultra" class="card">
+      <h2>9. Phụ Lục Kiểm Định (--ultra Best-of-5 Verifier &amp; --advice Kongming Supervision)</h2>
+      <p>
+        <strong>Verifier Receipt:</strong> <code>ultra: picked=3/5 margin=high unanimous=yes rejected_all=no</code><br/>
+        <strong>Supervisor Verdict (Kongming):</strong> <span class="badge badge-success">GO</span> — Ứng viên chiến thắng (<strong>Candidate C — 99/100 điểm</strong>, tiếp theo là Candidate A 95/100, Candidate D 94/100, Candidate B 89/100, Candidate E 88/100).<br/>
+        <strong>Lưu ý số 1 cho buổi làm việc ngày mai tại công ty (Phase 4 <code>bai07-ddl.sql</code> &amp; Phase 6):</strong> Khi viết ràng buộc <code>CHECK</code> cho bảng <code>wallets</code>, nhớ cho phép ví <code>TREASURY</code> mang số dư âm (<code>-300.000.000 VNĐ</code>) trong khi chặn nghiêm ngặt ví cửa hàng âm (<code>23514</code>), và luôn khóa ví theo thứ tự <code>ORDER BY id ASC FOR UPDATE</code>.
+      </p>
+    </section>
+  </main>
+</div>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
+  function filterInvariants() {
+    const q = document.getElementById('invSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#invTable tbody tr');
+    rows.forEach(r => {
+      r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>

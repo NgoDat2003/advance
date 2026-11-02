@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bức Tranh Toàn Cảnh 4 Tầng Lưu Trữ & Bộ Nhớ Đệm (Browser -> Redis -> DB Buffer -> DB Disk)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --blue: #38bdf8;
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #c084fc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.55;
+      padding: 28px 24px 60px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 24px; margin-bottom: 6px; color: #fff; }
+    .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+    .flow-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .layer {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      position: relative;
+      display: grid;
+      grid-template-columns: 280px 1fr 290px;
+      gap: 20px;
+      align-items: center;
+    }
+    .layer-1 { border-color: var(--blue); }
+    .layer-api { border-color: var(--purple); background: #1a1635; padding: 14px 22px; }
+    .layer-2 { border-color: var(--green); }
+    .layer-3 { border-color: var(--amber); }
+    .layer-4 { border-color: var(--rose); }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+      letter-spacing: 0.4px;
+    }
+    .b-blue { background: rgba(56,189,248,0.18); color: var(--blue); }
+    .b-purple { background: rgba(192,132,252,0.18); color: var(--purple); }
+    .b-green { background: rgba(74,222,128,0.18); color: var(--green); }
+    .b-amber { background: rgba(251,191,36,0.18); color: var(--amber); }
+    .b-rose { background: rgba(251,113,133,0.18); color: var(--rose); }
+
+    .layer-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .layer-where { font-size: 13px; color: var(--muted); }
+    .layer-body ul { list-style: none; }
+    .layer-body li {
+      font-size: 14px;
+      margin-bottom: 5px;
+      padding-left: 16px;
+      position: relative;
+    }
+    .layer-body li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--blue);
+      font-weight: bold;
+    }
+    .blindspot {
+      background: rgba(15, 23, 42, 0.75);
+      border-left: 3px solid var(--rose);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .blindspot strong { color: var(--rose); display: block; margin-bottom: 3px; }
+    .arrow-row {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 2px 0;
+    }
+    .arrow-row span {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 4px 14px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+    .compare-box {
+      background: var(--card);
+      border: 2px solid var(--green);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-top: 20px;
+    }
+    .compare-box h2 {
+      font-size: 18px;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .compare-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .compare-card h3 { font-size: 15px; margin-bottom: 8px; }
+    code {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Bức Tranh Toàn Cảnh 4 Tầng Lưu Trữ & Bộ Nhớ Đệm</h1>
+  <p class="subtitle">Hành trình của 1 Request từ Điện thoại/Trình duyệt của khách &rarr; NestJS API &rarr; Redis &rarr; PostgreSQL Buffer Pool &rarr; Ổ cứng DB</p>
+
+  <div class="flow-container">
+
+    <!-- TẦNG 1 -->
+    <div class="layer layer-1">
+      <div>
+        <span class="badge b-blue">TẦNG 1 · Thiết bị người dùng</span>
+        <div class="layer-title">Browser Cache / TanStack Query</div>
+        <div class="layer-where">📍 Nằm trên: RAM của từng chiếc điện thoại / laptop khách hàng</div>
+      </div>
+      <div class="layer-body">
+        <ul>
+          <li><strong>Ai dùng được?</strong> Chỉ 1 mình máy đó dùng. Máy Quán 1 không nhìn thấy RAM của Máy Quán 2.</li>
+          <li><strong>Lưu cái gì?</strong> Kết quả JSON mà máy đó vừa tải về trong vài giây/phút trước (<code>staleTime</code>).</li>
+          <li><strong>Tốc độ:</strong> <code>0 ms</code> (Bấm qua lại giữa các tab không tốn 1 gói tin mạng nào).</li>
+        </ul>
+      </div>
+      <div class="blindspot">
+        <strong>❓ Tại sao có Tầng 1 rồi vẫn cần Redis?</strong>
+        Khi <strong>10.000 người mới</strong> cùng mở app lúc 12h trưa, RAM của cả 10.000 máy đều trống &rarr; cả 10.000 máy vẫn bắn HTTP lên Server!
+      </div>
+    </div>
+
+    <div class="arrow-row">
+      <span>⬇ Khi máy khách chưa có Cache (hoặc hết hạn) &rarr; Bắn HTTP Request qua Internet lên Backend API ⬇</span>
+    </div>
+
+    <!-- TẦNG ỨNG DỤNG -->
+    <div class="layer layer-api">
+      <div>
+        <span class="badge b-purple">Trạm Điều Phối</span>
+        <div class="layer-title">NestJS Backend API</div>
+        <div class="layer-where">📍 Nằm trên: Server Backend (Cổng 3101)</div>
+      </div>
+      <div class="layer-body">
+        <ul>
+          <li>Nhận HTTP Request từ 10.000 máy khách.</li>
+          <li><strong>Chiến lược đọc (Cache-Aside):</strong> Hỏi <strong>Tầng 2 (Redis)</strong> trước. Có thì trả về ngay (99%). Không có mới xuống <strong>Tầng 3 & 4 (PostgreSQL)</strong> lấy rồi đút ngược vào Redis cho người sau ăn sẵn.</li>
+        </ul>
+      </div>
+      <div class="blindspot" style="border-left-color: var(--purple);">
+        <strong style="color: var(--purple);">💡 Vai trò:</strong>
+        Bản thân NestJS không giữ dữ liệu (Stateless) để có thể nhân bản thành 5–10 con API chạy song song.
+      </div>
+    </div>
+
+    <div class="arrow-row">
+      <span>⬇ Bước 1: Hỏi Tầng 2 (Redis) trước (~0.1 ms) · Nếu Redis chưa có (Cache Miss) hoặc cần Ghi Tiền thì mới xuống Tầng 3 & 4 ⬇</span>
+    </div>
+
+    <!-- TẦNG 2 -->
+    <div class="layer layer-2">
+      <div>
+        <span class="badge b-green">TẦNG 2 · RAM Hệ Thống Backend</span>
+        <div class="layer-title">Redis Server (System Cache)</div>
+        <div class="layer-where">📍 Nằm trên: RAM của Server trung tâm (Cổng 6379)</div>
+      </div>
+      <div class="layer-body">
+        <ul>
+          <li><strong>Ai dùng được?</strong> <strong>Tất cả 10.000 người dùng chung!</strong> Người số 1 mở app làm ấm Redis &rarr; 9.999 người sau lấy ra ăn sẵn!</li>
+          <li><strong>Lưu cái gì?</strong> <strong>Món ăn đã nấu chín</strong> (Cục JSON thực đơn đã JOIN sẵn, Hash thông tin quán, Bộ đếm Rate Limit, Khóa phân tán).</li>
+          <li><strong>Tốc độ:</strong> <code>~0.1 ms</code> · Gánh <code>100.000+ req/s</code> chỉ bằng 1 luồng chính.</li>
+        </ul>
+      </div>
+      <div class="blindspot">
+        <strong>❓ Tại sao có Redis rồi vẫn cần PostgreSQL?</strong>
+        RAM đắt (chỉ lưu dữ liệu nóng có thời hạn TTL), và Redis không có SQL <code>JOIN</code>, <code>CHECK</code> hay sổ cái ACID vĩnh viễn như DB.
+      </div>
+    </div>
+
+    <div class="arrow-row">
+      <span>⬇ Chỉ 1% lượt đọc bị trượt Redis (Cache Miss) + các giao dịch Tiền Bạc (Chuyển ví, Nhận Voucher) mới đi xuống PostgreSQL ⬇</span>
+    </div>
+
+    <!-- TẦNG 3 -->
+    <div class="layer layer-3">
+      <div>
+        <span class="badge b-amber">TẦNG 3 · RAM Nội Bộ Của Database</span>
+        <div class="layer-title">PostgreSQL Buffer Pool (<code>shared_buffers</code>)</div>
+        <div class="layer-where">📍 Nằm trên: RAM của Server PostgreSQL (Cổng 5434)</div>
+      </div>
+      <div class="layer-body">
+        <ul>
+          <li><strong>Lưu cái gì?</strong> <strong>Nguyên liệu thô</strong> — các trang bảng và trang B-Tree Index kích thước <code>8 KB</code> hay dùng nhất (chính là <code>Buffers: shared hit</code> Đạt học ở Bài 03).</li>
+          <li><strong>Tác dụng:</strong> Giúp PostgreSQL đọc/sửa dòng ví ngay trên RAM của DB mà không phải thò đầu xuống ổ cứng đọc từng trang.</li>
+        </ul>
+      </div>
+      <div class="blindspot">
+        <strong>❓ Câu hỏi triệu đô: Tầng 3 cũng là RAM, sao vẫn cần Tầng 2 (Redis)?</strong>
+        Xem bảng so sánh "Món nấu chín vs Nguyên liệu thô" ngay bên dưới!
+      </div>
+    </div>
+
+    <div class="arrow-row">
+      <span>⬇ Đọc trang chưa có trên RAM (<code>shared read</code>) & Ghi vĩnh viễn sổ cái xuống đĩa (<code>WAL + Heap</code>) ⬇</span>
+    </div>
+
+    <!-- TẦNG 4 -->
+    <div class="layer layer-4">
+      <div>
+        <span class="badge b-rose">TẦNG 4 · Ổ Cứng Vật Lý (Kho Bạc Gốc)</span>
+        <div class="layer-title">PostgreSQL Heap + Index + WAL (SSD / NVMe)</div>
+        <div class="layer-where">📍 Nằm trên: Ổ cứng vật lý của Server Database</div>
+      </div>
+      <div class="layer-body">
+        <ul>
+          <li><strong>Vai trò tối thượng:</strong> <strong>Source of Truth (Kho bạc cuối cùng).</strong> Cúp điện cả tòa nhà thì số dư 301 ví (<code>wallets</code>) và bút toán (<code>ledger_entries</code>) vẫn còn nguyên vẹn 100%.</li>
+          <li><strong>Tốc độ:</strong> Chậm nhất trong 4 tầng &rarr; nhờ Tầng 1, 2, 3 chắn đỡ 99% lượt đọc nên Tầng 4 rảnh tay khóa <code>FOR UPDATE</code> và ghi tiền chuẩn xác!</li>
+        </ul>
+      </div>
+      <div class="blindspot" style="border-left-color: var(--green);">
+        <strong style="color: var(--green);">✅ Kết luận 1 câu:</strong>
+        Tầng 1, 2, 3 dùng RAM để tăng tốc; Tầng 4 dùng ổ cứng để giữ tiền không bao giờ mất!
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BẢNG SO SÁNH TẦNG 2 (REDIS) VS TẦNG 3 (DB BUFFER POOL) -->
+  <div class="compare-box">
+    <h2>🔥 Điểm Hay Bị Nhầm Nhất: Cùng là RAM trên Server, nhưng Tầng 2 (Redis) khác Tầng 3 (DB Buffer Pool) chỗ nào?</h2>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h3 style="color: var(--green);">🍱 Tầng 2 — Redis: "Hộp Cơm Đã Nấu Chín Sẵn"</h3>
+        <p style="font-size: 14px; color: var(--muted); margin-bottom: 8px;">
+          Khi khách hỏi <em>"Top 10 món bán chạy kèm tên quán và giá"</em>:
+        </p>
+        <p style="font-size: 14px;">
+          • Trong Redis lưu sẵn cục kết quả cuối cùng tại key <code>bestsellers:top10</code>.<br/>
+          • API chỉ gõ đúng 1 lệnh <code>GET bestsellers:top10</code> &rarr; <strong>Bốc ra trả luôn trong 1 bước (O(1)), tốn 0% CPU của Database!</strong>
+        </p>
+      </div>
+      <div class="compare-card">
+        <h3 style="color: var(--amber);">🥩 Tầng 3 — DB Buffer Pool: "Tủ Lạnh Chứa Thịt Sống, Rau Sống"</h3>
+        <p style="font-size: 14px; color: var(--muted); margin-bottom: 8px;">
+          Nếu không có Redis mà bắt PostgreSQL trả lời câu hỏi trên từ <code>Buffer Pool</code>:
+        </p>
+        <p style="font-size: 14px;">
+          • Dù các trang 8KB của bảng <code>orders</code>, <code>products</code>, <code>stores</code> đã nằm trên RAM của DB, nhưng mỗi lần khách hỏi, <strong>CPU của PostgreSQL vẫn phải đứng nấu lại từ đầu</strong>: Dịch câu SQL &rarr; Duyệt B-Tree &rarr; Kiểm tra MVCC (<code>xmin/xmax</code>) &rarr; <code>JOIN</code> 3 bảng &rarr; <code>GROUP BY</code> + <code>ORDER BY</code>!<br/>
+          • 10.000 người hỏi cùng lúc = 10.000 lần bắt đầu bếp DB nấu lại từ đầu &rarr; <strong>Cháy 100% CPU Database!</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

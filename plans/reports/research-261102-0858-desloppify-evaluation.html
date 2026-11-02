@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đánh giá desloppify</title>
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --surface-2: #f1f5f9; --border: #dbe3ef;
+    --fg: #0f172a; --muted: #52607a; --accent: #0284c7; --accent-soft: #e0f2fe;
+    --success: #059669; --success-soft: #d1fae5; --warning: #b45309; --warning-soft: #fef3c7;
+    --error: #dc2626; --error-soft: #fee2e2; --code-bg: #0f172a; --code-fg: #e2e8f0; --bar-track: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1020; --surface: #131b31; --surface-2: #19233f; --border: #2a3964;
+      --fg: #ecf2ff; --muted: #9fb0d6; --accent: #38bdf8; --accent-soft: #0c2a40;
+      --success: #34d399; --success-soft: #0b2e25; --warning: #fbbf24; --warning-soft: #3a2a08;
+      --error: #f87171; --error-soft: #3a1414; --code-bg: #080d1a; --code-fg: #dbe7ff; --bar-track: #24304f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1020; --surface: #131b31; --surface-2: #19233f; --border: #2a3964;
+    --fg: #ecf2ff; --muted: #9fb0d6; --accent: #38bdf8; --accent-soft: #0c2a40;
+    --success: #34d399; --success-soft: #0b2e25; --warning: #fbbf24; --warning-soft: #3a2a08;
+    --error: #f87171; --error-soft: #3a1414; --code-bg: #080d1a; --code-fg: #dbe7ff; --bar-track: #24304f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  header.hero { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 28px; }
+  .eyebrow { color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; margin: 6px 0 10px; }
+  h2 { font-size: 22px; margin: 44px 0 14px; padding-top: 8px; }
+  h3 { font-size: 17px; margin: 22px 0 8px; }
+  p { margin: 8px 0; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .meta a { color: var(--accent); }
+  .verdict {
+    margin-top: 18px; padding: 16px 18px; border-radius: 12px;
+    background: var(--accent-soft); border: 1px solid var(--accent);
+  }
+  .verdict strong { color: var(--accent); }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  nav.toc a {
+    font-size: 13px; text-decoration: none; color: var(--fg); background: var(--surface);
+    border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px;
+  }
+  nav.toc a:hover { border-color: var(--accent); }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .card h3 { margin-top: 0; }
+  .card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .pill.ok { background: var(--success-soft); color: var(--success); }
+  .pill.warn { background: var(--warning-soft); color: var(--warning); }
+  .pill.bad { background: var(--error-soft); color: var(--error); }
+  .pill.info { background: var(--accent-soft); color: var(--accent); }
+  ul, ol { padding-left: 22px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  code { font-family: "Cascadia Code", Consolas, "SFMono-Regular", monospace; font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  pre {
+    background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 10px;
+    overflow-x: auto; font-size: 13.5px; line-height: 1.55; margin: 10px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  pre .c { color: #7f93bd; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; margin: 10px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; background: var(--surface); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  /* pipeline */
+  .pipeline { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 12px 0; }
+  .step { flex: 1 1 130px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .step b { display: block; color: var(--accent); font-family: Consolas, monospace; }
+  .step span { font-size: 13px; color: var(--muted); }
+  .arrow { align-self: center; color: var(--muted); font-size: 18px; }
+  /* score bars */
+  .bars { display: grid; gap: 8px; margin-top: 8px; }
+  .bar { display: grid; grid-template-columns: 110px 1fr 52px; gap: 10px; align-items: center; font-size: 14px; }
+  .track { height: 10px; background: var(--bar-track); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; background: var(--success); }
+  .fill.mid { background: var(--warning); }
+  .fill.low { background: var(--error); }
+  .scoreline { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 8px 0 4px; font-size: 14px; }
+  .scoreline b { font-size: 20px; }
+  .callout { border-left: 4px solid var(--warning); background: var(--warning-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; margin: 12px 0; }
+  .callout.bad { border-color: var(--error); background: var(--error-soft); }
+  .callout.ok { border-color: var(--success); background: var(--success-soft); }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding: 12px 14px 12px 52px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 10px 0; }
+  .steps li::before { content: counter(s); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--bg); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .time { font-size: 12px; font-weight: 600; color: var(--accent); margin-left: 6px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); padding-top: 16px; }
+  a { color: var(--accent); }
+  @media (max-width: 560px) { .bar { grid-template-columns: 90px 1fr 46px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Báo cáo nghiên cứu · đã chạy thử thật</div>
+  <h1>desloppify: dùng để làm gì, có cần setup không, mạnh tới đâu</h1>
+  <p class="meta">
+    2026-11-02, 08:49–09:15 (Asia/Bangkok) · Repo <a href="https://github.com/peteromallet/desloppify">peteromallet/desloppify</a>, nhánh <code>main</code>, PyPI <code>desloppify==1.0</code> · Thử trên Windows 10, Python 3.13.7
+  </p>
+  <div class="verdict">
+    <strong>Kết luận:</strong> desloppify không bắt buộc với Đạt và chưa nên đưa vào workflow chính.
+    Đáng dùng nhất là <b>scan cơ học</b>: miễn phí, chạy trong vài giây, hợp làm checklist sức khỏe định kỳ cho
+    <code>omnipos-finledger-hub</code>. <b>Không</b> nên bật chế độ autopilot "fix loop", vì nó trái với cách học tự làm và dễ đốt token.
+  </div>
+  <nav class="toc" aria-label="Mục lục">
+    <a href="#tom-tat">Tóm tắt</a><a href="#repo">Repo</a><a href="#cach-hoat-dong">Cách hoạt động</a>
+    <a href="#setup">Setup</a><a href="#ket-qua">Kết quả đo</a><a href="#danh-gia">Mạnh / yếu / rủi ro</a>
+    <a href="#khuyen-nghi">Khuyến nghị</a><a href="#nguon">Nguồn</a><a href="#cau-hoi">Câu hỏi mở</a>
+  </nav>
+</header>
+
+<section id="tom-tat">
+  <h2>Tóm tắt trong 4 ý</h2>
+  <div class="grid g2">
+    <div class="card">
+      <div class="k">Nó là gì</div>
+      <p>Một CLI Python chạy local, đóng vai "khung điều khiển" (harness) cho AI coding agent như Claude Code, Codex hay Cursor.
+      Công cụ quét code tìm lỗi cơ học, nhờ chính agent của bạn chấm điểm chủ quan về thiết kế, rồi đưa agent vào vòng lặp
+      <code>next → sửa → resolve → next</code> cho đến khi đạt điểm mục tiêu. Nó không phải SaaS và không có web dashboard.</p>
+    </div>
+    <div class="card">
+      <div class="k">Giải quyết gì</div>
+      <p>Code "vibe coding" do AI viết chạy được nhưng mục dần: file khổng lồ, abstraction lệch, mỗi chỗ xử lý lỗi một kiểu.
+      desloppify biến chất lượng thành một con số 0–100 có cơ chế chống gian lận và lưu state qua nhiều phiên, để agent cày dần.</p>
+    </div>
+    <div class="card">
+      <div class="k">Có cần setup?</div>
+      <p><span class="pill warn">Có</span> Cần Python ≥ 3.11, chạy <code>pip install "desloppify[full]"</code>, chạy trong repo,
+      rồi nạp skill vào agent. Công cụ không tự gọi API LLM: phần review chủ quan chạy bằng agent hoặc subagent của bạn, tức là
+      <b>tốn token của bạn</b>.</p>
+    </div>
+    <div class="card">
+      <div class="k">Sức mạnh đã đo</div>
+      <ul>
+        <li>Scan nhanh: <b>5 giây</b> cho 4.7k dòng Python, <b>9 giây</b> cho 65 file TS.</li>
+        <li>Độ chính xác cơ học khoảng <b>65–78%</b>.</li>
+        <li><b>Bỏ sót 37 lỗi escape thật</b> trong script Python.</li>
+        <li>Có bug: detector security bỏ qua exclude, sinh 2575 issue rác.</li>
+        <li>Phần review chủ quan (75% điểm) cần khoảng <b>20 subagent cho mỗi vòng</b>; mình chưa chạy.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="repo">
+  <h2>1. Repo và độ trưởng thành</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Mục</th><th>Giá trị (2026-11-02)</th></tr>
+    <tr><td>Stars / forks</td><td class="num">3,746 / 297, đang tăng hàng chục star mỗi ngày</td></tr>
+    <tr><td>Ngày tạo</td><td>2026-02-11, khoảng 9 tháng tuổi</td></tr>
+    <tr><td>Bản phát hành</td><td>v1.0 (2026-05-13), trùng PyPI <code>1.0</code></td></tr>
+    <tr><td>Commit cuối trên <code>main</code></td><td><span class="pill warn">2026-05-13</span> Từ đó tới nay không có commit nào vào main</td></tr>
+    <tr><td>Nhánh treo</td><td><code>1.0.1</code> (3 commit docs/version, chưa release); <code>chore/apache-2-license-20261027</code> (đổi sang Apache-2.0, chưa merge)</td></tr>
+    <tr><td>Người đóng góp</td><td><code>peteromallet</code> 874 commit; người thứ hai chỉ 17. Gần như một người duy trì, nên bus factor thấp</td></tr>
+    <tr><td>Issue/PR mới</td><td>Rất nhiều issue và PR mở trong khoảng 29/10–01/11, hầu hết 0 comment và chưa merge</td></tr>
+    <tr><td>Ngôn ngữ</td><td>29 ngôn ngữ. Hỗ trợ sâu cho TypeScript, Python, C#, C++, Dart, GDScript, Go, Rust</td></tr>
+    <tr><td>License (main)</td><td>OSNL v0.2: <b>miễn phí cho cá nhân và dùng nội bộ</b>, kể cả trong công ty thương mại. Chỉ tính phí khi nhúng vào sản phẩm bán ra, công ty không open source và có từ $1M funding/doanh thu trở lên</td></tr>
+  </table></div>
+  <p>Repo nổi nhanh nhưng còn non: main đứng yên gần 6 tháng trong khi backlog bug tăng nhanh. Nên coi đây là công cụ beta, dù số phiên bản đã là 1.0.</p>
+</section>
+
+<section id="cach-hoat-dong">
+  <h2>2. Cách hoạt động</h2>
+  <div class="pipeline" role="list" aria-label="Vòng lặp desloppify">
+    <div class="step" role="listitem"><b>scan</b><span>Khoảng 17 detector cơ học</span></div><div class="arrow">→</div>
+    <div class="step" role="listitem"><b>score</b><span>25% cơ học + 75% chủ quan</span></div><div class="arrow">→</div>
+    <div class="step" role="listitem"><b>review</b><span>20 subagent LLM chấm 20 chiều</span></div><div class="arrow">→</div>
+    <div class="step" role="listitem"><b>triage</b><span>observe → reflect → organize → enrich</span></div><div class="arrow">→</div>
+    <div class="step" role="listitem"><b>execute</b><span>next → sửa → resolve</span></div><div class="arrow">→</div>
+    <div class="step" role="listitem"><b>rescan</b><span>Xác minh rồi lặp lại</span></div>
+  </div>
+  <p class="meta">State lưu trong <code>.desloppify/</code> (state, plan, query), nên tiến độ được giữ qua nhiều phiên làm việc.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Hai nhóm điểm</h3>
+      <ul>
+        <li><b>Cơ học (25%):</b> File health, Code quality, Duplication, Test health, Security. Mỗi chiều tính bằng <code>(potential − failures) / potential</code>; chiều nào có dưới 200 lượt kiểm tra thì bị giảm trọng số.</li>
+        <li><b>Chủ quan (75%):</b> khoảng 20 chiều như High/Mid/Low elegance, Contracts, Type safety, Design coherence… LLM chấm trên một "blind packet", tức gói dữ liệu không chứa điểm cũ để reviewer không bị neo vào kết quả trước.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Bốn loại điểm và chống gian lận</h3>
+      <ul>
+        <li><code>overall</code>: điểm tổng, bản dễ dãi.</li>
+        <li><code>strict</code>: tính cả các issue bị đánh <code>wontfix</code> là nợ. Đây là "north star".</li>
+        <li><code>objective</code>: chỉ tính phần cơ học. <code>verified</code>: chỉ cộng điểm cho fix đã được scan xác minh.</li>
+        <li>Chống gian lận: resolve phải kèm attestation, review lại có thể làm điểm giảm, điểm khớp đúng target thì bị reset.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="setup">
+  <h2>3. Setup: cần gì, tốn gì</h2>
+  <p>Bắt buộc có Python ≥ 3.11 và <code>pip install "desloppify[full]"</code>. Gói <code>[full]</code> kéo theo tree-sitter, bandit, Pillow, PyYAML và defusedxml; venv thử nghiệm nặng <b>68 MB</b>. Lệnh <code>desloppify update-skill claude</code> (hoặc <code>setup</code> để cài global) ghi skill/workflow guide vào cấu hình agent.</p>
+  <h3>Công thức chạy an toàn trên Windows (PowerShell 5.1)</h3>
+<pre><code><span class="c"># 1. Dùng lại venv đã cài và đã kiểm chứng (nằm ngoài path sẽ scan, vì detector security bỏ qua exclude)
+#    Đưa Scripts lên đầu PATH để bandit được thấy, không cần Activate.ps1 (tránh lỗi execution policy)</span>
+$env:PATH = "D:\học\advance-be\labs\desloppify-trial\py-env\Scripts;$env:PATH"
+$env:PYTHONUTF8 = "1"; $env:PYTHONIOENCODING = "utf-8"
+
+<span class="c"># 2. Chạy trong repo; mỗi --path là MỘT project mạch lạc</span>
+cd D:\học\advance-be\omnipos-finledger-hub
+Add-Content .gitignore ".desloppify/"   <span class="c"># đừng dùng echo &gt;&gt; : PowerShell 5.1 ghi UTF-16, git không đọc được</span>
+desloppify --lang typescript scan --path apps/api --no-badge
+desloppify status            <span class="c"># dashboard</span>
+desloppify show smells       <span class="c"># xem chi tiết theo detector</span></code></pre>
+  <div class="callout">Chưa kiểm chứng: lần thử chỉ chạy trên bản copy không có <code>node_modules</code> và <code>tsc</code>. Chạy trên hub thật (đã <code>npm install</code>) có thể ra số khác.</div>
+  <div class="callout bad"><b>Chi phí thật nằm ở review chủ quan.</b>
+    <ul>
+      <li><code>review --run-batches --dry-run</code> sinh ra <b>20 file prompt</b> (tổng khoảng 152 KB), mỗi chiều cần một subagent.</li>
+      <li>Mỗi subagent còn tự đọc code. Ước lượng thô cho codebase cỡ 5k dòng là vài trăm nghìn đến khoảng 1 triệu token mỗi vòng; con số này <b>chưa đo</b>.</li>
+      <li>Nếu bỏ qua review, <code>overall</code>/<code>strict</code> bị kẹt ở mức ≤ 25.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="ket-qua">
+  <h2>4. Kết quả chạy thử thực tế</h2>
+  <p class="meta">Sandbox nằm ở <code>labs/desloppify-trial/</code> (gitignore riêng bằng <code>*</code>): venv, log, bản copy code và state.</p>
+
+  <h3>4.1 Lần 1: scan root advance-be <span class="pill bad">thất bại, nhưng lộ bug</span></h3>
+  <ul>
+    <li>Dù đã có <code>--exclude labs</code>, detector security vẫn quét <b>2178 file</b>, gồm cả <code>labs/desloppify-trial/py-env/Lib/site-packages/…</code>, và sinh <b>2575 issue rác</b>. Ví dụ là các mã bandit B108/B319 nằm ngay trong code của chính desloppify.</li>
+    <li>Thử lại bằng exclude lưu bền (<code>desloppify exclude labs</code>, config xác nhận đã lưu) vẫn ra <b>2575 issue / 2184 file</b>. Vậy lỗi không phụ thuộc cách khai báo exclude.</li>
+    <li>Output còn báo "bandit is not installed" dù kết quả có mã bandit. Lý do là venv chưa được activate nên preflight không thấy bandit trên PATH.</li>
+    <li>Hệ quả: potential bị thổi phồng nên điểm objective là <b>63.3</b>, <b>cao hơn</b> lần chạy sạch (43.2). Scope sai làm điểm sai theo cả hai chiều. Bug này trùng nhóm với issue mở <a href="https://github.com/peteromallet/desloppify/issues/916">#916</a>.</li>
+  </ul>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>4.2 Python: 6 script root (bản copy, 4,688 LOC)</h3>
+      <div class="scoreline"><span>overall <b>10.8</b></span><span>objective <b>43.2</b></span><span>strict <b>10.8</b></span><span>5 giây</span></div>
+      <p class="meta">43 issue = 23 cơ học + 20 placeholder chủ quan (chưa review)</p>
+      <div class="bars">
+        <div class="bar"><span>File health</span><div class="track"><div class="fill low" style="width:41.7%"></div></div><span class="num">41.7</span></div>
+        <div class="bar"><span>Code quality</span><div class="track"><div class="fill mid" style="width:84.8%"></div></div><span class="num">84.8</span></div>
+        <div class="bar"><span>Duplication</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">100</span></div>
+        <div class="bar"><span>Security</span><div class="track"><div class="fill" style="width:94.2%"></div></div><span class="num">94.2</span></div>
+        <div class="bar"><span>Test health</span><div class="track"><div class="fill low" style="width:0%"></div></div><span class="num">0</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>4.3 TypeScript: hub <code>apps/api</code> (NestJS, bản copy, 65 file)</h3>
+      <div class="scoreline"><span>overall <b>18.9</b></span><span>objective <b>75.8</b></span><span>9 giây</span></div>
+      <p class="meta">75 issue = 55 cơ học (42 test coverage, 9 smells, 2 single-use, 1 orphaned, 1 security) + 20 placeholder chủ quan</p>
+      <div class="bars">
+        <div class="bar"><span>File health</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">100</span></div>
+        <div class="bar"><span>Code quality</span><div class="track"><div class="fill" style="width:98.5%"></div></div><span class="num">98.5</span></div>
+        <div class="bar"><span>Duplication</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">100</span></div>
+        <div class="bar"><span>Security</span><div class="track"><div class="fill" style="width:99.8%"></div></div><span class="num">99.8</span></div>
+        <div class="bar"><span>Test health</span><div class="track"><div class="fill low" style="width:22.5%"></div></div><span class="num">22.5</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Đối chiếu tay 23 finding cơ học Python với source</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Phân loại</th><th>Số</th><th>Ví dụ</th></tr>
+    <tr><td><span class="pill ok">Đúng, hữu ích</span></td><td class="num">~15</td><td><code>build_reports.py</code> 1470 LOC; monster function trên 150 LOC tại <code>build_reports.py:681</code> và <code>generate_master_curriculum_reports.py:11</code>; complexity 849; 4 hàm cyclomatic trên 12 trong <code>convert_pdf_to_md.py</code>; không có test</td></tr>
+    <tr><td><span class="pill bad">Sai</span></td><td class="num">4</td><td><code>sys.exit</code> tại <code>convert_pdf_to_md.py:338</code> bị báo "ngoài CLI entry point" dù nằm trong <code>if __name__ == "__main__"</code>. "Insecure random" tại <code>generate_master_curriculum_reports.py:59</code> thực chất là <b>một đoạn chữ</b> nói về TTL jitter. 2 file có guard <code>__main__</code> vẫn bị báo "orphaned"</td></tr>
+    <tr><td><span class="pill warn">Tranh cãi được</span></td><td class="num">3</td><td><code>generate_html_roadmap.py</code>, <code>generate_md_report.py</code> và <code>update_calendar_roadmap.py</code> bị báo orphaned. Chúng là script chạy một lần, không có guard và không được tài liệu nào nhắc tới. Còn dùng thì đây là false positive, đã bỏ thì tool đúng</td></tr>
+    <tr><td><span class="pill info">Đáng ngờ</span></td><td class="num">1</td><td>ReDoS trên <code>DOMAIN_RE</code>: nested quantifier được phân tách bởi <code>\.</code>, nên rủi ro thấp</td></tr>
+  </table></div>
+  <p><b>Precision ≈ 65–78%</b>, tùy 3 script kia còn dùng hay không.</p>
+
+  <div class="callout bad">
+    <b>Bỏ sót 37 lỗi escape thật.</b> Mình viết thêm <code>labs/desloppify-trial/check-silent-escapes.py</code>, đọc AST và kiểm tra giá trị string sau khi Python decode. Kết quả:
+    <ul>
+      <li><b>4 escape không hợp lệ</b> (<code>\w</code>, <code>\l</code>, <code>\d</code>): Python có in <code>SyntaxWarning</code> nhưng vẫn giữ dấu <code>\</code>. Vị trí: <code>generate_html_roadmap.py:891</code>, <code>generate_master_curriculum_reports.py:40</code> và <code>:385</code>, <code>generate_md_report.py:206</code>.</li>
+      <li><b>33 escape hợp lệ bị decode âm thầm</b>, đã làm hỏng nội dung xuất ra ngay bây giờ:
+        <ul>
+          <li><code>$\rightarrow$</code> thành ký tự CR cộng "ightarrow" (khoảng 25 chỗ, đa số trong <code>generate_master_curriculum_reports.py</code>).</li>
+          <li><code>$\times$</code> thành TAB cộng "imes" (dòng 385, 386, 388).</li>
+          <li><code>$\approx$</code> thành ký tự BEL cộng "pprox" (dòng 541).</li>
+          <li>Đường dẫn <code>D:\học\advance-be</code> tại <code>generate_md_report.py:7</code> chứa <code>\a</code>, thành ký tự BEL.</li>
+        </ul>
+      </li>
+    </ul>
+    desloppify không ghi nhận cái nào. Với 4 escape không hợp lệ, cảnh báo của Python chỉ trôi qua như stderr rác trong log scan; với 33 chỗ decode âm thầm thì không có gì báo cả.
+  </div>
+
+  <h3>Nhận xét riêng cho hub TS</h3>
+  <ul>
+    <li>Code sạch <b>theo các detector đã thực sự chạy</b>. Finding chủ yếu ở mức thấp.</li>
+    <li><span class="pill ok">Có ích</span> Chuỗi <code>http://localhost:3100</code> lặp ở 3 chỗ: <code>env.schema.ts:20</code> đã có default, nhưng <code>main.ts:43</code> và <code>origin-check.guard.ts:28</code> lại thêm fallback <code>??</code> thừa. Tool gắn nhãn là "hardcoded URL", nhưng giá trị thật là gợi ý gom về một chỗ (DRY).</li>
+    <li><span class="pill bad">Nhiễu</span> <code>prisma.config.ts</code> bị báo orphaned, dù đây là config do Prisma CLI đọc. Filter/interceptor global bị báo "single-use", dù đăng ký trong <code>main.ts</code> là cách làm chuẩn của NestJS.</li>
+    <li><span class="pill warn">Bug nhãn</span> Log ghi "274 production files" trong khi zone thực tế chỉ có 56. Trùng với issue <a href="https://github.com/peteromallet/desloppify/issues/921">#921</a> và <a href="https://github.com/peteromallet/desloppify/issues/936">#936</a>.</li>
+    <li><span class="pill warn">Lỗ hổng âm thầm</span> Máy không có <code>tsc</code> và bản copy không có <code>node_modules</code>, vậy mà bước "Unused (tsc)" vẫn báo 0 instances, không cảnh báo gì (Python thì có cảnh báo khi thiếu bandit).</li>
+  </ul>
+
+  <h3>Mâu thuẫn ngay trong tài liệu của dự án</h3>
+  <ol>
+    <li><code>docs/scoring.md</code> viết "chưa review thì điểm 100% cơ học". CLI thực tế lại tính phần chủ quan bằng 0, nên <code>overall = 0.25 × objective</code> (43.2 × 0.25 = 10.8 và 75.8 × 0.25 ≈ 18.9, đúng với số đo).</li>
+    <li><code>docs/CLAUDE.md</code> dặn gom thành 3–4 batch theo chủ đề. CLI lại nói "do NOT regroup, launch 20 subagents in parallel". Còn <code>docs/SKILL.md</code> khuyên chạy 3–5 subagent mỗi đợt vì 20+ có thể cạn quota.</li>
+  </ol>
+</section>
+
+<section id="danh-gia">
+  <h2>5. Điểm mạnh, điểm yếu, rủi ro</h2>
+  <div class="grid g3">
+    <div class="card">
+      <h3><span class="pill ok">Mạnh</span></h3>
+      <ul>
+        <li>Ý tưởng đúng: một con số có chống gian lận, state lưu qua nhiều phiên.</li>
+        <li>Scan cơ học nhanh, đa ngôn ngữ, có chế độ CI (<code>--profile ci</code>, <code>status --json</code>).</li>
+        <li>Review thiết kế cẩn thận: blind packet, persona luân phiên, attestation.</li>
+        <li>Miễn phí cho cá nhân và dùng nội bộ.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="pill warn">Yếu</span></h3>
+      <ul>
+        <li>Precision 65–78%, nên agent mất công "sửa" cả false positive, thậm chí có thể xóa script đang dùng. Trong khi đó lại bỏ sót 37 lỗi escape thật.</li>
+        <li>75% điểm phụ thuộc vào LLM review: tốn token và không tái lập được tuyệt đối.</li>
+        <li>Main đứng yên từ tháng 5, một người duy trì.</li>
+        <li>Bug gặp trên Windows: exclude bị bỏ qua, preflight bandit sai, nhãn đếm sai. Ngoài ra có issue riêng cho Windows: <a href="https://github.com/peteromallet/desloppify/issues/909">#909</a>, <a href="https://github.com/peteromallet/desloppify/issues/917">#917</a>, <a href="https://github.com/peteromallet/desloppify/issues/918">#918</a>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="pill bad">Rủi ro</span></h3>
+      <ul>
+        <li>Output chứa khối <code>INSTRUCTIONS FOR LLM</code> và hộp "No need to reply, just continue", được thiết kế để lái agent chạy liên tục. Ở chế độ bypass permissions, agent có thể đốt token rất lâu.</li>
+        <li><code>docs/SKILL.md</code> mục 4 dặn agent: khi thấy tool sai thì clone repo upstream, sửa, push và <b>mở PR/issue công khai</b>. Repro có thể chứa code hoặc đường dẫn của bạn.</li>
+        <li><code>setup</code> ghi skill vào cấu hình agent ở mức global.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="meta">Nhiều issue gần đây có đúng template "Problem / Fix / Minimal reproduction", khớp với hành vi tự mở issue ở trên, nhưng chưa chứng minh được là do agent viết. Chưa tìm thấy đánh giá độc lập nào trên HN, Reddit hay X: mọi tuyên bố kiểu "trên 98 điểm là code đẹp" mới chỉ là tuyên bố của tác giả.</p>
+</section>
+
+<section id="khuyen-nghi">
+  <h2>6. Khuyến nghị và bước tiếp theo</h2>
+  <div class="callout ok">Không cần setup để học tiếp lộ trình advance-be. Nếu muốn khai thác, chỉ lấy phần <b>scan cơ học làm checklist</b>, tự đọc kết quả và tự quyết sửa gì. Cách này hợp với nguyên tắc "Đạt tự làm, AI phản biện".</div>
+  <ol class="steps">
+    <li><b>Sửa 37 lỗi escape</b><span class="time">[15 phút]</span><br>
+      Literal nào không cố ý dùng <code>\n</code> thì thêm tiền tố <code>r"..."</code>; literal có <code>\n</code> cố ý thì nhân đôi <code>\\</code> ở các chỗ còn lại.
+      Sửa xong chạy lại <code>py -3.13 -I labs/desloppify-trial/check-silent-escapes.py &lt;6 file&gt;</code> để kiểm tra output rỗng.</li>
+    <li><b>Gom <code>http://localhost:3100</code></b><span class="time">[10 phút]</span><br>
+      Dùng <code>env.schema.ts</code> làm nguồn duy nhất và bỏ 2 fallback <code>??</code> thừa trong hub.</li>
+    <li><b>Scan hub thật</b><span class="time">[15 phút, tùy chọn]</span><br>
+      Chạy trên hub đã <code>npm install</code> theo công thức ở mục 3 để có số liệu <code>tsc</code> và dead export chính xác.</li>
+    <li><b>Thử review chủ quan cho 1–3 chiều</b><span class="time">[chỉ khi chấp nhận tốn token]</span><br>
+      Dùng <code>review --prepare --dimensions high_level_elegance,…</code> với ít subagent, xem nhận xét có đáng tiền không. Chưa nên chạy đủ 20 chiều.</li>
+    <li><b>Không làm</b><br>
+      Không chạy <code>desloppify setup</code> ở mức global, và không để agent tự chạy <code>next</code>/<code>resolve</code> vô hạn ở chế độ bypass permissions.</li>
+  </ol>
+  <p class="meta">Dọn dẹp: muốn bỏ hẳn thì xóa <code>labs/desloppify-trial/</code> (đã gitignore). Bản pack repomix nằm ở <code>plans/reports/desloppify-pack/desloppify-scoped-pack.md</code>: 29 file trên nhánh main, 28,159 token, security check sạch.</p>
+</section>
+
+<section id="nguon">
+  <h2>7. Nguồn</h2>
+  <ul>
+    <li>Repo: <a href="https://github.com/peteromallet/desloppify">github.com/peteromallet/desloppify</a> (README, <code>docs/scoring.md</code>, <code>docs/SKILL.md</code>, <code>docs/CLAUDE.md</code>, LICENSE)</li>
+    <li>Issue: <a href="https://github.com/peteromallet/desloppify/issues/909">#909</a>, <a href="https://github.com/peteromallet/desloppify/issues/916">#916</a>, <a href="https://github.com/peteromallet/desloppify/issues/917">#917</a>, <a href="https://github.com/peteromallet/desloppify/issues/918">#918</a>, <a href="https://github.com/peteromallet/desloppify/issues/921">#921</a>, <a href="https://github.com/peteromallet/desloppify/issues/931">#931</a>, <a href="https://github.com/peteromallet/desloppify/issues/936">#936</a></li>
+    <li><a href="https://pypi.org/project/desloppify/">PyPI</a> · <a href="https://desloppify.it/">Trang chủ</a> · <a href="https://deepwiki.com/peteromallet/desloppify">DeepWiki</a> · <a href="https://libraries.io/pypi/desloppify">Libraries.io</a></li>
+    <li>Bài quảng bá, không độc lập: <a href="https://prompts.brightcoding.dev/blog/stop-letting-ai-agents-write-slop-use-desloppify-instead">brightcoding.dev</a></li>
+    <li>Log đo đạc local: <code>labs/desloppify-trial/scan-python.log</code>, <code>scan-python-clean.log</code>, <code>scan-ts-api.log</code>, <code>status.json</code></li>
+  </ul>
+</section>
+
+<section id="cau-hoi">
+  <h2>8. Câu hỏi chưa giải quyết</h2>
+  <ol>
+    <li>Chất lượng của review chủ quan (75% điểm) chưa được kiểm chứng vì chưa chạy vòng subagent nào. Chưa biết nó có bắt được vấn đề lớn nhất của các script Python không (dữ liệu nội dung hardcode hàng trăm dòng trong code).</li>
+    <li>Chi phí token thực tế cho một vòng review mới chỉ là ước lượng, chưa đo.</li>
+    <li>Bug exclude của security chỉ xảy ra trên Windows hay ở mọi nền tảng? Cả cờ <code>--exclude</code> lẫn config đều bị bỏ qua, nhưng chưa có máy Linux/macOS để so sánh.</li>
+    <li>Nhánh Apache-2.0 có được merge không? Nếu có thì vấn đề license gần như biến mất.</li>
+    <li>Main đứng yên từ 2026-05-13: tác giả đang phát triển ở nơi khác, hay dự án đang chậm lại?</li>
+  </ol>
+</section>
+
+<footer>Nguồn markdown cùng nội dung: <code>plans/reports/research-261102-0858-desloppify-evaluation.md</code> · Đo trên desloppify 1.0, Windows 10, Python 3.13.7.</footer>
+</div>
+</body>
+</html>

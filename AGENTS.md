@@ -7,6 +7,9 @@
   - File PDF gốc nằm tại: `Tài Liệu/*.pdf`
   - File Markdown tương ứng sinh ra nằm trực tiếp tại: `Tài Liệu/*.md` (cùng thư mục với file gốc để tiện tra cứu).
 
+- **Cross-Repository Link (`omnipos-finledger-hub`)**:
+  - Repo dự án thực chiến `omnipos-finledger-hub` nằm song song cùng cấp tại `../omnipos-finledger-hub` (`D:/học/omnipos-finledger-hub`, liên kết Directory Junction 2 chiều với `omnipos-finledger-hub/`) để mở trực tiếp trên VS Code / Cursor xem Git diff, đổi nhánh và quản lý Source Control độc lập.
+  - Có thể mở đồng thời cả 2 repo bằng file Multi-Root Workspace `advance-be-omnipos.code-workspace`.
 ## Core Learning Mindset & Apprenticeship Rules (BẮT BUỘC KHI KÈM HỌC ĐẠT)
 
 1. **Anti Over-Engineering (Cấm làm phức tạp hóa):**

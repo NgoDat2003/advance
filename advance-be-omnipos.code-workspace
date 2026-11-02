@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "1. Advance-BE (Giáo trình & Labs)",
+      "path": "."
+    },
+    {
+      "name": "2. OmniPOS & FinLedger Hub (Repo Dự án Thực chiến)",
+      "path": "../omnipos-finledger-hub"
+    }
+  ],
+  "settings": {
+    "git.autoRepositoryDetection": true
+  }
+}

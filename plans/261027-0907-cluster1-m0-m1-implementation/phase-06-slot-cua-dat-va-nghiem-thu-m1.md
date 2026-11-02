@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Slot của Đạt + nghiệm thu M1, tag m1, public 01/11"
-status: pending
+status: completed
 priority: P1
 effort: "Đạt ~3h · executor 1h"
 dependencies: [5]
@@ -125,11 +125,11 @@ command -v gitleaks && gitleaks detect --source . --log-opts="--all"            
 - Verify: `gh repo view NgoDat2003/omnipos-finledger-hub --json visibility -q .visibility` → `PUBLIC`. Quét bước 2 lệch → STOP, không public, Failure Protocol.
 
 ## Success Criteria
-- [ ] `m1-before-*` (naive, DB sạch) và `m1-after-*` là 2 file riêng; README có cả 2
-- [ ] Rút quá 5×201 / 25×409, C = 0, 0 dòng `SQLSTATE=23514`; Chuyển chéo 30×201, 0 `40P01`
-- [ ] Voucher 10×201 / 20×409 `SOLD_OUT`; campaign 2: 201 rồi 409 `ALREADY_CLAIMED`
-- [ ] Đối soát 0 sau mọi test; `pg_locks` ≥ 1 dòng chưa granted; timeout về 5000
-- [ ] Phiếu rà 8/8; tag `m1` trên remote; public chỉ khi Đạt nói `đồng ý public`
+- [x] `m1-before-*` (naive, DB sạch) và `m1-after-*` là 2 file riêng; README có cả 2
+- [x] Rút quá 5×201 / 25×409, C = 0, 0 dòng `SQLSTATE=23514`; Chuyển chéo 30×201, 0 `40P01`
+- [x] Voucher 10×201 / 20×409 `SOLD_OUT`; campaign 2: 201 rồi 409 `ALREADY_CLAIMED`
+- [x] Đối soát 0 sau mọi test; `pg_locks` ≥ 1 dòng chưa granted; timeout về 5000
+- [x] Phiếu rà 8/8; tag `m1` trên remote; public chỉ khi Đạt nói `đồng ý public`
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

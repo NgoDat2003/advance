@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Tích hợp M1 sau DDL: Prisma, seed ví, API đọc, naive, khung transaction, checks/m1 (UI tùy chọn)"
-status: pending
+status: completed
 priority: P1
 effort: "4h"
 dependencies: [4]
@@ -198,10 +198,10 @@ git grep --cached -c 'TODO(Đạt)' -- apps/api/src/modules/wallets/wallets.serv
 - Verify: `cd apps/web && pnpm exec tsc --noEmit` → exit 0; `pnpm --filter web dev` nền → `http://127.0.0.1:3100/wallets`, `/vouchers` → `200` (≤ 180 s); `kill_port 3100 && port_free 3100`; G1–G5; `git commit -m "feat: add wallet and voucher demo pages"` và `git push`.
 
 ## Success Criteria
-- [ ] `Already in sync`; 4 chiều (CHECK, index, FK, cột) hub = Đạt
-- [ ] 301 ví, tổng số dư 0, đối soát 0 trước naive
-- [ ] `locked`/claim → 501 `TODO(Đạt)`; 404 đúng mã; naive > 5×201 và đối soát ≥ 1
-- [ ] Không SQL khóa ngoài dòng `TODO(Đạt)`; không node trên 3100/3101
+- [x] `Already in sync`; 4 chiều (CHECK, index, FK, cột) hub = Đạt
+- [x] 301 ví, tổng số dư 0, đối soát 0 trước naive
+- [x] `locked`/claim → 501 `TODO(Đạt)`; 404 đúng mã; naive > 5×201 và đối soát ≥ 1
+- [x] Không SQL khóa ngoài dòng `TODO(Đạt)`; không node trên 3100/3101
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

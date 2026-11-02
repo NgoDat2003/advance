@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Gate Bài 07 — DDL ví, sổ cái, voucher của Đạt"
-status: pending
+status: completed
 priority: P1
 effort: "Đạt ~2h · executor 30m"
 dependencies: [3]
@@ -102,10 +102,10 @@ grep -cxE 'wallets|ledger_entries|voucher_campaigns|voucher_slots' "$OUT/public-
 - Lệch 3 dòng đầu: KHÔNG sửa file của Đạt. Gửi Đạt `OUT/bai07-replay.txt` và chờ. Lệch 3 dòng cuối (hub bị bẩn) → Failure Protocol.
 
 ## Success Criteria
-- [ ] Đề không lộ cột/ràng buộc; không có Q về partition (để Cụm 6)
-- [ ] File của Đạt qua tiền kiểm (không transaction, không schema, không BOM)
-- [ ] Replay: đúng 1 lỗi `23514`, đúng 1 lỗi `23505`, 0 lỗi khác; `public` không đổi
-- [ ] Xong trước 31/10 12:00, hoặc Đạt đã chọn dời/giảm phạm vi
+- [x] Đề không lộ cột/ràng buộc; không có Q về partition (để Cụm 6)
+- [x] File của Đạt qua tiền kiểm (không transaction, không schema, không BOM)
+- [x] Replay: đúng 1 lỗi `23514`, đúng 1 lỗi `23505`, 0 lỗi khác; `public` không đổi
+- [x] Xong trước 31/10 12:00, hoặc Đạt đã chọn dời/giảm phạm vi
 
 ## Risk
 | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

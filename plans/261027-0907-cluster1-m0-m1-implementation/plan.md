@@ -1,7 +1,7 @@
 ---
 title: "Cụm 1: khung hub M0 + sổ cái kép & Flash-Voucher M1"
 description: "Dựng repo omnipos-finledger-hub trên cổng riêng (Nest 12, Next 16, Prisma 7.9), rồi M1 ví sổ cái kép + voucher SKIP LOCKED với dòng chịu lực do Đạt gõ."
-status: pending
+status: completed
 priority: P1
 effort: "17.5h (executor ~11.5h, Đạt ~6h)"
 branch: main
@@ -58,18 +58,18 @@ Executor dừng hẳn ở phase 4 cho tới khi `docs/design/bai07-ddl.sql` qua 
 | T7 31/10 → CN 01/11 | Phase 6; 01/11 là ngày đệm + public | Đạt, AI hỗ trợ |
 
 ## Success Criteria
-- [ ] Không đụng thứ khác: G5 không in gì (container của Đạt còn đủ, không bị restart); advance-be `git status` có 0 dòng hub; không file output nào trong advance-be
-- [ ] Cổng sạch: `git grep -nwE '3000|3001|5433|6379'` trong hub = 0; API, web bind `127.0.0.1`
-- [ ] Bí mật: env trong git chỉ là `*.example` (NFR-06); secret sinh ngầm; guard DB chặn URL khác `localhost:5434/omnipos_hub`
-- [ ] Seed: 300 quán, 77 món, 301 ví; tổng số dư = 0
-- [ ] Rút quá (30×200.000 từ ví C = 1.000.000): 5×201, 25×409 `INSUFFICIENT_FUNDS`, C = 0, 0×5xx, 0 dòng log `SQLSTATE=23514`
-- [ ] Chuyển chéo (15 A→B + 15 B→A, 10.000): 30×201, 0 `40P01`, A và B về số cũ
-- [ ] Voucher: campaign 1 (10 slot, 30 quán) → 10×201, 20×409 `SOLD_OUT`, DB đúng 10 slot có chủ; campaign 2 (còn slot) → quán X 201 rồi 409 `ALREADY_CLAIMED`
-- [ ] Lỗi: 400 `SAME_WALLET` (DTO); 404 `WALLET_NOT_FOUND`, 404 `CAMPAIGN_NOT_FOUND`
-- [ ] `pg_locks WHERE NOT granted` ≥ 1 dòng khi DBX giữ khóa; COMMIT trong timeout drill → 201
-- [ ] Đối soát I-01…I-04, I-06 = 0 dòng sau mọi test (bản `locked`)
-- [ ] README có số Trước (naive trên DB sạch: > 5×201 hoặc sổ lệch) và Sau, từ 2 file riêng; tag `m1`
-- [ ] Dọn tiến trình: 0 node trên 3100/3101; chỉ `omnipos-hub-pg` của hub còn Up
+- [x] Không đụng thứ khác: G5 không in gì (container của Đạt còn đủ, không bị restart); advance-be `git status` có 0 dòng hub; không file output nào trong advance-be
+- [x] Cổng sạch: `git grep -nwE '3000|3001|5433|6379'` trong hub = 0; API, web bind `127.0.0.1`
+- [x] Bí mật: env trong git chỉ là `*.example` (NFR-06); secret sinh ngầm; guard DB chặn URL khác `localhost:5434/omnipos_hub`
+- [x] Seed: 300 quán, 77 món, 301 ví; tổng số dư = 0
+- [x] Rút quá (30×200.000 từ ví C = 1.000.000): 5×201, 25×409 `INSUFFICIENT_FUNDS`, C = 0, 0×5xx, 0 dòng log `SQLSTATE=23514`
+- [x] Chuyển chéo (15 A→B + 15 B→A, 10.000): 30×201, 0 `40P01`, A và B về số cũ
+- [x] Voucher: campaign 1 (10 slot, 30 quán) → 10×201, 20×409 `SOLD_OUT`, DB đúng 10 slot có chủ; campaign 2 (còn slot) → quán X 201 rồi 409 `ALREADY_CLAIMED`
+- [x] Lỗi: 400 `SAME_WALLET` (DTO); 404 `WALLET_NOT_FOUND`, 404 `CAMPAIGN_NOT_FOUND`
+- [x] `pg_locks WHERE NOT granted` ≥ 1 dòng khi DBX giữ khóa; COMMIT trong timeout drill → 201
+- [x] Đối soát I-01…I-04, I-06 = 0 dòng sau mọi test (bản `locked`)
+- [x] README có số Trước (naive trên DB sạch: > 5×201 hoặc sổ lệch) và Sau, từ 2 file riêng; tag `m1`
+- [x] Dọn tiến trình: 0 node trên 3100/3101; chỉ `omnipos-hub-pg` của hub còn Up
 
 ## Rủi ro chính
 | # | Rủi ro | Khả năng × Ảnh hưởng | Giảm thiểu |

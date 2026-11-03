@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "defaultLevel": 2,
+  "defaultRung": 0,
+  "quietMs": 5000,
+  "timeoutMs": 0,
+  "hubPath": "../omnipos-finledger-hub",
+  "forbiddenHubPorts": [3000, 3001, 5433, 6379]
+}

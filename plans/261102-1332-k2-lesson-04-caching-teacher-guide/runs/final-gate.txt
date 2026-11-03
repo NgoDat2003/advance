@@ -1,0 +1,11 @@
+# Final Gate · K2 Bài 04 Caching Teacher Guide · 03/11/2026 11:52 +0700
+✔ [G1] HTML size budget: 528534 bytes <= 532480 bytes (520 KB)
+✔ [G2] verify-guide.mjs (guide + --runs + --data + --lint): 0 lỗi (M01, D01, V01..V23, R01..R37b)
+✔ [G3] negative-tests.sh: 34/34 ca đỏ đúng thiết kế · 0 SKIP
+✔ [G4] widget-smoke.mjs: 9/9 widgets + 8/8 quizzes + dark toggle + U03/U06 assertions PASS
+✔ [G5] render-check.mjs (light & dark @ 375x812, 768x1024, 1440x900): 0 errors
+✔ [G6] ultra code-review (--ultra --advice): 5 reviewers + kongming verifier · 0 OPEN findings
+✔ [G7] check.sh learner-ready state: rc=0 (main up & seeded DBSIZE=2, extras –, PG 1000 rows zeroed)
+✔ [G8] fingerprint.sh --compare 00-fingerprint-before.txt: rc=0 (L06 & foreign containers/schemas untouched)
+✔ [G9] L06 link integrity (V01,V02,V03,V10) & T10.1 1-line curriculum diffs: PASS
+✔ [G10] git status scope allow-list check: PASS (0 out-of-scope modifications)

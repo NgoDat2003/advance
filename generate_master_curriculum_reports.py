@@ -444,7 +444,7 @@ def build_data():
                             "Bị nghẽn Redis khi một node duy nhất không đủ RAM chứa hàng chục triệu keys -> chuyển đổi sang Redis Cluster.",
                             "Hệ thống downstream (Payment, SMS) bị quá tải khi traffic đầu vào ùa tới bất thường."
                         ],
-                        "artifacts": "Slide 39 trang kèm so sánh ưu nhược điểm 5 thuật toán Rate Limiting."
+                        "artifacts": "labs/k2-lesson-04-caching/ & reports/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/k2_lesson_04_caching_teacher_guide.html"
                     },
                     {
                         "stt": "05",

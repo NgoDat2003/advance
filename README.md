@@ -26,7 +26,8 @@ Toàn bộ tài liệu (`Tài Liệu/`) và báo cáo thực hành (`reports/`) 
   8. `08. URL Shortener.pdf / .md`
   9. `09. Design a Microblogging System (Threads).pdf / .md`
   10. `master-software-architecture.pdf / .md`
-- 📊 **Thư mục báo cáo & Guides**: `reports/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/`
+- 🔬 **Mã nguồn Labs thực hành (Redis 7.2.3 & PostgreSQL 16)**: `labs/k2-lesson-04-caching/`
+- 📊 **Thư mục báo cáo & Guides**: `reports/Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/` (`k2_lesson_04_caching_teacher_guide.html`)
 
 ### 3. Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub
 - 📚 **Tài liệu học tập (13 PDF & Markdown kèm assets)**: `Tài Liệu/Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/`
@@ -79,8 +80,10 @@ advance-be/
 │   │   ├── lesson_14_locking_teacher_guide.html
 │   │   └── ...
 │   ├── Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/
+│   │   └── k2_lesson_04_caching_teacher_guide.html
 │   └── Khóa 4. Khóa Học Kafka Nâng Cao 2025 – Ứng Dụng Trong System Design Và Microservices Cùng Roninhub/
 └── labs/
+    ├── k2-lesson-04-caching/
     ├── lesson-02-caching/
     ├── lesson-03-index/
     ├── lesson-06-redis/

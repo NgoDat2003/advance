@@ -4529,7 +4529,7 @@ B7 SET NX PX: chỉ một người lấy được khóa (chỗ đúng) → run 0
       <li><b>FR-M2-04</b> bảng món bán chạy bằng ZSET, dựng lại được từ SQL: <a href="#chang-5">chặng 5</a>.</li>
       <li><b>FR-M2-05</b> token bucket bằng Lua cho claim voucher, khóa theo <code>storeId</code>: <a href="#chang-9">chặng 9</a>.</li>
     </ul>
-    <p>Sau đó làm <b>Boss Challenge 2</b> trên <code>quan-ly-hop-dong</code>: idempotency key (hash SHA-256 của body + khóa Redis) cho <code>executeImportExport</code> và <code>terminateContract</code>, Cache-Aside + Singleflight + xóa cache sau commit cho <code>sap-master-data</code> và <code>dashboard</code>, kèm token bucket Lua. Rồi sang K2 Bài 04 Rate Limiting để đi sâu các thuật toán giới hạn tốc độ.</p>
+    <p>Sau đó làm <b>Boss Challenge 2</b> trên <code>quan-ly-hop-dong</code>: idempotency key (hash SHA-256 của body + khóa Redis) cho <code>executeImportExport</code> và <code>terminateContract</code>, Cache-Aside + Singleflight + xóa cache sau commit cho <code>sap-master-data</code> và <code>dashboard</code>, kèm token bucket Lua. Rồi sang <a href="../Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub/k2_lesson_04_caching_teacher_guide.html">K2 Bài 04 Rate Limiting</a> để đi sâu các thuật toán giới hạn tốc độ.</p>
     <p>Bài trước: <a href="lesson_07_data_modeling_teacher_guide.html">Bài 07 Data modeling</a> · <a href="lesson_02_caching_teacher_guide.html">Bài 02 Caching</a> · <a href="lesson_14_locking_teacher_guide.html">Bài 14 Locking</a>.</p>
   </div>
 </section>

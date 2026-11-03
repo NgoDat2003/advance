@@ -1,0 +1,66 @@
+# Dữ liệu lưu lượng cố định cho K2 Bài 04 (60 request: ts_ms client act)
+# Màn 1 (s7 act 1): 11 request kẹp ngay ranh giới cửa sổ 10 000 ms — phơi bày lỗi gấp đôi định mức của Fixed Window
+8750	s7	1
+9000	s7	1
+9250	s7	1
+9500	s7	1
+9750	s7	1
+10000	s7	1
+10250	s7	1
+10500	s7	1
+10750	s7	1
+11000	s7	1
+12750	s7	1
+# Màn 2 (s7 act 2): 5 request dồn cuối cửa sổ 70s, sau đó đều đặn mỗi 1s từ 81s đến 89s — so độ mượt của Sliding Counter và Token Bucket
+78750	s7	2
+79000	s7	2
+79250	s7	2
+79500	s7	2
+79750	s7	2
+81000	s7	2
+82000	s7	2
+83000	s7	2
+84000	s7	2
+85000	s7	2
+86000	s7	2
+87000	s7	2
+88000	s7	2
+89000	s7	2
+# Màn 3 (s7 act 3): 5 request dồn trong 0,5s giữa cửa sổ mới — kiểm chứng burst hợp lệ trong hạn mức 5/10s
+155000	s7	3
+155125	s7	3
+155250	s7	3
+155375	s7	3
+155500	s7	3
+# Màn 4 (s7 act 4): 5 request dồn đầu cửa sổ 200s, rồi 3 request ngay đầu cửa sổ 210s — thấy chỗ Sliding Counter ước lượng lệch Log
+200125	s7	4
+200250	s7	4
+200375	s7	4
+200500	s7	4
+200625	s7	4
+211000	s7	4
+212000	s7	4
+213000	s7	4
+# Cửa hàng s8 (act 1): 22 request cách đều 10s — đối chứng cô lập theo cửa hàng (không bị s7 làm ảnh hưởng)
+5000	s8	1
+15000	s8	1
+25000	s8	1
+35000	s8	1
+45000	s8	1
+55000	s8	1
+65000	s8	1
+75000	s8	1
+85000	s8	1
+95000	s8	1
+105000	s8	1
+115000	s8	1
+125000	s8	1
+135000	s8	1
+145000	s8	1
+155000	s8	1
+165000	s8	1
+175000	s8	1
+185000	s8	1
+195000	s8	1
+205000	s8	1
+215000	s8	1

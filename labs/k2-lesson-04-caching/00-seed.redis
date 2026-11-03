@@ -1,0 +1,4 @@
+# K2 Bài 04 · Khởi tạo dữ liệu nền (idempotent: chỉ xóa các khóa do chính seed sở hữu, không đụng khóa my/hw/run).
+UNLINK k2l04:seed:version k2l04:voucher:V1:stock k2l04:voucher:V1:redeemed
+SET k2l04:seed:version v1
+SET k2l04:voucher:V1:stock 1

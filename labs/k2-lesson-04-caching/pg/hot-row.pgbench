@@ -1,0 +1,1 @@
+UPDATE k2l04_counter.post_count SET like_count = like_count + 1 WHERE post_id = 1;

@@ -360,7 +360,16 @@ function parseUnifiedDiffAddedLines(diffText, prefixLabel = '') {
 
 function collectSingleRepoSnapshot(repoDir, isHub, prefixLabel = '') {
   // 1. Lấy toàn bộ thay đổi đã stage + chưa stage so với HEAD (shell: false chống injection)
-  let diffRes = spawnSync('git', ['diff', 'HEAD', '--unified=0', '--no-color', '--'], {
+  const baseDiffFlags = [
+    '-c',
+    'core.quotepath=false',
+    'diff',
+    '--src-prefix=a/',
+    '--dst-prefix=b/',
+    '--unified=0',
+    '--no-color',
+  ];
+  let diffRes = spawnSync('git', [...baseDiffFlags, 'HEAD', '--'], {
     cwd: repoDir,
     encoding: 'utf8',
     shell: false,
@@ -369,12 +378,12 @@ function collectSingleRepoSnapshot(repoDir, isHub, prefixLabel = '') {
 
   // Dự phòng khi repo mới khởi tạo chưa có commit HEAD đầu tiên
   if (diffRes.status !== 0) {
-    const cached = spawnSync('git', ['diff', '--cached', '--unified=0', '--no-color', '--'], {
+    const cached = spawnSync('git', [...baseDiffFlags, '--cached', '--'], {
       cwd: repoDir,
       encoding: 'utf8',
       shell: false,
     });
-    const working = spawnSync('git', ['diff', '--unified=0', '--no-color', '--'], {
+    const working = spawnSync('git', [...baseDiffFlags, '--'], {
       cwd: repoDir,
       encoding: 'utf8',
       shell: false,
@@ -386,11 +395,15 @@ function collectSingleRepoSnapshot(repoDir, isHub, prefixLabel = '') {
   const hashChunks = [ (diffRes.stdout || '').replace(/\r\n/g, '\n').trim() ];
 
   // 2. Bổ sung các file mới tạo chưa git add (untracked, tôn trọng .gitignore) — RT-03
-  const untrackedRes = spawnSync('git', ['ls-files', '--others', '--exclude-standard'], {
-    cwd: repoDir,
-    encoding: 'utf8',
-    shell: false,
-  });
+  const untrackedRes = spawnSync(
+    'git',
+    ['-c', 'core.quotepath=false', 'ls-files', '--others', '--exclude-standard'],
+    {
+      cwd: repoDir,
+      encoding: 'utf8',
+      shell: false,
+    }
+  );
 
   if (untrackedRes.status === 0 && untrackedRes.stdout) {
     const relFiles = untrackedRes.stdout
@@ -898,7 +911,11 @@ export async function main(argv = process.argv.slice(2)) {
 }
 
 const isDirectExecution =
-  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+  Boolean(process.argv[1]) &&
+  (process.platform === 'win32'
+    ? path.resolve(process.argv[1]).toLowerCase() ===
+      path.resolve(fileURLToPath(import.meta.url)).toLowerCase()
+    : path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url)));
 
 if (isDirectExecution) {
   main().then((code) => {

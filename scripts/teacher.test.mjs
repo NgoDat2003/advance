@@ -132,13 +132,14 @@ test('diff: captures tracked, staged, and untracked files plus TODO(Đạt) and 
   const root = makeFixture('diff-slots');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
-  // Modify tracked file + stage it
+  // Enable diff.noprefix + default quotepath to ensure parser resists custom git configs & Vietnamese paths
+  spawnSync('git', ['config', 'diff.noprefix', 'true'], { cwd: root, shell: false });
   fs.writeFileSync(path.join(root, 'labs', 'base.js'), 'export const x = 2;\n', 'utf8');
   spawnSync('git', ['add', 'labs/base.js'], { cwd: root, shell: false });
 
-  // Create brand-new untracked exercise file with TODO(Đạt) and __1__, __2__ slots
+  // Create brand-new untracked exercise file with Vietnamese diacritics, TODO(Đạt), and __1__, __2__ slots
   fs.writeFileSync(
-    path.join(root, 'labs', 'redis-lock.ts'),
+    path.join(root, 'labs', 'bài-tập-redis-lock.ts'),
     [
       '// TODO(Đạt): cài đặt khóa phân tán chống race condition',
       'export async function acquire(redis: any, key: string) {',

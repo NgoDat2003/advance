@@ -63,3 +63,20 @@ branch: main
 3. Run `/ak:plan validate` (3–8 questions) and the whole-plan consistency sweep. Note that must-fix 9 added run row R16h, so the run-row counts quoted in the phase files must be re-checked.
 4. Ask kongming for the post-plan-gates go/no-go (`--advice` checkpoint).
 5. Then run `/ak:cook --tdd --auto plans/261102-1332-k2-lesson-04-caching-teacher-guide/plan.md --advice`.
+
+## Update 2026-11-03 ~08:00: all 4 red-team reports are committed
+- `reports/red-team-security.md`: 1 Critical, 5 High, 4 Medium.
+- `reports/red-team-scope-contract.md`: 4 High, 6 Medium.
+- `reports/red-team-failure-modes.md`: 1 Critical, 6 High, 3 Medium.
+- `reports/red-team-assumptions.md`: 1 Critical, 5 High, 4 Medium.
+
+Several findings show up in more than one report. Fold each group into one finding when deduplicating:
+- the run-row count is now 59, not 58, after R16h;
+- `record-all.sh --out` vs the `.A`/`.B`/`.timeline` suffixes, and the homework group missing from it;
+- `pg_other_writes` is still inside exact diffs;
+- the fingerprint breaks under normal L06 use;
+- R16b `retry 1000000` is unreachable;
+- regions do not reset their keys before the rerun gate;
+- the R16h awk reads multi-line `--eval` output.
+
+Skip step 1 of "Exact next actions" and start at step 2: adjudicate, cap at 15, then ask Đạt.

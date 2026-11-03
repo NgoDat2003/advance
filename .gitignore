@@ -36,3 +36,8 @@ RESTORE.ps1
 
 # Dự án cá nhân OmniPOS & FinLedger Hub — repo git riêng, không lồng vào advance-be
 /omnipos-finledger-hub/
+
+# Isolated git worktrees and local Live-Teacher session/temp state
+/.worktrees/
+/.teacher/state.local.json
+/.teacher/tmp/

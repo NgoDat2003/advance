@@ -66,5 +66,5 @@ const http = await measure('HTTP + use case + adapter RAM', 500, async () => {
 });
 server.close();
 
-console.log(`HTTP cham hon domain ${Math.round(http / domain)} lan; use case cham hon domain ${Math.round(application / domain)} lan`);
+console.log(`so voi domain: use case x${(application / domain).toFixed(1)}, HTTP x${(http / domain).toFixed(0)}`);
 console.log('so lieu phu thuoc may, chua tinh DB that');

@@ -1,0 +1,12 @@
+$ npm run hw:solution   # node v22.18.0
+PASS  H1 du 4 tang
+PASS  H2 Aggregate Booking o domain
+PASS  H3 Booking khong co ham luu DB
+PASS  H4 port repository la interface o domain
+PASS  H5 adapter implements port o infrastructure
+PASS  H6 use case o application
+PASS  H7 co DTO rieng o application
+PASS  H8 controller o presentation, khong tra Entity
+PASS  H9 quy tac phu thuoc (0 vi pham)
+9/9 dat
+[rc=0]

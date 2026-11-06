@@ -1,0 +1,6 @@
+$ npm run lab7   # node v22.18.0
+DI khong DIP: import that bai truoc khi kip tiem prisma gia -> PrismaService: thieu DATABASE_URL
+DI + DIP: {"transferId":"t1"}
+Sau khi bo kieu, con lai:
+export const WALLET_REPOSITORY = Symbol("WALLET_REPOSITORY");
+[rc=0]

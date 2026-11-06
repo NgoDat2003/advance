@@ -1,0 +1,5 @@
+$ npm run lab1   # node v22.18.0
+GET /entity -> 500 {"loi":"Do not know how to serialize a BigInt"}
+GET /entity-to-json-patch -> 200 {"id":7,"storeId":3,"balance":"1500000","riskScore":87,"version":4}
+GET /dto -> 200 {"id":7,"storeId":3,"balance":"1500000"}
+[rc=0]

@@ -1,0 +1,9 @@
+$ npm run challenge   # node v22.18.0
+FAIL  C1 con han, con suat: claim duoc, remaining giam 1
+FAIL  C2 het han: VOUCHER_EXPIRED, remaining giu nguyen
+FAIL  C3 cung cua hang claim lan 2: ALREADY_CLAIMED, khong tru them
+FAIL  C4 het suat: SOLD_OUT, remaining khong am
+FAIL  C5 het han duoc kiem truoc het suat
+PASS  C6 khong the ghi de remaining tu ben ngoai
+1/6 dat
+[rc=1]

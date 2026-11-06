@@ -1,0 +1,8 @@
+$ npm run lab8   # node v22.18.0
+spaghetti: 1 file, 39 dong
+4 tang: 9 file, 167 dong (1 adapter)
+  domain          5 file, 86 dong
+  application     2 file, 28 dong
+  infrastructure  1 file, 34 dong
+  presentation    1 file, 19 dong
+[rc=0]

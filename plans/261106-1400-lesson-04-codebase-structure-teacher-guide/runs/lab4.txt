@@ -1,0 +1,25 @@
+$ npm run lab4   # node v22.18.0
+
+== RAM (xep hang)
+  PASS  chuyen hop le, sum so cai = 0
+  PASS  thieu tien: tu choi, khong doi gi
+  PASS  vi khong ton tai: WALLET_NOT_FOUND
+      vi1=700 vi2=300 but_toan=60
+  PASS  30 lenh dong thoi moi lenh 10
+
+== File JSON
+  PASS  chuyen hop le, sum so cai = 0
+  PASS  thieu tien: tu choi, khong doi gi
+  PASS  vi khong ton tai: WALLET_NOT_FOUND
+      vi1=700 vi2=300 but_toan=60
+  PASS  30 lenh dong thoi moi lenh 10
+
+== RAM thieu khoa (co y sai)
+  PASS  chuyen hop le, sum so cai = 0
+  PASS  thieu tien: tu choi, khong doi gi
+  PASS  vi khong ton tai: WALLET_NOT_FOUND
+      vi1=990 vi2=10 but_toan=60
+  FAIL  30 lenh dong thoi moi lenh 10
+
+tong so ca FAIL: 1 (ky vong dung 1, nam o adapter co y sai)
+[rc=0]

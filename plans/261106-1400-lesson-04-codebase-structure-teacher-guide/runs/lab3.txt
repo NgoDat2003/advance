@@ -1,0 +1,22 @@
+$ npm run lab3   # node v22.18.0
+
+== src (ban 4 tang): 11 file, 0 vi pham
+
+== bad-src (ban AI viet): 5 file, 5 vi pham
+  vouchers/application/claim-voucher.ts:1  application -> goi-ngoai  '@nestjs/common'
+  vouchers/application/claim-voucher.ts:2  application -> presentation  '../presentation/claim-response.dto.ts'
+  vouchers/domain/voucher.ts:1  domain -> goi-ngoai  '@prisma/client'
+  vouchers/domain/voucher.ts:2  domain -> infrastructure  '../infrastructure/voucher-prisma.repository.ts'
+  vouchers/presentation/vouchers.controller.ts:2  presentation -> infrastructure  '../infrastructure/voucher-prisma.repository.ts'
+
+== Hub @859c913 apps/api/src/modules/wallets/wallets.service.ts
+  dong 1: 'node:crypto'
+  dong 8: '@nestjs/common'
+  dong 9: '@nestjs/config'
+  dong 10: '../../common/database/transaction-options'
+  dong 11: '../../common/database/sql-state'
+  dong 13: '../../config/env.schema'
+  dong 14: '../../prisma/prisma.service'
+  import ha tang/framework: 7
+  this.prisma: 6  tx.: 7  HTTP exception: 4
+[rc=0]

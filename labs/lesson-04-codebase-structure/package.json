@@ -1,0 +1,23 @@
+{
+  "name": "lesson-04-codebase-structure-labs",
+  "private": true,
+  "type": "module",
+  "description": "Lab Bài 04: cùng một nghiệp vụ chuyển ví viết theo kiểu spaghetti và 4 tầng. Chỉ cần Node >= 22.18, không cài gì, không cần Docker.",
+  "scripts": {
+    "lab1": "node 01-entity-leak.mjs",
+    "lab2": "node 02-test-speed.mjs",
+    "lab3": "node 03-dependency-rule.mjs",
+    "lab4": "node 04-port-contract.mjs",
+    "lab5": "node 05-value-object-aggregate.mjs",
+    "lab6": "node 06-functional-core.mjs",
+    "lab7": "node 07-di-vs-dip.mjs",
+    "lab8": "node 08-cost-of-layers.mjs",
+    "scan": "node check-dependency-rule.mjs",
+    "hw": "node hw-check.mjs hw/mine",
+    "hw:solution": "node hw-check.mjs hw/solution",
+    "hw:draft": "node hw-check.mjs hw/ai-draft",
+    "challenge": "node challenge/grade.mjs voucher-campaign.todo.ts",
+    "challenge:solution": "node challenge/grade.mjs voucher-campaign.solution.ts",
+    "all": "npm run -s lab1 && npm run -s lab2 && npm run -s lab3 && npm run -s lab4 && npm run -s lab5 && npm run -s lab6 && npm run -s lab7 && npm run -s lab8 && npm run -s hw:solution && npm run -s challenge:solution"
+  }
+}

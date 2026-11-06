@@ -1,0 +1,5 @@
+$ npm run lab6   # node v22.18.0
+100000 lan cung dau vao: lo pure ra 1 ket qua khac nhau; ban impure ra 100000
+kiem bat bien tren 90601 to hop: 0 to hop sai
+vo goi loi: OK; thu tu: I/O doc -> quyet dinh -> I/O ghi
+[rc=0]

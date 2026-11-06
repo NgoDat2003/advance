@@ -1,0 +1,10 @@
+$ npm run lab2   # node v22.18.0
+thanh cong: domain                    20000 ca   trung vi      0.3 us/ca
+thanh cong: use case + adapter RAM    20000 ca   trung vi      2.0 us/ca
+tu choi: domain                       20000 ca   trung vi     12.6 us/ca
+tu choi: use case + adapter RAM       20000 ca   trung vi     15.0 us/ca
+tu choi: HTTP + use case + adapter RAM    500 ca   trung vi    812.3 us/ca
+thanh cong: use case gap x6.1 lan domain
+tu choi: use case gap x1.2, HTTP gap x64 lan domain
+so lieu phu thuoc may; DB that chua do trong lab nay
+[rc=0]

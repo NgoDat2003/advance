@@ -1,0 +1,596 @@
+<header class="hero col">
+  <div class="hero-top">
+    <p class="eyebrow">Advance Backend · Bài 04 / 16 · Cụm 3 ngày 1 · sau Bài 07 và Bài 06</p>
+    <button type="button" class="theme-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">Sáng / Tối</button>
+  </div>
+  <h1>Codebase Structure</h1>
+  <p class="lead">Hàm <code>transferLocked</code> của Hub đang chứa cả khóa dòng, quy tắc thiếu tiền và mã lỗi HTTP. Bài này chỉ ra mỗi dòng nên về đâu, và đo xem việc chia tầng được gì, mất gì. Slide kể 5 kiến trúc, nhưng chỉ có một quy tắc phải nhớ: phụ thuộc hướng vào trong.</p>
+  <div class="hero-meta">
+    <span><b>33</b> slide</span><span><b>7</b> chặng + bài tập tối</span><span><b>205</b> phút + 45 bài tập tối</span><span><b>8</b> lab chạy thật</span><span><b>28</b> câu quiz + <b>8</b> câu phỏng vấn</span>
+  </div>
+  <p class="epigraph">"Being deeply loved by someone gives you strength, while loving someone deeply gives you courage." · Lao Tzu, slide 1</p>
+</header>
+
+<section id="cach-hoc" class="col" style="margin-top:40px">
+  <h2>Cách học bài này</h2>
+  <p>Slide 3 hỏi ba câu: vì sao cấu trúc dự án lại như thế, code lớn lên có khó quản lý không, và làm sao biến lý thuyết kiến trúc thành thứ dùng được. Bài này trả lời câu thứ ba bằng code chạy thật: một nghiệp vụ chuyển ví, viết hai kiểu, đo cả hai.</p>
+  <p>Mỗi slide có một nhãn: <span class="vchip ok">Đúng</span> <span class="vchip diff">Đúng một phần</span> <span class="vchip fix">Cần sửa</span>. Slide không có luận điểm thì không gắn nhãn. Số trong khung đen là output thật, chèn nguyên văn từ file ghi lại; các ý chưa đo được ghi rõ "chưa đo trực tiếp".</p>
+
+  <div class="table-wrap">
+    <table class="plan">
+      <thead><tr><th>Chặng</th><th>Nội dung</th><th>Slide</th><th>Thời gian</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Chạy toàn bộ lab một lần</td><td>1–3</td><td class="n">10 phút</td><td><code>npm run all</code></td></tr>
+        <tr><td><a class="stage-link" href="#chang-1">1</a></td><td>Layered: đóng, mở và cái giá của 4 tầng</td><td>4–8</td><td class="n">20 phút</td><td>Lab 8</td></tr>
+        <tr><td><a class="stage-link" href="#chang-2">2</a></td><td>Hexagonal, Onion: port, adapter, đảo chiều</td><td>9–12</td><td class="n">25 phút</td><td>W1 · Lab 4</td></tr>
+        <tr><td><a class="stage-link" href="#chang-3">3</a></td><td>Clean: quy tắc phụ thuộc, DTO, khi nào không dùng</td><td>13–17</td><td class="n">40 phút</td><td>W2, W3 · Lab 1, 3</td></tr>
+        <tr><td><a class="stage-link" href="#chang-4">4</a></td><td>Lõi thuần, vỏ I/O và tốc độ test</td><td>18–19</td><td class="n">20 phút</td><td>Lab 2, 6</td></tr>
+        <tr><td><a class="stage-link" href="#chang-5">5</a></td><td>Chia domain, Bounded Context, ngôn ngữ chung</td><td>20–25</td><td class="n">25 phút</td><td>bảng Hub</td></tr>
+        <tr><td><a class="stage-link" href="#chang-6">6</a></td><td>Entity, Value Object, Aggregate, 4 tầng DDD</td><td>26–29</td><td class="n">35 phút</td><td>Lab 5 · TODO(Đạt)</td></tr>
+        <tr><td><a class="stage-link" href="#chang-7">7</a></td><td>DI khác DIP và bản đồ refactor Hub</td><td>30–31, 33</td><td class="n">30 phút</td><td>W4 · Lab 7</td></tr>
+        <tr data-spill><td>+</td><td>Tối: Flight Booking (review bản AI, xếp tầng, dựng khung)</td><td>32</td><td class="n">45 phút</td><td>W5 · hw-check</td></tr>
+        <tr data-total><td></td><td>Tổng: lõi 205 + bài tập 45 = 250 phút</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h4>Chuẩn bị (5 phút)</h4>
+    <ol>
+      <li>Kiểm tra <code>node -v</code> từ 22.18 trở lên. Bản này chạy thẳng file <code>.ts</code>, tức là tự bỏ phần khai báo kiểu rồi chạy, không cần build hay cài gì. Lab không cần Docker.</li>
+      <li>Mở Git Bash tại <code>labs/lesson-04-codebase-structure</code>, chạy <code>npm run all</code>. Lệnh phải kết thúc với mã 0.</li>
+      <li>Mở thư mục <code>src/wallets</code> cạnh trang này. Bài dạy đọc code nhiều hơn gõ code.</li>
+    </ol>
+    <p class="muted">Toàn bộ số trong trang đo ngày 06/11/2026 trên Node v22.18.0. Hub yêu cầu Node 24; <code>npm run all</code> cũng đã chạy đạt trên Node 24.22.1.</p>
+  </div>
+  <label class="fields"><span class="muted">Ghi chú trước khi học: theo bạn, vì sao service của Hub "chưa sạch"? Cuối bài đối chiếu.</span>
+    <textarea class="field" data-store="l04-warmup" placeholder="Ví dụ: vì nó import Prisma…"></textarea>
+  </label>
+</section>
+
+<!-- CHẶNG 1 -->
+<section id="chang-1" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">01</span>
+    <div>
+      <div class="stage-meta"><span>Slide 4–8</span><span>20 phút</span></div>
+      <h2>Layered: đơn giản, và đáy tháp là database</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> tách được hai thứ hay bị nhầm là luồng chạy và chiều phụ thuộc, rồi biết layered thất bại ở đâu.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Chia code thành các tầng ngang. Request đi từ trên xuống; tầng đóng không được nhảy cóc.</dd>
+    <dt>TẠI SAO?</dt><dd>Mỗi tầng có một việc, người mới biết đặt code vào đâu.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Khi nghiệp vụ phải sống lâu hơn database và framework, vì business layer vẫn phụ thuộc xuống persistence.</dd>
+  </dl>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_05_img_01.png" alt="Slide 5: mũi tên flow of control đi từ phía user interface qua application core sang infrastructure rồi quay ngược về" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 5 · luồng chạy đi vào lõi, sang hạ tầng, rồi quay về</figcaption></figure>
+  <div class="callout key">
+    <span class="tag">Slide 5 · <span class="vchip ok">Đúng</span></span>
+    <p><b>Đây là ý quan trọng nhất của chặng.</b> Lúc chạy, lõi vẫn gọi sang database. Điều kiến trúc đổi được là <b>chiều của dòng import</b> trong source. Luồng chạy và chiều phụ thuộc là hai mũi tên khác nhau; các chặng sau chỉ xoay mũi tên thứ hai.</p>
+  </div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Slide</th><th>Slide nói</th><th>Đọc thế nào</th></tr></thead>
+    <tbody>
+      <tr id="sl-6"><td>6 <span class="vchip diff">Đúng một phần</span></td><td>Tầng đóng; sửa một tầng không ảnh hưởng tầng khác</td><td>Đúng khi sửa bên trong một tầng. Đổi kiểu cột <code>balance</code> thì sửa lan từ persistence lên business, vì business đang dùng kiểu của persistence. Đây là suy luận, chưa đo trực tiếp.</td></tr>
+      <tr><td>7 <span class="vchip ok">Đúng</span></td><td>Thêm tầng mở (services) cho phần dùng chung</td><td>Tầng mở cho phép bỏ qua. Business vẫn đi thẳng xuống persistence, còn presentation bị cấm gọi shared component.</td></tr>
+      <tr id="sl-8"><td>8 <span class="vchip ok">Đúng</span></td><td>Dễ làm, testable; khó scale, các tầng phụ thuộc nhau</td><td>Slide không nói rõ loại scale. Cách đọc hợp lý: khối phân tầng chạy chung một process nên chỉ nhân bản được cả khối, không scale riêng từng phần. <b>Clean chạy chung một process cũng chịu giới hạn đó</b>, nên chữ "Scalable" ở slide 17 không tự có. Khóa và index quyết định một instance chịu được bao nhiêu, đó là chuyện khác.</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_07_img_01.png" alt="Slide 7: năm tầng presentation, business, services, persistence, database; chỉ tầng services là open; presentation gọi thẳng shared component bị gạch chéo" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 7 · tầng services mở, các tầng còn lại đóng</figcaption></figure>
+
+  <h3>Làm mẫu: cái giá đo bằng dòng code</h3>
+  <p>Mở <code>spaghetti/transfer-handler.ts</code>: BEGIN, SELECT FOR UPDATE, quy tắc thiếu tiền và <code>res.status(409)</code> nằm chung một hàm. Bản 4 tầng dài <b class="m" data-run="lab8">168</b> dòng, so với <b class="m" data-run="lab8">39</b> dòng của bản spaghetti. Khoảng một nửa nằm ở domain. Chỉ nên đọc đây là thứ tự độ lớn: SQL của bản spaghetti chưa từng chạy, còn bản 4 tầng dùng adapter RAM, chưa tính adapter Prisma và phần nối dây, nhưng có thêm quy tắc <code>SAME_WALLET</code>.</p>
+  {{RUN:lab8}}
+  <div class="callout warn">
+    <span class="tag">Đọc số này cho đúng</span>
+    <p>Với một endpoint, 4 tầng đắt hơn rõ rệt. Khoản đầu tư chỉ có lãi khi quy tắc nghiệp vụ nhiều lên và được đọc, test, sửa nhiều lần. Đó cũng là lý do slide 17 có mục "không nên dùng".</p>
+  </div>
+
+  <div class="panel">
+    <h4>Thử 30 giây</h4>
+    <p>Có thêm quy tắc "mỗi lần chuyển tối đa 5.000.000". Ở bản 4 tầng, bạn sửa file nào?</p>
+    <details class="fold"><summary>Xem đáp án</summary><div class="fold-body"><p>Quy tắc chỉ nằm ở <code>domain/transfer-between-wallets.ts</code>: một dòng <code>if</code> và một mã lỗi. Mã lỗi mới phải thêm vào bảng ánh xạ ở <code>presentation</code>, nếu không handler ném lại và thành 500. Ở bản spaghetti, quy tắc mới chen vào giữa transaction và phải tự nhớ gọi ROLLBACK.</p></div></details>
+  </div>
+  <div class="quiz" data-quiz="1"></div>
+</section>
+
+<!-- CHẶNG 2 -->
+<section id="chang-2" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">02</span>
+    <div>
+      <div class="stage-meta"><span>Slide 9–12</span><span>25 phút</span></div>
+      <h2>Port, adapter và 30 lệnh chuyển tiền đồng thời</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> viết được định nghĩa port và adapter bằng code của Hub, và biết điều gì adapter giả không bao giờ chứng minh được.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Port là hợp đồng do lõi tự đặt ra. Adapter nối lõi với công nghệ thật: phía ra thì cài đặt port, phía vào thì gọi use case.</dd>
+    <dt>TẠI SAO?</dt><dd>Lõi chạy được mà không cần HTTP hay DB, đổi công nghệ chỉ đổi adapter.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Khi chỉ có CRUD thẳng xuống bảng: port lúc đó chỉ lặp lại đúng chữ ký của Prisma.</dd>
+  </dl>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_09_img_01.png" alt="Slide 9: hình lục giác Application; bên trái driving side với port và adapter nhận yêu cầu từ người dùng và hệ thống, bên phải driven side với adapter ra file và database" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 9 · driving side gọi vào lõi, driven side bị lõi gọi ra</figcaption></figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Phía</th><th>Ai khởi xướng</th><th>Trong lab</th><th>Trong Hub sau refactor</th></tr></thead>
+    <tbody>
+      <tr><td><b>Driving</b></td><td>Thế giới ngoài gọi vào</td><td><code>presentation/transfer-http-handler.ts</code></td><td><code>WalletsController</code>, sau này Kafka consumer</td></tr>
+      <tr><td><b>Driven</b></td><td>Lõi gọi ra</td><td><code>infrastructure/*-wallet-repository.ts</code></td><td><code>PrismaWalletRepository</code>, Redis</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout key"><span class="tag">Slide 9 · <span class="vchip ok">Đúng</span></span><p>"Factory cho adapter" trong slide chính là nơi nối dây: chỉ một chỗ biết chọn adapter nào. Trong Nest, đó là <code>providers</code> của module. Biến <code>M1_IMPL=naive|locked</code> của Hub đang chọn nhánh bằng <code>if</code> trong service; về bản chất đó là hai adapter chưa được tách.</p></div>
+
+  <h3>Làm mẫu: một bộ kiểm, ba adapter</h3>
+  <p>Mở <code>domain/wallet-repository.ts</code>. Port có đúng ba thao tác trong transaction: <code>lockMany</code>, <code>save</code>, <code>appendLedger</code>. Lab 4 chạy cùng 5 ca trên 3 adapter và không đổi một dòng domain hay use case.</p>
+  <div class="widget" id="w1">
+    <div class="widget-head"><h4>W1 · Ma trận hợp đồng</h4><span class="eyebrow">Lab 4 · slide 10, 16</span></div>
+    <div class="widget-body">
+      <p>Bấm một ô để xem. Hãy đoán trước: adapter thiếu khóa sai ở mấy ca?</p>
+      <div class="table-wrap" id="w1-table" style="margin:0"></div>
+      <div class="out" id="w1-out" aria-live="polite">Chưa chọn ô nào.</div>
+    </div>
+  </div>
+  {{RUN:lab4}}
+  <div class="callout pg" id="sl-10">
+    <span class="tag">Slide 10 · <span class="vchip ok">Đúng</span>, kèm một lưu ý</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Flexibility: dễ đổi adapter. Lõi test độc lập với dịch vụ ngoài.</p></div>
+      <div><h5>Đo được</h5><p>Đúng là đổi adapter không phải sửa lõi. Lưu ý: adapter thiếu khóa qua 4 trên 5 ca, chỉ lộ ở ca đồng thời: ví còn <b class="m" data-run="lab4">vi1=990</b> thay vì 700, trong khi sổ cái có <b class="m" data-run="lab4">but_toan=60</b>.</p></div>
+    </div>
+    <p>Kết luận: <b>test với adapter trong RAM không nói gì về khóa của DB.</b> Mỗi adapter thật phải qua cùng một bộ kiểm hợp đồng, kể cả ca rollback và ca đồng thời. Ở đây không có Postgres, nên lab chỉ mô phỏng; số thật trên DB nằm ở Lab 14.01 của Bài 14.</p>
+  </div>
+
+  <h3>Onion: chuyển database ra khỏi tâm</h3>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_11_img_01.png" alt="Slide 11: các vòng tròn đồng tâm, Domain Model ở giữa, rồi Domain Services, Application Services; vòng ngoài là User Interface, Tests, Infrastructure; mũi tên direction of coupling chỉ vào tâm" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 11 · Domain ở tâm, Infrastructure ở vòng ngoài</figcaption></figure>
+  <div class="callout key"><span class="tag">Slide 11–12 · <span class="vchip ok">Đúng</span></span><p>Onion giữ tư duy tầng của layered, nhưng lấy domain làm tâm thay vì database. Hexagonal nói về <b>rìa</b> (port, adapter), Onion nói về <b>các vòng bên trong</b>. Cả hai cùng một luật: tầng trong không được biết tầng ngoài. Nhược điểm của slide 12 là phức tạp và khó học. Lab 8 chỉ đếm dòng, nên chưa đo được độ khó học.</p></div>
+
+  <div class="panel">
+    <h4>Thử thách (TODO Đạt, 10 phút)</h4>
+    <p>Sửa <code>infrastructure/racy-wallet-repository.ts</code> để ca đồng thời PASS. Chỉ được sửa file đó.</p>
+    <p><b>Luồng:</b> (1) thêm một hàng đợi Promise, (2) mỗi <code>transaction</code> nối vào cuối hàng, (3) lỗi của lượt trước không được làm hỏng hàng. <b>Phao cú pháp:</b> <code>const run = this.#queue.then(() =&gt; làmViệc()); this.#queue = run.catch(() =&gt; undefined); return run;</code></p>
+    <p><b>Đạt khi:</b> <code>npm run lab4</code> in <code>tong so ca FAIL: 0</code>. Lab thoát mã 1 vì nó kỳ vọng bản cố ý sai vẫn sai, đừng lo. Xong thì <code>git checkout -- src/wallets/infrastructure/racy-wallet-repository.ts</code> để trả lại.</p>
+    <p class="muted">Câu hỏi thêm: hàng đợi này giúp được một process. Hai pod NestJS thì sao? Đáp án nằm ở quiz Bài 14 chặng 8.</p>
+  </div>
+  <div class="quiz" data-quiz="2"></div>
+</section>
+
+<!-- CHẶNG 3 -->
+<section id="chang-3" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">03</span>
+    <div>
+      <div class="stage-meta"><span>Slide 13–17</span><span>40 phút</span></div>
+      <h2>Clean: một luật, hai ranh giới, một lời khuyên gây tranh cãi</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> chỉ ra vi phạm bằng cách đọc dòng import, và tranh luận được khi nào không nên dùng Clean.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Theo slide 13, Clean không có gì mới, chỉ gói lại Hexagonal và Onion. Số tầng cũng không cố định; quy tắc phụ thuộc mới là thứ không được vi phạm.</dd>
+    <dt>TẠI SAO?</dt><dd>Khi import chỉ hướng vào trong, framework và DB thành chi tiết thay được.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Theo slide 17: dự án nhỏ, team 1–3 người, công cụ và thư viện ít nghiệp vụ.</dd>
+  </dl>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_14_img_01.png" alt="Slide 14: sơ đồ Explicit Architecture; application core ở giữa, bên trái primary adapter nhận HTTP và CLI, bên phải secondary adapter ra ORM, message queue, search; mũi tên dependencies go inwards" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 14 · Explicit Architecture, bản đồ đầy đủ. Dòng chú thích trong ảnh: "understand all of this, but use only what you need".</figcaption></figure>
+  <div class="callout key"><span class="tag">Slide 13–14 · <span class="vchip ok">Đúng</span></span><p>Hub chỉ cần một phần của sơ đồ này. Command bus, query bus chưa cần ở M2. Chọn đúng phần mình cần cũng là một kỹ năng phỏng vấn.</p></div>
+
+  <h3 id="sl-15">Ranh giới 1: đi ra ngoài (slide 15)</h3>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_15_img_01.png" alt="Slide 15: sơ đồ The Clean Architecture với các vòng Entities, Use Cases, Controllers, DB và Web; góc dưới vẽ Controller, Use Case Input Port, Use Case Interactor, Use Case Output Port, Presenter" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 15–16 · góc dưới: Input Port và Output Port thuộc vòng use case</figcaption></figure>
+  <p>Slide 15 hỏi: controller trả thẳng Entity cho client thì sao? Hub dùng <code>BigInt</code> cho số dư, nên lab đo bằng HTTP thật trên một dòng kiểu Prisma có bigint (<code>riskScore</code>, <code>version</code> là field nội bộ minh họa, Hub không có) và trên chính Entity của lab.</p>
+  <div class="widget" id="w2">
+    <div class="widget-head"><h4>W2 · Trả gì cho client?</h4><span class="eyebrow">Lab 1 · slide 15</span></div>
+    <div class="widget-body">
+      <div class="btns" id="w2-btns" role="group" aria-label="Chọn cách trả"></div>
+      <div class="out" id="w2-out" aria-live="polite"></div>
+    </div>
+  </div>
+  {{RUN:lab1}}
+  <div class="callout pg">
+    <span class="tag">Slide 15 · <span class="vchip fix">Cần sửa</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Dùng DTO "in Domain Layer".</p></div>
+      <div><h5>Nên làm</h5><p>Đặt DTO ở <b>application</b>, cạnh use case. Sơ đồ Clean trên chính slide này vẽ Use Case Input Port và Output Port ở vòng use case, không phải vòng Entities.</p></div>
+    </div>
+    <p>Phần vấn đề của slide thì đúng, và có 3 kiểu hỏng: dòng Prisma có bigint gây lỗi <b class="m" data-run="lab1">500</b>; "sửa nhanh" bằng <code>toJSON</code> cho 200 nhưng làm lộ <b class="m" data-run="lab1">riskScore</b> và <b class="m" data-run="lab1">version</b>; còn Entity có field <code>#private</code> thì trả 200 với <b class="m" data-run="lab1">{"id":7}</b>, số dư mất mà không báo lỗi. Hub đang làm đúng: <code>findOne</code> tự map <code>String(wallet.balance)</code>.</p>
+  </div>
+
+  <h3>Ranh giới 2: đi vào hạ tầng (slide 16)</h3>
+  <p>Domain cần lưu dữ liệu, mà gọi thẳng DB thì sai chiều. Cách giải: interface đặt bên trong, phần cài đặt đặt bên ngoài. Luồng chạy vẫn đi ra DB, nhưng dòng import đã quay ngược.</p>
+  <figure class="slide-fig" style="background:var(--surface)">
+    <svg viewBox="0 0 640 262" role="img" aria-labelledby="dip-t" style="width:100%;height:auto;display:block">
+      <title id="dip-t">Trước: use case import PrismaService. Sau: use case và PrismaWalletRepository cùng import interface WalletRepository, luồng chạy vẫn đi từ use case sang Prisma.</title>
+      <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--bad)"></path></marker>
+      <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--ok)"></path></marker>
+      <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--muted)"></path></marker></defs>
+      <g font-family="var(--font-mono)" font-size="14" fill="var(--fg)">
+        <text x="8" y="20" font-weight="700">TRƯỚC (v1.0)</text>
+        <rect x="8" y="34" width="190" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect><text x="103" y="62" text-anchor="middle">WalletsService</text>
+        <rect x="442" y="34" width="190" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect><text x="537" y="62" text-anchor="middle">PrismaService</text>
+        <line x1="198" y1="57" x2="440" y2="57" stroke="var(--bad)" stroke-width="2.5" marker-end="url(#a1)"></line><text x="320" y="48" text-anchor="middle" fill="var(--bad)">import đi ra ngoài</text>
+        <text x="8" y="122" font-weight="700">SAU (v2.0)</text>
+        <rect x="8" y="136" width="170" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect><text x="93" y="164" text-anchor="middle">TransferFunds</text>
+        <rect x="222" y="136" width="186" height="46" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"></rect><text x="315" y="164" text-anchor="middle">WalletRepository</text>
+        <rect x="452" y="136" width="180" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"></rect><text x="542" y="158" text-anchor="middle" font-size="12">PrismaWallet</text><text x="542" y="174" text-anchor="middle" font-size="12">Repository</text>
+        <line x1="178" y1="159" x2="220" y2="159" stroke="var(--ok)" stroke-width="2.5" marker-end="url(#a2)"></line>
+        <line x1="452" y1="159" x2="410" y2="159" stroke="var(--ok)" stroke-width="2.5" marker-end="url(#a2)"></line>
+        <path d="M93,182 Q93,232 320,232 Q542,232 542,184" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a3)"></path>
+        <text x="320" y="224" text-anchor="middle" fill="var(--muted)" font-size="13">luồng chạy lúc runtime không đổi</text>
+        <text x="315" y="208" text-anchor="middle" fill="var(--ok)" font-size="13">cả hai import đều hướng vào port</text>
+      </g>
+    </svg>
+    <figcaption>Slide 16 vẽ lại · mũi tên liền là import, mũi tên đứt là luồng chạy</figcaption>
+  </figure>
+  <div class="callout key"><span class="tag">Slide 16 · <span class="vchip ok">Đúng</span></span><p>Slide đặt interface trong repository layer "bọc" entity. Lab đặt ở <code>domain/wallet-repository.ts</code>. Hai cách cùng một luật; port nằm ở vòng trong.</p></div>
+
+  <h3>Làm mẫu: quy tắc này máy kiểm được</h3>
+  <p><code>check-dependency-rule.mjs</code> chỉ khoảng 70 dòng: đọc import từng file, đối chiếu bảng tầng nào được import tầng nào. Mở bảng <code>ALLOWED</code> ở đầu file, rồi đoán trước khi xem kết quả. Lưu ý: quy tắc phụ thuộc của Clean cho phép presentation import domain vì đó vẫn là hướng vào trong. Bảng của lab <b>chặt hơn</b> để ép controller đi qua DTO, và chỉ chừa <code>domain/errors</code> cho exception filter.</p>
+  <div class="widget" id="w3">
+    <div class="widget-head"><h4>W3 · Bạn là máy quét</h4><span class="eyebrow">Lab 3 · slide 11, 13, 16</span></div>
+    <div class="widget-body"><div data-sorter="scan"></div></div>
+  </div>
+  {{RUN:lab3}}
+  <div class="callout teacher"><span class="tag">Đo trên Hub thật</span><p>File <code>wallets.service.ts</code> có <b class="m" data-run="lab3">import ha tang/framework: 7</b>, cùng 4 lệnh <code>new</code> exception HTTP. Đây không phải lỗi: bản v1.0 chủ động như vậy để bạn tập trung vào DB và Redis (đã chốt ở roadmap). Con số này là đường cơ sở cho đợt refactor ngày 15–17/11.</p></div>
+
+  <div class="callout pg" id="sl-17">
+    <span class="tag">Slide 17 · <span class="vchip diff">Đúng một phần</span></span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Team 1–3 người, dự án nhỏ: đừng dùng. Rủi ro lớn là "do it wrong".</p></div>
+      <div><h5>Hub thì sao?</h5><p>Hub do một người làm, vậy mà roadmap vẫn nâng lên 4 tầng. Có phải sai không? Không, nếu nói rõ phạm vi và lý do.</p></div>
+    </div>
+    <p><b>Áp dụng theo module, không theo repo.</b> Đúng với ADR-008 đang đề xuất: <code>wallets</code>, <code>vouchers</code>, <code>pos-invoices</code> có bất biến nên chia 4 tầng; <code>products</code>, <code>stores</code> là CRUD nên giữ mỏng. Mục tiêu học và phỏng vấn cũng là một lý do hợp lệ, miễn là bạn nói thẳng ra thay vì coi đó là nhu cầu kỹ thuật. Một dự án thương mại cỡ này, 1 người, mà chia 4 tầng cho mọi CRUD thì đúng là over-engineering.</p>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tín hiệu</th><th>Giữ mỏng</th><th>Chia 4 tầng</th></tr></thead>
+    <tbody>
+      <tr><td>Quy tắc nghiệp vụ</td><td>Không có hoặc chỉ validate</td><td>Có bất biến, có nhiều nhánh từ chối</td></tr>
+      <tr><td>Sai thì mất gì</td><td>Sửa lại là xong</td><td>Mất tiền, cần đối soát</td></tr>
+      <tr><td>Khả năng đổi hạ tầng</td><td>Gần như không</td><td>Có lộ trình (Hub: tách service ở v3.0)</td></tr>
+      <tr><td>Ví dụ trong Hub</td><td><code>products</code>, <code>stores</code></td><td><code>wallets</code>, <code>vouchers</code>, <code>pos-invoices</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="panel">
+    <h4>Thử thách (10 phút)</h4>
+    <p>Sửa <code>bad-src</code> tới khi <code>npm run scan -- bad-src</code> in <code>0 vi pham</code>. Không được xóa quy tắc khỏi bảng <code>ALLOWED</code>. Thứ tự gợi ý: tách interface repository vào domain, bỏ <code>@prisma/client</code> khỏi Entity, bỏ <code>@nestjs/common</code> khỏi use case, chuyển DTO về application, controller gọi use case thay vì repository.</p>
+    <p class="muted">Muốn trả về như cũ: <code>git checkout -- bad-src &amp;&amp; git clean -fd bad-src</code> (lệnh sau xóa các file bạn vừa tạo trong <code>bad-src</code>). Máy quét chỉ kiểm được import; "use case nhét quy tắc" nó không nhìn ra. Phần đó ở bài tập tối.</p>
+  </div>
+  <div class="quiz" data-quiz="3"></div>
+</section>
+
+<!-- CHẶNG 4 -->
+<section id="chang-4" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">04</span>
+    <div>
+      <div class="stage-meta"><span>Slide 18–19</span><span>20 phút</span></div>
+      <h2>Lõi thuần, vỏ I/O: không cần viết Haskell</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> nhận ra chỗ nào trong một hàm là tác dụng phụ, và đẩy nó ra rìa.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Hàm thuần <code>f(x) → y</code>: cùng đầu vào luôn cùng đầu ra, không đổi gì bên ngoài. I/O nằm ở hai đầu.</dd>
+    <dt>TẠI SAO?</dt><dd>Test không cần mock, vì không có gì để mock.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Khi đang ép cả team đổi sang phong cách hàm hoàn toàn. Chỉ cần mượn ý tưởng "lõi thuần".</dd>
+  </dl>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_18_img_01.png" alt="Slide 18: đường thẳng đi qua I/O ở vòng ngoài, Pure code ở Core Domain, rồi lại I/O ở vòng ngoài" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 18 · I/O ở hai đầu, code thuần ở giữa</figcaption></figure>
+  <div class="callout key"><span class="tag">Slide 18 · <span class="vchip ok">Đúng</span></span><p>Câu slide hỏi: "gọi I/O ở đâu?" Trả lời: trong use case hoặc adapter, trước và sau lõi. Vì lẽ đó <code>TransferFunds</code> nhận <code>newId</code> từ ngoài vào, còn domain không tự gọi <code>randomUUID()</code> hay <code>Date.now()</code>.</p></div>
+
+  <h3>Làm mẫu</h3>
+  <div class="code"><pre><code>// Lõi: chỉ nhận dữ liệu, trả quyết định
+function decideTransfer(fromBalance, toBalance, amount) {
+  if (fromBalance &lt; amount) return { ok: false, reason: 'INSUFFICIENT_FUNDS' };
+  return { ok: true, nextFrom: fromBalance - amount, nextTo: toBalance + amount };
+}</code></pre></div>
+  {{RUN:lab6}}
+  <p>Chạy <b class="m" data-run="lab6">90601</b> tổ hợp đầu vào, không mock, chỉ để kiểm một bất biến. Bản lẫn <code>randomUUID</code> và <code>Date.now</code> cho <b class="m" data-run="lab6">100000</b> kết quả khác nhau trên cùng đầu vào, nên không thể so sánh trực tiếp với kết quả kỳ vọng.</p>
+
+  <h3 id="sl-19">Test ở mức nào, tốn bao nhiêu?</h3>
+  {{RUN:lab2}}
+  <div class="callout pg">
+    <span class="tag">Slide 19 · <span class="vchip ok">Đúng</span>, kèm số đo</span>
+    <div class="sayvs">
+      <div><h5>Slide nói</h5><p>Domain thì unit test, application thì integration test. FP ít được dùng vì khó học.</p></div>
+      <div><h5>Đo được</h5><p>Nhánh thành công: use case + adapter RAM gấp domain <b class="m" data-run="lab2">x6.1</b>, nhưng vẫn chỉ vài µs mỗi ca. Nhánh từ chối: <b class="m" data-run="lab2">x1.2</b>, vì phần lớn thời gian là dựng đối tượng <code>Error</code>. Qua HTTP: <b class="m" data-run="lab2">x64</b>.</p></div>
+    </div>
+    <p>Cách chia của slide vẫn đúng: logic điều phối test được bằng adapter RAM với giá rẻ, còn khóa và transaction chỉ test được trên DB thật (chặng 2). Trong lab, mạng là bước đắt nhất; DB thật chưa đo ở đây. Slide cũng đúng khi nói chuyển hẳn sang FP tốn thời gian, nhưng bạn không cần chuyển hẳn: <code>decideTransfer</code> ở trên chỉ là JavaScript thường. "Ít được dùng" là nhận định của slide, chưa đo trực tiếp. Số thời gian phụ thuộc máy.</p>
+  </div>
+
+  <div class="panel">
+    <h4>Thử thách (5 phút)</h4>
+    <p>Mở <code>wallets.service.ts</code> của Hub, hàm <code>transferLocked</code>. Liệt kê những gì làm hàm này không thuần. Đạt khi tìm đủ 4 nhóm.</p>
+    <textarea class="field" data-store="l04-c4" placeholder="Ví dụ: randomUUID…"></textarea>
+    <details class="fold"><summary>Xem đáp án</summary><div class="fold-body"><ol><li>Sinh id: <code>randomUUID()</code>.</li><li>Đọc và ghi DB: <code>$transaction</code>, <code>$queryRaw</code>, <code>ledgerEntry.createMany</code>, <code>wallet.update</code>.</li><li>Ghi log: <code>this.logger.warn</code>.</li><li>Đọc cấu hình đã nạp: <code>this.txOptions</code>.</li></ol><p>Phần còn lại, tức so sánh số dư và tính hai bút toán, là thứ có thể tách thành thuần.</p></div></details>
+  </div>
+  <div class="quiz" data-quiz="4"></div>
+</section>
+
+<!-- CHẶNG 5 -->
+<section id="chang-5" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">05</span>
+    <div>
+      <div class="stage-meta"><span>Slide 20–25</span><span>25 phút</span></div>
+      <h2>Cắt domain ở đâu? Slide hỏi nhưng không trả lời</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> dùng được 4 tín hiệu để quyết định ranh giới module, và đặt tên code theo ngôn ngữ nghiệp vụ.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Bounded Context: một vùng mà mỗi từ chỉ có một nghĩa. Ubiquitous Language: dev và người làm nghiệp vụ dùng chung từ đó, kể cả trong code.</dd>
+    <dt>TẠI SAO?</dt><dd>Một class <code>Store</code> phục vụ mọi nơi sẽ phình to và ai cũng sợ sửa.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Đừng tách thành microservice chỉ vì đã vẽ được context. Context là ranh giới logic, có thể sống chung một process.</dd>
+  </dl>
+
+  <div class="callout warn" id="sl-21">
+    <span class="tag">Slide 20–21 · slide trống</span>
+    <p>Slide 20 chỉ có tiêu đề "Project Structure", slide 21 chỉ có câu hỏi "How to define/divide domains?". Không có nội dung để gắn nhãn, nên hai phần dưới là phần bổ sung của bài này, và không đến từ slide.</p>
+  </div>
+
+  <h3>Slide 20: chia thư mục theo gì?</h3>
+  <div class="sayvs">
+    <div><h5>Theo tầng kỹ thuật</h5><div class="code"><pre><code>controllers/wallets.ts
+services/wallets.ts
+repositories/wallets.ts</code></pre></div><p>Một tính năng nằm rải 3 nơi. Nhìn cây thư mục không biết app làm gì.</p></div>
+    <div><h5>Theo nghiệp vụ, rồi mới theo tầng</h5><div class="code"><pre><code>modules/wallets/domain/
+modules/wallets/application/
+modules/wallets/infrastructure/
+modules/wallets/presentation/</code></pre></div><p>Cây thư mục tự nói app làm gì. Tách service sau này gần như chỉ là bê cả thư mục đi.</p></div>
+  </div>
+  <p>Hub đã chia theo nghiệp vụ (<code>modules/wallets</code>, <code>modules/vouchers</code>). Việc của v2.0 chỉ là thêm 4 thư mục con trong những module cần.</p>
+
+  <h3>Slide 21: 4 tín hiệu để cắt</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tín hiệu</th><th>Câu hỏi</th><th>Áp vào Hub</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. Từ đổi nghĩa</b></td><td>Cùng một từ, hai nhóm hiểu khác nhau?</td><td><code>Store</code> ở <code>wallets</code> là chủ số dư; ở <code>products</code> là nơi bán menu</td></tr>
+      <tr><td><b>2. Bất biến chung</b></td><td>Thứ gì phải đúng ngay trong một transaction?</td><td>Số dư và bút toán phải cùng commit, nên cùng context</td></tr>
+      <tr><td><b>3. Nhịp thay đổi</b></td><td>Thứ gì đổi cùng nhau, đổi vì cùng một lý do?</td><td>Luật voucher đổi theo campaign, luật sổ cái gần như không đổi</td></tr>
+      <tr><td><b>4. Chủ dữ liệu</b></td><td>Ai duy nhất được ghi bảng này?</td><td>Chỉ <code>wallets</code> được ghi <code>ledger_entries</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Slide</th><th>Slide nói</th><th>Ghi nhớ</th></tr></thead>
+    <tbody>
+      <tr><td>22 </td><td>Mở đầu phần DDD</td><td>Slide chuyển mục.</td></tr>
+      <tr><td>23 <span class="vchip ok">Đúng</span></td><td>Tên class, method khớp nghiệp vụ; DDD còn là cách làm việc</td><td><code>wallet.debit(amount)</code> nói được với kế toán, còn <code>updateBalance(-x)</code> thì không.</td></tr>
+      <tr><td>24 <span class="vchip ok">Đúng</span></td><td>"credit" có 2 nghĩa: cho vay và tài khoản nhận tiền</td><td>Trong lab, <code>wallet.credit()</code> nghĩa là ghi có. Nếu sau này có tín dụng cho cửa hàng, hãy đặt nó ở context riêng thay vì dùng chung từ.</td></tr>
+      <tr><td>25 <span class="vchip ok">Đúng</span></td><td>Dev ngồi với chuyên gia nghiệp vụ</td><td>Không có domain expert? Dùng đúng từ trong SRS OmniPOS và trải nghiệm chuỗi F&amp;B của bạn. Đó cũng là chuyện đáng kể khi phỏng vấn.</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_23_img_01.png" alt="Slide 23: sơ đồ vẽ tay Problem Space với stakeholder và các phần core, supportive, generic; Solution Space với domain expert, ubiquitous language, code và bounded contexts" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 23 · chia core, supportive, generic. Chỉ core mới đáng đầu tư mô hình phức tạp; "simple solutions for simple problems".</figcaption></figure>
+
+  <div class="panel">
+    <h4>Thử thách (8 phút)</h4>
+    <p>Quyết định: <code>VoucherClaim</code> nên nằm ở context nào? Khi claim voucher xong ví có được cộng tiền không, và hai việc đó có cần chung transaction không?</p>
+    <textarea class="field" data-store="l04-c5" placeholder="Viết 2–3 dòng, nêu tín hiệu nào bạn dùng"></textarea>
+    <details class="fold"><summary>Xem một đáp án hợp lý</summary><div class="fold-body"><p><code>VoucherClaim</code> thuộc <code>vouchers</code>: nó đổi theo campaign (tín hiệu 3), và bất biến "mỗi cửa hàng một lần" là của voucher (tín hiệu 2). Nếu claim phải cộng ví, đừng để <code>vouchers</code> ghi thẳng bảng ví (tín hiệu 4). Hiện cùng một DB thì gọi use case của <code>wallets</code> trong cùng transaction là thực dụng. Khi tách service ở v3.0, chuyển sang event và Outbox. Đổi lại, lúc đó sẽ có độ trễ giữa hai bên.</p></div></details>
+  </div>
+  <div class="quiz" data-quiz="5"></div>
+</section>
+
+<!-- CHẶNG 6 -->
+<section id="chang-6" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">06</span>
+    <div>
+      <div class="stage-meta"><span>Slide 26–29</span><span>35 phút</span></div>
+      <h2>Entity, Value Object, Aggregate: quy tắc nằm ở đâu thì không ai bỏ qua được</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> phân loại đúng từng class, và tự viết một Aggregate giữ được bất biến.</p>
+  <dl class="wwh">
+    <dt>LÀ GÌ?</dt><dd>Bộ khối xây dựng của tầng domain, chi tiết ở bảng dưới.</dd>
+    <dt>TẠI SAO?</dt><dd>Quy tắc nằm trong đối tượng thì mọi đường gọi đều phải qua nó. Quy tắc nằm trong service thì đường gọi mới có thể quên.</dd>
+    <dt>KHI NÀO KHÔNG?</dt><dd>Với CRUD, thêm Aggregate chỉ để bọc getter và setter thì không được gì.</dd>
+  </dl>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Khối</th><th>Nhận diện</th><th>Trong lab</th><th>Slide</th></tr></thead>
+    <tbody>
+      <tr><td><b>Entity</b></td><td>Có id, có vòng đời; thuộc tính đổi vẫn là nó</td><td><code>Wallet</code></td><td>26 <span class="vchip ok">Đúng</span></td></tr>
+      <tr><td><b>Value Object</b></td><td>Không id, bất biến, bằng nhau theo giá trị</td><td><code>Money</code></td><td>26 <span class="vchip ok">Đúng</span></td></tr>
+      <tr><td><b>Aggregate Root</b></td><td>Cửa duy nhất để đổi cụm dữ liệu cần nhất quán</td><td><code>Wallet</code> với <code>debit</code>, <code>credit</code></td><td>27</td></tr>
+      <tr><td><b>Domain Service</b></td><td>Quy tắc không thuộc riêng đối tượng nào, không state</td><td><code>transferBetweenWallets</code></td><td>27</td></tr>
+      <tr><td><b>Repository</b></td><td>Interface ở domain, cài đặt ở infrastructure</td><td><code>WalletRepository</code></td><td>27</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Làm mẫu: thử phá nó</h3>
+  <p>Đọc <code>domain/money.ts</code> và <code>domain/wallet.ts</code>, rồi xem lab thử vượt rào theo từng đường.</p>
+  {{RUN:lab5}}
+  <div class="callout teacher"><span class="tag">3 điều rút ra</span><ul>
+    <li><b>TypeScript <code>private</code> chỉ tồn tại lúc biên dịch.</b> Gán từ JS vào field <code>private balance</code>, lab ghi được số dư <b class="m" data-run="lab5">= -1</b>. Còn đọc <code>w.#balance</code> ngoài class thì lỗi <b class="m" data-run="lab5">SyntaxError</b> ngay. Với code TS bình thường, <code>private</code> thường đủ dùng; chọn <code>#</code> khi muốn đảm bảo cả lúc chạy.</li>
+    <li><b>Tiền không dùng number:</b> <code>9007199254740993</code> thành <b class="m" data-run="lab5">9007199254740992</b>. Đây cũng là lý do Hub dùng BigInt.</li>
+    <li><b>Kiểm tra đặt trong constructor</b>, nên <code>new Money(-5n)</code> cũng ném lỗi dù <code>private constructor</code> chỉ chặn lúc biên dịch. <code>Money.of</code> từ chối cả số vượt ngưỡng an toàn: dòng in ra <code>9007199254740992</code> cho thấy số đã bị làm tròn trước khi vào hàm, vì vậy số lớn phải truyền bigint.</li>
+  </ul></div>
+
+  <div class="callout warn">
+    <span class="tag">Lab đơn giản hơn Hub ở một điểm</span>
+    <p>Lab chỉ mô hình ví cửa hàng, và <code>Money</code> ở đây là số tiền không âm. Trong Hub, bất biến <code>I-03</code> chỉ cấm âm với ví STORE; ví TREASURY được phép âm, DB cũng ghi <code>check(store_id is null or balance&gt;=0)</code>. Nếu bê nguyên lab vào Hub, nạp ví TREASURY sẽ ném <code>MONEY_NEGATIVE</code>. Khi refactor: <code>Money</code> dùng cho số tiền chuyển, số dư phải được âm, còn quy tắc thiếu tiền nằm trong <code>Wallet</code> và phụ thuộc loại ví.</p>
+  </div>
+
+  <div class="callout pg" id="sl-27">
+    <span class="tag">Slide 27 · <span class="vchip ok">Đúng</span>, thêm 2 ghi chú</span>
+    <p>Định nghĩa của slide đúng. Có hai điều cần thêm khi áp dụng thực tế:</p>
+    <ul>
+      <li><b>Chuyển tiền đụng 2 Aggregate.</b> Sách DDD thường khuyên mỗi transaction chỉ sửa một Aggregate, nhưng sổ cái kép cần cả hai ví cùng commit. Chọn thực dụng: một Domain Service, một transaction DB, khóa theo thứ tự id (I-07). Tài liệu kiến trúc giữ Wallet và LedgerEntry chung DB <code>omnipos_wallet</code> ngay cả ở v3.0, nên chuyển ví vẫn một transaction; Saga dành cho luồng order sang wallet.</li>
+      <li><b>Về đặt tên (sở thích, không phải lỗi):</b> lab dùng <code>PrismaWalletRepository</code> thay vì <code>BookingRepositoryImpl</code> như ví dụ của slide, vì khi có 2 adapter thì hậu tố <code>Impl</code> không phân biệt được.</li>
+    </ul>
+  </div>
+  <div class="callout warn">
+    <span class="tag">Bẫy khi refactor: ghi tuyệt đối</span>
+    <p><code>tx.save(wallet)</code> ghi đè số dư bằng một giá trị tuyệt đối, tức cách B của Lab 14.01, nơi tổng tiền bị in thêm. Nó chỉ an toàn khi đã giữ khóa từ lúc đọc, hoặc khi ghi có điều kiện <code>version</code> (Bài 14 chặng 7). Trong port của lab, <code>lockMany</code> phải thật sự là <code>FOR UPDATE</code>; đó là điều bộ kiểm hợp đồng ở chặng 2 bắt được. Hub hiện dùng <code>decrement</code> tương đối, lại có <code>CHECK</code> ở DB. Cứ giữ <code>CHECK</code>: domain chặn sớm, DB là lưới cuối.</p>
+  </div>
+
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_28_img_01.png" alt="Slide 28: Key Terms in DDD; Value Object mô tả Entity, Entity là phần của Aggregate; Repository lưu và nạp Aggregate; Factory tạo Aggregate; Domain Service điều phối nhiều Aggregate; Aggregate phát Domain Event" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 28 <span class="vchip ok">Đúng</span> · hai khối mới so với slide 26–27: Factory (<code>Money.of</code> là bản nhỏ nhất) và Domain Event (dùng ở Outbox, Cụm 5)</figcaption></figure>
+
+  <h3 id="sl-29">Slide 29: chữ đúng, hình sai chiều</h3>
+  <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_29_img_01.png" alt="Slide 29: kim tự tháp 4 tầng User Interface, Application, Domain, Infrastructure, mũi tên Dependency Flow chỉ từ trên xuống dưới" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 29 · mũi tên "Dependency Flow" đi từ UI xuống Infrastructure</figcaption></figure>
+  <div class="callout pg">
+    <span class="tag">Slide 29 · <span class="vchip fix">Cần sửa</span></span>
+    <div class="sayvs">
+      <div><h5>Hình vẽ</h5><p>Domain phụ thuộc xuống Infrastructure, đúng kiểu layered của chặng 1. Có thể đây là cách vẽ DDD cổ điển, nhưng không còn khớp với phần slide này đang dạy.</p></div>
+      <div><h5>Mâu thuẫn với</h5><p>Slide 16 và 27: interface ở domain, cài đặt ở infrastructure, nên <b>infrastructure phụ thuộc domain</b>. Lab 3 kiểm đúng chiều này và <b class="m" data-run="lab3">0 vi pham</b> trên bản 4 tầng.</p></div>
+    </div>
+    <p>Phần chữ của slide vẫn đúng: "Application là người điều phối, không biết quy tắc domain". Mở <code>application/transfer-funds.ts</code>: không có một phép so sánh nghiệp vụ nào. Đừng dùng hình này khi phỏng vấn.</p>
+  </div>
+
+  <div class="panel" id="todo-dat">
+    <h4>Thử thách chính: TODO(Đạt), 10–15 phút</h4>
+    <p>Mở <code>challenge/voucher-campaign.todo.ts</code>, viết thân hàm <code>claim(storeId, now)</code>. Phao đã nằm ngay trên khối TODO. Chạy <code>npm run challenge</code>, đạt khi in <code>8/8 dat</code>.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nấc</th><th>Khi nào</th><th>Lệnh</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Cần nhắc hướng: vì sao ca C5 đòi kiểm hạn trước số suất?</td><td><code>/thay hint</code></td></tr>
+        <tr><td>2</td><td>Bí cú pháp, cần khung có ô trống</td><td><code>/thay hint 2</code></td></tr>
+        <tr><td>3</td><td>Xem bản mẫu rồi gõ lại</td><td><code>/thay mau</code></td></tr>
+      </tbody>
+    </table></div>
+    <details class="fold"><summary>Khung chạy thật (trước khi bạn viết)</summary><div class="fold-body">{{RUN:challenge}}</div></details>
+    <p class="muted">Lưu ý ca C6 đã PASS sẵn: <code>#remaining</code> chỉ có getter. Đó là thiết kế làm hộ bạn. Ở phỏng vấn, câu ăn điểm là: "now truyền vào làm tham số, nên test được ca hết hạn mà không phải chỉnh đồng hồ".</p>
+  </div>
+  <div class="quiz" data-quiz="6"></div>
+</section>
+
+<!-- CHẶNG 7 -->
+<section id="chang-7" class="stage col">
+  <div class="stage-head">
+    <span class="stage-no">07</span>
+    <div>
+      <div class="stage-meta"><span>Slide 30–31, 33</span><span>30 phút</span></div>
+      <h2>DI không phải DIP, và bản đồ refactor Hub</h2>
+    </div>
+  </div>
+  <p class="goal"><b>Mục tiêu:</b> giải thích khác biệt DI và DIP bằng một output lỗi thật, rồi đặt từng dòng <code>transferLocked</code> vào đúng tầng.</p>
+  <div class="callout key"><span class="tag">Slide 30 · Recap · <span class="vchip ok">Đúng</span></span><p>Slide chốt 3 ý: cách ly tầng, DI khác DIP, dev phải hiểu nghiệp vụ để code khớp nghiệp vụ. Ý thứ hai hay bị hỏi nhất nên có lab riêng.</p></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Dependency Injection</th><th>Dependency Inversion</th></tr></thead>
+    <tbody>
+      <tr><td><b>Là gì</b></td><td>Kỹ thuật: ai tạo đối tượng và đưa vào</td><td>Nguyên tắc: dòng import hướng về đâu</td></tr>
+      <tr><td><b>Hub v1.0</b></td><td>Có: <code>constructor(prisma: PrismaService)</code>, nên test tiêm được bản giả</td><td>Không: file vẫn gọi tên class Prisma và dùng API của nó</td></tr>
+      <tr><td><b>Lab <code>src/</code></b></td><td>Có: truyền repo qua constructor</td><td>Có: use case chỉ biết interface</td></tr>
+    </tbody>
+  </table></div>
+  {{RUN:lab7}}
+  <p><b>Đừng nói "không có DIP thì không test được".</b> DI đã đủ để tiêm bản giả, và Hub cũng đang làm thế bằng <code>overrideProvider(PrismaService)</code>. Khác biệt nằm ở <b>ai sở hữu hợp đồng</b>. Bản giả ở trên phải biết <b class="m" data-run="lab7">wallet.findUnique</b>, tức test và service cùng gắn vào API của Prisma; đổi ORM là sửa cả hai. Với DIP, use case chỉ import vào trong, còn hợp đồng do lõi đặt ra theo ngôn ngữ nghiệp vụ. Dòng cuối cho thấy <code>interface</code> biến mất khi bỏ kiểu, chỉ <code>Symbol</code> còn lại, nên Nest cần token. Khi tự chạy, bạn sẽ thấy thêm <code>ExperimentalWarning</code> ở stderr; output trên chỉ ghi stdout.</p>
+  <h4>Nối dây trong Nest <span class="muted">(chưa chạy trong lab này, kiểm chứng ở Pha B)</span></h4>
+  <div class="code"><pre><code>// modules/wallets/wallets.module.ts: nơi duy nhất biết Prisma nối với port
+providers: [
+  { provide: WALLET_REPOSITORY, useClass: PrismaWalletRepository },
+  {
+    provide: TransferFunds,
+    useFactory: (repo: WalletRepository) =&gt; new TransferFunds(repo, randomUUID),
+    inject: [WALLET_REPOSITORY],
+  },
+],</code></pre></div>
+  <p><b>Đánh đổi:</b> dùng <code>useFactory</code> thì use case không cần <code>@Injectable()</code>, 0 vi phạm nhưng thêm vài dòng module. Dùng <code>@Injectable()</code> + <code>@Inject(TOKEN)</code> ở application thì ngắn hơn, nhưng application phải import <code>@nestjs/common</code>. Slide 17 gọi đó là "violating the rules by using frameworks". Nhiều team chấp nhận điều này. Tài liệu kiến trúc đang để ngỏ quyết định này cho bạn, ghi vào ADR-008 sau khi làm xong. Domain thì giữ sạch trong cả hai cách.</p>
+
+  <h3>Làm mẫu: bản đồ refactor</h3>
+  <div class="widget" id="w4">
+    <div class="widget-head"><h4>W4 · Mỗi dòng của transferLocked về đâu?</h4><span class="eyebrow">Hub @859c913 · ngày 15–17/11</span></div>
+    <div class="widget-body"><div data-sorter="hub"></div></div>
+  </div>
+  <div class="callout warn"><span class="tag">Chỉ là bản đồ</span><p>Đợt này không sửa code Hub. Refactor do bạn làm ở Pha B (15–17/11) trên nhánh riêng. Trước khi bắt đầu, chạy lại <code>checks</code> của M1 để có số "trước"; sau refactor, 30 request đồng thời phải cho cùng kết quả.</p></div>
+
+  <details class="fold" id="sl-33"><summary>Slide 33: "Thank you"</summary><div class="fold-body"><p>Slide kết, không có nội dung kỹ thuật.</p></div></details>
+  <div class="quiz" data-quiz="7"></div>
+</section>
+
+<!-- BÀI TẬP -->
+<section id="bai-tap" class="stage col">
+  <h2>Bài tập tối: Flight Booking (slide 32, 45 phút)</h2>
+  <p>Slide 32 <span class="vchip ok">Đúng</span> yêu cầu dựng khung Clean + DDD cho đặt vé máy bay, chỉ tạo package và class, không viết logic. Bài chia 3 phần, từ dễ đến khó. Phần A là chính, vì ở công việc thật bạn sẽ review code AI nhiều hơn tự viết.</p>
+
+  <h3>Phần A: review bản AI (15 phút)</h3>
+  <p>Mở <code>hw/ai-draft/booking</code>. Tìm đủ <b>8 lỗi</b>, ghi file và dòng: 5 lỗi import và 3 lỗi thiết kế. Máy quét bắt được 5 lỗi import; <code>hw-check</code> dò thêm được <code>saveToDb</code>; 2 lỗi còn lại chỉ mắt người nhìn ra. Chạy <code>npm run hw:draft</code> sau khi đã tự tìm.</p>
+  <textarea class="field" data-store="l04-hw-a" placeholder="file:dòng, lỗi gì, sửa thế nào"></textarea>
+  <details class="fold"><summary>Kết quả máy chấm trên bản AI</summary><div class="fold-body">{{RUN:hw-draft}}</div></details>
+  <details class="fold"><summary>Đáp án 3 lỗi thiết kế</summary><div class="fold-body"><ol>
+    <li><code>Booking</code> không có hành vi: <code>status</code> để public, lại có <code>saveToDb</code>. Entity vừa thiếu quy tắc vừa biết về DB.</li>
+    <li>Quy tắc "trước giờ bay 2 tiếng" nằm trong use case, và use case tự gán <code>booking.status</code>. Đáng ra là <code>booking.confirm(now)</code>.</li>
+    <li><code>domain/flight.ts</code> chép nguyên Flight của context khác, kèm cả <code>seatsLeft</code>. Booking chỉ nên giữ <code>FlightId</code> và lịch bay cần thiết.</li>
+  </ol><p>Lỗi import <code>application -&gt; infrastructure</code> có gốc là thiếu port: use case gọi tên thẳng <code>PrismaBookingRepository</code>, nên không đổi được adapter. Thiếu port là lý do H4, H5 trượt.</p></div></details>
+
+  <h3>Phần B: xếp tầng (10 phút)</h3>
+  <div class="widget" id="w5">
+    <div class="widget-head"><h4>W5 · Class này về tầng nào?</h4><span class="eyebrow">Slide 26–29, 32</span></div>
+    <div class="widget-body"><div data-sorter="flight"></div></div>
+  </div>
+
+  <h3>Phần C: tự dựng khung (20 phút)</h3>
+  <p>Tạo <code>hw/mine/booking/{domain,application,infrastructure,presentation}</code>, chỉ khai báo class và chữ ký hàm. Chạy <code>npm run hw</code>, đạt khi in <code>9/9 dat</code>. Lời giải tham khảo ở <code>hw/solution</code>, làm xong rồi hãy mở.</p>
+  <details class="fold"><summary>Máy chấm chạy trên lời giải</summary><div class="fold-body">{{RUN:hw-solution}}</div></details>
+  <p class="muted">Máy chấm dò theo tên và mẫu, nên 9/9 chỉ là điều kiện cần. Dán bài của bạn vào <code>/thay</code> để được review phần thiết kế.</p>
+</section>
+
+<!-- PHỎNG VẤN -->
+<section id="phong-van" class="stage col">
+  <h2>Kiểm tra cuối bài: 8 câu phỏng vấn</h2>
+  <p>Tự trả lời thành tiếng trước, rồi mới mở đáp án. Đối chiếu với ghi chú đầu bài của bạn.</p>
+  <div id="examList"></div>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat-sheet" class="stage col">
+  <h2>Cheat sheet một trang</h2>
+  <h3>Ai được import ai (bảng <code>ALLOWED</code>)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tầng</th><th>Được import</th><th>Chứa gì</th></tr></thead>
+    <tbody>
+      <tr><td><b>domain</b></td><td>domain</td><td>Entity, Value Object, Domain Service, port repository</td></tr>
+      <tr><td><b>application</b></td><td>domain, application</td><td>Use case, DTO, port ra ngoài</td></tr>
+      <tr><td><b>infrastructure</b></td><td>domain, application, gói ngoài</td><td>Adapter Prisma, Redis, Stripe; dịch lỗi DB thành lỗi nghiệp vụ</td></tr>
+      <tr><td><b>presentation</b></td><td>application, gói ngoài, <code>domain/errors</code></td><td>Controller, dịch mã lỗi thành HTTP status</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Dòng code này về đâu?</h3>
+  <ol>
+    <li>Quyết định đúng sai về nghiệp vụ, không có I/O: domain.</li>
+    <li>Sắp thứ tự các bước, mở transaction qua port, kiểm tìm đủ dữ liệu: application.</li>
+    <li>Có tên công nghệ (Prisma, <code>FOR UPDATE</code>, <code>Redis</code>): infrastructure.</li>
+    <li>Có HTTP (<code>status</code>, <code>ConflictException</code>, decorator route): presentation.</li>
+    <li>Chọn adapter nào: module, tức nơi nối dây.</li>
+  </ol>
+  <h3>Mùi cần nhận ra khi review</h3>
+  <ul>
+    <li>Entity có <code>save()</code>, hoặc domain có import gói ngoài.</li>
+    <li>Use case có <code>if</code> so sánh số liệu nghiệp vụ.</li>
+    <li>Controller trả Entity, hoặc import thẳng repository.</li>
+    <li>Interface chỉ có đúng một cài đặt và chép nguyên chữ ký của ORM: port đang không trừu tượng được gì.</li>
+    <li>Test chỉ chạy trên adapter RAM mà không có ca đồng thời trên DB thật.</li>
+  </ul>
+</section>
+
+<!-- BẢN ĐỒ SLIDE -->
+<section id="ban-do-slide" class="stage col">
+  <h2>Bản đồ 33 slide</h2>
+  <p>Mỗi chip dẫn tới chỗ slide được giải thích.</p>
+  <div class="chips" id="slideMap"></div>
+</section>
+
+<!-- THAM KHẢO -->
+<section id="tham-khao" class="stage col">
+  <h2>Tài liệu tham khảo (slide 31)</h2>
+  <ul>
+    <li><a href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" target="_blank" rel="noreferrer">Uncle Bob: The Clean Architecture</a></li>
+    <li><a href="https://herbertograca.com/2017/11/16/explicit-architecture-01-ddd-hexagonal-onion-clean-cqrs-how-i-put-it-all-together" target="_blank" rel="noreferrer">Herberto Graça: Explicit Architecture</a></li>
+    <li><a href="https://increment.com/software-architecture/primer-on-functional-architecture/" target="_blank" rel="noreferrer">Increment: Primer on functional architecture</a></li>
+    <li><a href="https://netflixtechblog.com/ready-for-changes-with-hexagonal-architecture-b315ec967749" target="_blank" rel="noreferrer">Netflix: Ready for changes with Hexagonal Architecture</a></li>
+    <li><a href="https://beyondxscratch.com/2020/08/23/hexagonal-architecture-example-digging-a-spring-boot-implementation/" target="_blank" rel="noreferrer">Beyond x Scratch: Hexagonal với Spring Boot</a></li>
+    <li><a href="https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c" target="_blank" rel="noreferrer">SSENSE: Hexagonal, two sides to every story</a></li>
+    <li><a href="https://medium.com/kayvan-kaseb/the-layered-architecture-pattern-in-software-architecture-324922d381ad" target="_blank" rel="noreferrer">Kayvan Kaseb: The Layered Architecture Pattern</a></li>
+    <li><a href="https://medium.com/raa-labs/part-1-domain-driven-design-like-a-pro-f9e78d081f10" target="_blank" rel="noreferrer">Raa Labs: DDD like a pro</a></li>
+    <li><a href="https://medium.com/tacta/a-decade-of-ddd-cqrs-and-event-sourcing-74edc8211039" target="_blank" rel="noreferrer">Tacta: A decade of DDD, CQRS and Event Sourcing</a></li>
+    <li><a href="https://github.com/heynickc/awesome-ddd" target="_blank" rel="noreferrer">awesome-ddd</a></li>
+    <li><a href="https://docs.nestjs.com/fundamentals/custom-providers" target="_blank" rel="noreferrer">NestJS: Custom providers (bổ sung, không có trong slide)</a></li>
+  </ul>
+</section>
+
+<!-- TIẾP THEO -->
+<section id="tiep-theo" class="stage col">
+  <div class="callout key">
+    <span class="tag">Tiếp theo · Bài 13 · Cụm 3 ngày 2</span>
+    <h3 style="margin-top:4px">SOLID và Result&lt;T,E&gt;</h3>
+    <p>Lab này ném <code>DomainError</code> để giữ code ngắn. Bài 13 đặt câu hỏi tiếp: lỗi nghiệp vụ dự kiến được nên là exception hay giá trị trả về? DIP mà bạn vừa đo chính là chữ D trong SOLID.</p>
+    <p>Mang theo từ Bài 04: phụ thuộc hướng vào trong, <code>private</code> chưa phải là hàng rào lúc chạy, và mỗi adapter thật phải qua bộ kiểm hợp đồng.</p>
+  </div>
+</section>

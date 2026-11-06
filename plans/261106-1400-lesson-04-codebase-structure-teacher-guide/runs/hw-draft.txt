@@ -1,0 +1,17 @@
+$ npm run hw:draft   # node v22.18.0
+PASS  H1 du 4 tang
+PASS  H2 Aggregate Booking o domain
+FAIL  H3 Booking khong co ham luu DB
+FAIL  H4 port repository (interface hoac abstract class) o domain
+FAIL  H5 adapter implements port o infrastructure
+PASS  H6 use case la class o application
+FAIL  H7 co DTO rieng o application
+FAIL  H8 controller o presentation, khong tra Entity
+FAIL  H9 quy tac phu thuoc (5 vi pham)
+      booking/application/book-flight.use-case.ts:1  application -> goi-ngoai  '@nestjs/common'
+      booking/application/book-flight.use-case.ts:3  application -> presentation  '../presentation/booking-response.dto.ts'
+      booking/application/book-flight.use-case.ts:4  application -> infrastructure  '../infrastructure/prisma-booking-repository.ts'
+      booking/domain/booking.ts:1  domain -> goi-ngoai  '@prisma/client'
+      booking/presentation/bookings.controller.ts:2  presentation -> domain  '../domain/booking.ts'
+3/9 dat
+[rc=1]

@@ -1,0 +1,6 @@
+$ npm run lab1   # node v22.18.0
+GET /prisma-row -> 500 {"loi":"Do not know how to serialize a BigInt"}
+GET /prisma-row-to-json-patch -> 200 {"id":7,"storeId":3,"balance":"1500000","riskScore":87,"version":4}
+GET /domain-entity -> 200 {"id":7}
+GET /dto -> 200 {"id":7,"storeId":3,"balance":"1500000"}
+[rc=0]

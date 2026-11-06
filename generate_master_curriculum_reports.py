@@ -107,7 +107,7 @@ def build_data():
                             "Business logic bị trộn lẫn trực tiếp trong Controller hoặc SQL queries, không thể viết Unit Test.",
                             "Ràng buộc chặt chẽ vào một framework hoặc database cụ thể khiến việc refactor hoặc nâng cấp là bất khả thi."
                         ],
-                        "artifacts": "Cấu trúc thư mục chuẩn áp dụng cho các labs và dự án tích hợp."
+                        "artifacts": "labs/lesson-04-codebase-structure/ & reports/advanced_backend/lesson_04_codebase_structure_teacher_guide.html"
                     },
                     {
                         "stt": "05",

@@ -1,7 +1,7 @@
 import { DomainError } from './errors.ts';
 import { Money } from './money.ts';
 
-// Aggregate Root: muốn đổi số dư phải đi qua debit/credit, nên bất biến "không âm" không thể bị bỏ qua.
+// Aggregate Root của ví cửa hàng: muốn đổi số dư phải đi qua debit/credit, nên bất biến "không âm" không thể bị bỏ qua.
 export class Wallet {
   readonly id: number;
   #balance: Money;

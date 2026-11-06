@@ -5,6 +5,8 @@ const STATUS_BY_CODE: Record<string, number> = {
   INSUFFICIENT_FUNDS: 409,
   WALLET_NOT_FOUND: 404,
   SAME_WALLET: 400,
+  MONEY_NEGATIVE: 400,
+  MONEY_NOT_SAFE_INTEGER: 400,
 };
 
 // Adapter phía vào: dịch HTTP thành command và dịch lỗi nghiệp vụ thành status. Không chứa quy tắc nào.

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { TransferFunds } from './src/wallets/application/transfer-funds.ts';
 import { InMemoryWalletRepository } from './src/wallets/infrastructure/in-memory-wallet-repository.ts';
+import { Money } from './src/wallets/domain/money.ts';
 import { RacyWalletRepository } from './src/wallets/infrastructure/racy-wallet-repository.ts';
 import { JsonFileWalletRepository } from './src/wallets/infrastructure/json-file-wallet-repository.ts';
 
@@ -29,7 +30,7 @@ let ids = 0;
 const nextId = () => `t${(ids += 1)}`;
 const ledgerSum = (ledger) => ledger.reduce((sum, entry) => sum + entry.amount, 0n);
 
-// Hợp đồng của port: adapter nào cũng phải giữ được 4 điều này.
+// Hợp đồng của port: adapter nào cũng phải giữ được 5 điều này.
 const contract = {
   'chuyen hop le, sum so cai = 0': async ({ repo, read }) => {
     await new TransferFunds(repo, nextId).execute({ fromWalletId: 1, toWalletId: 2, amount: '100' });
@@ -48,6 +49,19 @@ const contract = {
       .execute({ fromWalletId: 1, toWalletId: 99, amount: '1' })
       .catch((error) => error.code);
     return code === 'WALLET_NOT_FOUND';
+  },
+  'ghi xong moi loi: phai hoan tac (rollback)': async ({ repo, read }) => {
+    await repo
+      .transaction(async (tx) => {
+        const [wallet] = await tx.lockMany([1]);
+        wallet.debit(Money.of(100n));
+        await tx.save(wallet);
+        await tx.appendLedger([{ transferId: 'x', walletId: 1, amount: -100n }]);
+        throw new Error('loi sau khi da ghi');
+      })
+      .catch(() => undefined);
+    const { balances, ledger } = await read();
+    return balances.get(1) === 1000n && ledger.length === 0;
   },
   '30 lenh dong thoi moi lenh 10': async ({ repo, read }) => {
     const useCase = new TransferFunds(repo, nextId);

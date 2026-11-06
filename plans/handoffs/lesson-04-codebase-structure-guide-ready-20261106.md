@@ -28,14 +28,20 @@ Nên học xong Bài 06 và K2 Bài 04 trước, theo đúng thứ tự Cụm 2.
 
 - **Không chạm vào Hub.** Lab chỉ đọc `wallets.service.ts` (commit `859c913`) để lấy đường cơ sở: 7 import hạ tầng hoặc framework. Refactor là việc của Đạt ở Pha B, ngày 15–17/11.
 - **Không dùng Postgres.** Lab 4 mô phỏng race trong RAM; số thật trên DB nằm ở Lab 14.01. Phần nối dây NestJS trong chặng 7 chưa chạy, phải kiểm chứng ở Pha B.
-- **Slide bị sửa:** 15 (DTO không thuộc domain), 29 (mũi tên kim tự tháp ngược slide 16 và 27). **Đúng một phần:** 6, 8, 10, 17, 19, 27.
-- **Slide 17 và roadmap:** Hub làm một mình nhưng vẫn chia 4 tầng. Guide chốt áp dụng theo module, chỉ `wallets` và `vouchers`, CRUD giữ mỏng.
+- **Slide bị sửa:** 15 (DTO không thuộc domain), 29 (mũi tên kim tự tháp ngược slide 16 và 27). **Đúng một phần:** 6, 17.
+- **Slide 17 và roadmap:** Hub làm một mình nhưng vẫn chia 4 tầng. Guide chốt áp dụng theo module như ADR-008 (`wallets`, `vouchers`, `pos-invoices`), CRUD giữ mỏng.
+- **Lab đơn giản hơn Hub:** `Money` không âm và `Wallet` chỉ mô hình ví cửa hàng. Hub có ví TREASURY được phép âm (`I-03`), nên không bê nguyên hai class này sang.
 
 ## Hạn chế
 
 - Lab chỉ chạy trên Node v22.18.0, chưa chạy trên Node 24 của Hub.
 - Số ở Lab 2 phụ thuộc máy.
 - Máy quét import không bắt được lỗi thiết kế như quy tắc nằm trong use case; `hw-check` dò theo tên và mẫu nên 9/9 chỉ là điều kiện cần.
+
+## Cần Đạt xem
+
+- `transferLocked` kiểm thiếu tiền với mọi ví, trong khi SRS `I-03` cho phép TREASURY âm. Có thể chuyển từ TREASURY sang STORE sẽ bị từ chối nhầm. Chưa chạy thử; guide không sửa Hub.
+- ADR-008 còn để ngỏ việc `application/` có được dùng decorator của Nest không. Chặng 7 nêu đánh đổi, quyết định là của Đạt.
 
 ## Bước tiếp
 

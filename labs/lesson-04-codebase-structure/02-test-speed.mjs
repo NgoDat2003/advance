@@ -1,4 +1,4 @@
-// Lab 2 (slide 17, 19): cùng một quy tắc "thiếu tiền thì từ chối", kiểm ở 3 mức khác nhau tốn bao nhiêu thời gian.
+// Lab 2 (slide 17, 19): cùng một nghiệp vụ, kiểm ở các mức khác nhau tốn bao nhiêu thời gian.
 import { createServer } from 'node:http';
 import { InMemoryWalletRepository } from './src/wallets/infrastructure/in-memory-wallet-repository.ts';
 import { TransferFunds } from './src/wallets/application/transfer-funds.ts';
@@ -16,7 +16,7 @@ async function measure(label, cases, oneCase) {
     perCase.push(Number(process.hrtime.bigint() - start) / 1000 / cases);
   }
   const value = median(perCase);
-  console.log(`${label.padEnd(30)} ${String(cases).padStart(6)} ca   trung vi ${value.toFixed(1).padStart(8)} us/ca`);
+  console.log(`${label.padEnd(36)} ${String(cases).padStart(6)} ca   trung vi ${value.toFixed(1).padStart(8)} us/ca`);
   return value;
 }
 
@@ -24,8 +24,19 @@ const expectRejected = (code) => {
   if (code !== 'INSUFFICIENT_FUNDS') throw new Error(`sai ket qua: ${code}`);
 };
 
-// Mức 1: chỉ domain, không await I/O, không use case.
-const domain = await measure('domain thuan', 20000, () => {
+// Nhánh thành công: không tạo Error, nên thấy rõ chi phí của chính các tầng.
+const okDomain = await measure('thanh cong: domain', 20000, () => {
+  new Wallet(1, Money.of(100n)).debit(Money.of(1n));
+});
+const okRepo = new InMemoryWalletRepository({ 1: 1000000000n, 2: 0n });
+const okUseCase = new TransferFunds(okRepo, () => 't');
+const okApplication = await measure('thanh cong: use case + adapter RAM', 20000, async () => {
+  await okUseCase.execute({ fromWalletId: 1, toWalletId: 2, amount: '1' });
+  okRepo.ledger.length = 0; // không để mảng sổ cái lớn dần làm sai số đo
+});
+
+// Nhánh từ chối: phần lớn thời gian là dựng đối tượng Error.
+const rejectDomain = await measure('tu choi: domain', 20000, () => {
   try {
     new Wallet(1, Money.of(100n)).debit(Money.of(200n));
     throw new Error('phai tu choi');
@@ -33,10 +44,8 @@ const domain = await measure('domain thuan', 20000, () => {
     expectRejected(error.code);
   }
 });
-
-// Mức 2: use case + adapter trong RAM.
 const useCase = new TransferFunds(new InMemoryWalletRepository({ 1: 100n, 2: 0n }), () => 't');
-const application = await measure('use case + adapter RAM', 20000, async () => {
+const rejectApplication = await measure('tu choi: use case + adapter RAM', 20000, async () => {
   try {
     await useCase.execute({ fromWalletId: 1, toWalletId: 2, amount: '200' });
     throw new Error('phai tu choi');
@@ -45,7 +54,7 @@ const application = await measure('use case + adapter RAM', 20000, async () => {
   }
 });
 
-// Mức 3: đi vòng qua HTTP thật trên localhost.
+// Đi vòng qua HTTP thật trên localhost.
 const server = createServer((req, res) => {
   let raw = '';
   req.on('data', (chunk) => (raw += chunk));
@@ -56,7 +65,7 @@ const server = createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const url = `http://127.0.0.1:${server.address().port}/`;
-const http = await measure('HTTP + use case + adapter RAM', 500, async () => {
+const http = await measure('tu choi: HTTP + use case + adapter RAM', 500, async () => {
   const response = await fetch(url, {
     method: 'POST',
     body: JSON.stringify({ fromWalletId: 1, toWalletId: 2, amount: '200' }),
@@ -66,5 +75,6 @@ const http = await measure('HTTP + use case + adapter RAM', 500, async () => {
 });
 server.close();
 
-console.log(`so voi domain: use case x${(application / domain).toFixed(1)}, HTTP x${(http / domain).toFixed(0)}`);
-console.log('so lieu phu thuoc may, chua tinh DB that');
+console.log(`thanh cong: use case gap x${(okApplication / okDomain).toFixed(1)} lan domain`);
+console.log(`tu choi: use case gap x${(rejectApplication / rejectDomain).toFixed(1)}, HTTP gap x${(http / rejectDomain).toFixed(0)} lan domain`);
+console.log('so lieu phu thuoc may; DB that chua do trong lab nay');

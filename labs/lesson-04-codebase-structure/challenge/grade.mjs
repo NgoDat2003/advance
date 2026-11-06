@@ -42,6 +42,16 @@ const cases = [
     const c = fresh(0);
     return codeOf(() => c.claim(7, LATER)) === 'VOUCHER_EXPIRED';
   }],
+  ['C7 claim bi tu choi khong duoc ghi nho cua hang', () => {
+    const c = fresh();
+    codeOf(() => c.claim(7, LATER));
+    return codeOf(() => c.claim(7, NOW)) === 'OK';
+  }],
+  ['C8 cua hang da claim luon nhan ALREADY_CLAIMED, ke ca khi vua het suat', () => {
+    const c = fresh(1);
+    c.claim(7, NOW);
+    return codeOf(() => c.claim(7, NOW)) === 'ALREADY_CLAIMED';
+  }],
   ['C6 khong the ghi de remaining tu ben ngoai', () => {
     const c = fresh();
     return codeOf(() => {

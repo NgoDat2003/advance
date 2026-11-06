@@ -329,21 +329,21 @@ td a.stage-link { display: inline-flex; align-items: center; justify-content: ce
     <tbody>
       <tr id="sl-6"><td>6 <span class="vchip diff">Đúng một phần</span></td><td>Tầng đóng; sửa một tầng không ảnh hưởng tầng khác</td><td>Đúng khi sửa bên trong một tầng. Đổi kiểu cột <code>balance</code> thì sửa lan từ persistence lên business, vì business đang dùng kiểu của persistence. Đây là suy luận, chưa đo trực tiếp.</td></tr>
       <tr><td>7 <span class="vchip ok">Đúng</span></td><td>Thêm tầng mở (services) cho phần dùng chung</td><td>Tầng mở cho phép bỏ qua. Business vẫn đi thẳng xuống persistence, còn presentation bị cấm gọi shared component.</td></tr>
-      <tr id="sl-8"><td>8 <span class="vchip diff">Đúng một phần</span></td><td>Dễ làm, testable; khó scale, các tầng phụ thuộc nhau</td><td>"Khó scale" ở đây là scale <b>codebase và team</b>, không phải tải. Bài 12 và Bài 14 cho thấy lượng request chịu được phụ thuộc vào khóa và index, không phải cách xếp thư mục.</td></tr>
+      <tr id="sl-8"><td>8 <span class="vchip ok">Đúng</span></td><td>Dễ làm, testable; khó scale, các tầng phụ thuộc nhau</td><td>Slide không nói rõ loại scale. Cách đọc hợp lý: khối phân tầng chạy chung một process nên chỉ nhân bản được cả khối, không scale riêng từng phần. <b>Clean chạy chung một process cũng chịu giới hạn đó</b>, nên chữ "Scalable" ở slide 17 không tự có. Khóa và index quyết định một instance chịu được bao nhiêu, đó là chuyện khác.</td></tr>
     </tbody>
   </table></div>
   <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_07_img_01.png" alt="Slide 7: năm tầng presentation, business, services, persistence, database; chỉ tầng services là open; presentation gọi thẳng shared component bị gạch chéo" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 7 · tầng services mở, các tầng còn lại đóng</figcaption></figure>
 
   <h3>Làm mẫu: cái giá đo bằng dòng code</h3>
-  <p>Mở <code>spaghetti/transfer-handler.ts</code>: BEGIN, SELECT FOR UPDATE, quy tắc thiếu tiền và <code>res.status(409)</code> nằm chung một hàm. Bản 4 tầng làm đúng việc đó với <b class="m" data-run="lab8">167</b> dòng, so với <b class="m" data-run="lab8">39</b> dòng của bản spaghetti. Khoảng một nửa số dòng nằm ở domain, và đó là phần viết thêm có chủ đích.</p>
+  <p>Mở <code>spaghetti/transfer-handler.ts</code>: BEGIN, SELECT FOR UPDATE, quy tắc thiếu tiền và <code>res.status(409)</code> nằm chung một hàm. Bản 4 tầng dài <b class="m" data-run="lab8">168</b> dòng, so với <b class="m" data-run="lab8">39</b> dòng của bản spaghetti. Khoảng một nửa nằm ở domain. Chỉ nên đọc đây là thứ tự độ lớn: SQL của bản spaghetti chưa từng chạy, còn bản 4 tầng dùng adapter RAM, chưa tính adapter Prisma và phần nối dây, nhưng có thêm quy tắc <code>SAME_WALLET</code>.</p>
   <div class="run-label">Đã chạy ngày 06/11/2026 · <code>npm run lab8</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="lab8">$ npm run lab8   # node v22.18.0
 spaghetti: 1 file, 39 dong
-4 tang: 9 file, 167 dong (1 adapter)
-  domain          5 file, 86 dong
+4 tang: 9 file, 168 dong (1 adapter)
+  domain          5 file, 85 dong
   application     2 file, 28 dong
   infrastructure  1 file, 34 dong
-  presentation    1 file, 19 dong
+  presentation    1 file, 21 dong
 [rc=0]</pre></div>
   <div class="callout warn">
     <span class="tag">Đọc số này cho đúng</span>
@@ -353,7 +353,7 @@ spaghetti: 1 file, 39 dong
   <div class="panel">
     <h4>Thử 30 giây</h4>
     <p>Có thêm quy tắc "mỗi lần chuyển tối đa 5.000.000". Ở bản 4 tầng, bạn sửa file nào?</p>
-    <details class="fold"><summary>Xem đáp án</summary><div class="fold-body"><p>Chỉ <code>domain/transfer-between-wallets.ts</code>, thêm một dòng <code>if</code> và một mã lỗi. Controller thêm ánh xạ status nếu muốn trả mã khác. Ở bản spaghetti, quy tắc mới chen vào giữa transaction và phải tự nhớ gọi ROLLBACK.</p></div></details>
+    <details class="fold"><summary>Xem đáp án</summary><div class="fold-body"><p>Quy tắc chỉ nằm ở <code>domain/transfer-between-wallets.ts</code>: một dòng <code>if</code> và một mã lỗi. Mã lỗi mới phải thêm vào bảng ánh xạ ở <code>presentation</code>, nếu không handler ném lại và thành 500. Ở bản spaghetti, quy tắc mới chen vào giữa transaction và phải tự nhớ gọi ROLLBACK.</p></div></details>
   </div>
   <div class="quiz" data-quiz="1"></div>
 </section>
@@ -369,7 +369,7 @@ spaghetti: 1 file, 39 dong
   </div>
   <p class="goal"><b>Mục tiêu:</b> viết được định nghĩa port và adapter bằng code của Hub, và biết điều gì adapter giả không bao giờ chứng minh được.</p>
   <dl class="wwh">
-    <dt>LÀ GÌ?</dt><dd>Port là interface do lõi tự đặt ra. Adapter là phần cài đặt nối port với công nghệ thật.</dd>
+    <dt>LÀ GÌ?</dt><dd>Port là hợp đồng do lõi tự đặt ra. Adapter nối lõi với công nghệ thật: phía ra thì cài đặt port, phía vào thì gọi use case.</dd>
     <dt>TẠI SAO?</dt><dd>Lõi chạy được mà không cần HTTP hay DB, đổi công nghệ chỉ đổi adapter.</dd>
     <dt>KHI NÀO KHÔNG?</dt><dd>Khi chỉ có CRUD thẳng xuống bảng: port lúc đó chỉ lặp lại đúng chữ ký của Prisma.</dd>
   </dl>
@@ -385,7 +385,7 @@ spaghetti: 1 file, 39 dong
   <div class="callout key"><span class="tag">Slide 9 · <span class="vchip ok">Đúng</span></span><p>"Factory cho adapter" trong slide chính là nơi nối dây: chỉ một chỗ biết chọn adapter nào. Trong Nest, đó là <code>providers</code> của module. Biến <code>M1_IMPL=naive|locked</code> của Hub đang chọn nhánh bằng <code>if</code> trong service; về bản chất đó là hai adapter chưa được tách.</p></div>
 
   <h3>Làm mẫu: một bộ kiểm, ba adapter</h3>
-  <p>Mở <code>domain/wallet-repository.ts</code>. Port có đúng ba thao tác trong transaction: <code>lockMany</code>, <code>save</code>, <code>appendLedger</code>. Lab 4 chạy cùng 4 ca trên 3 adapter và không đổi một dòng domain hay use case.</p>
+  <p>Mở <code>domain/wallet-repository.ts</code>. Port có đúng ba thao tác trong transaction: <code>lockMany</code>, <code>save</code>, <code>appendLedger</code>. Lab 4 chạy cùng 5 ca trên 3 adapter và không đổi một dòng domain hay use case.</p>
   <div class="widget" id="w1">
     <div class="widget-head"><h4>W1 · Ma trận hợp đồng</h4><span class="eyebrow">Lab 4 · slide 10, 16</span></div>
     <div class="widget-body">
@@ -401,6 +401,7 @@ spaghetti: 1 file, 39 dong
   PASS  chuyen hop le, sum so cai = 0
   PASS  thieu tien: tu choi, khong doi gi
   PASS  vi khong ton tai: WALLET_NOT_FOUND
+  PASS  ghi xong moi loi: phai hoan tac (rollback)
       vi1=700 vi2=300 but_toan=60
   PASS  30 lenh dong thoi moi lenh 10
 
@@ -408,6 +409,7 @@ spaghetti: 1 file, 39 dong
   PASS  chuyen hop le, sum so cai = 0
   PASS  thieu tien: tu choi, khong doi gi
   PASS  vi khong ton tai: WALLET_NOT_FOUND
+  PASS  ghi xong moi loi: phai hoan tac (rollback)
       vi1=700 vi2=300 but_toan=60
   PASS  30 lenh dong thoi moi lenh 10
 
@@ -415,23 +417,24 @@ spaghetti: 1 file, 39 dong
   PASS  chuyen hop le, sum so cai = 0
   PASS  thieu tien: tu choi, khong doi gi
   PASS  vi khong ton tai: WALLET_NOT_FOUND
+  PASS  ghi xong moi loi: phai hoan tac (rollback)
       vi1=990 vi2=10 but_toan=60
   FAIL  30 lenh dong thoi moi lenh 10
 
 tong so ca FAIL: 1 (ky vong dung 1, nam o adapter co y sai)
 [rc=0]</pre></div>
   <div class="callout pg" id="sl-10">
-    <span class="tag">Slide 10 · <span class="vchip diff">Đúng một phần</span></span>
+    <span class="tag">Slide 10 · <span class="vchip ok">Đúng</span>, kèm một lưu ý</span>
     <div class="sayvs">
       <div><h5>Slide nói</h5><p>Flexibility: dễ đổi adapter. Lõi test độc lập với dịch vụ ngoài.</p></div>
-      <div><h5>Đo được</h5><p>Đổi adapter đúng là không sửa lõi. Nhưng adapter thiếu khóa qua <b class="m" data-run="lab4">3</b> trên 4 ca, chỉ lộ ở ca đồng thời: ví còn <b class="m" data-run="lab4">vi1=990</b> thay vì 700, trong khi sổ cái có <b class="m" data-run="lab4">but_toan=60</b>.</p></div>
+      <div><h5>Đo được</h5><p>Đúng là đổi adapter không phải sửa lõi. Lưu ý: adapter thiếu khóa qua 4 trên 5 ca, chỉ lộ ở ca đồng thời: ví còn <b class="m" data-run="lab4">vi1=990</b> thay vì 700, trong khi sổ cái có <b class="m" data-run="lab4">but_toan=60</b>.</p></div>
     </div>
-    <p>Kết luận: <b>test với adapter trong RAM không nói gì về khóa của DB.</b> Mỗi adapter thật phải qua cùng một bộ kiểm hợp đồng, kể cả ca đồng thời. Ở đây không có Postgres, nên lab chỉ mô phỏng; số thật trên DB nằm ở Lab 14.01 của Bài 14.</p>
+    <p>Kết luận: <b>test với adapter trong RAM không nói gì về khóa của DB.</b> Mỗi adapter thật phải qua cùng một bộ kiểm hợp đồng, kể cả ca rollback và ca đồng thời. Ở đây không có Postgres, nên lab chỉ mô phỏng; số thật trên DB nằm ở Lab 14.01 của Bài 14.</p>
   </div>
 
   <h3>Onion: chuyển database ra khỏi tâm</h3>
   <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_11_img_01.png" alt="Slide 11: các vòng tròn đồng tâm, Domain Model ở giữa, rồi Domain Services, Application Services; vòng ngoài là User Interface, Tests, Infrastructure; mũi tên direction of coupling chỉ vào tâm" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 11 · Domain ở tâm, Infrastructure ở vòng ngoài</figcaption></figure>
-  <div class="callout key"><span class="tag">Slide 11–12 · <span class="vchip ok">Đúng</span></span><p>Onion giữ tư duy tầng của layered, nhưng lấy domain làm tâm thay vì database. Hexagonal nói về <b>rìa</b> (port, adapter), Onion nói về <b>các vòng bên trong</b>. Cả hai cùng một luật: tầng trong không được biết tầng ngoài. Nhược điểm của slide 12 (phức tạp, khó học) đo được ở Lab 8.</p></div>
+  <div class="callout key"><span class="tag">Slide 11–12 · <span class="vchip ok">Đúng</span></span><p>Onion giữ tư duy tầng của layered, nhưng lấy domain làm tâm thay vì database. Hexagonal nói về <b>rìa</b> (port, adapter), Onion nói về <b>các vòng bên trong</b>. Cả hai cùng một luật: tầng trong không được biết tầng ngoài. Nhược điểm của slide 12 là phức tạp và khó học. Lab 8 chỉ đếm dòng, nên chưa đo được độ khó học.</p></div>
 
   <div class="panel">
     <h4>Thử thách (TODO Đạt, 10 phút)</h4>
@@ -463,7 +466,7 @@ tong so ca FAIL: 1 (ky vong dung 1, nam o adapter co y sai)
 
   <h3 id="sl-15">Ranh giới 1: đi ra ngoài (slide 15)</h3>
   <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_15_img_01.png" alt="Slide 15: sơ đồ The Clean Architecture với các vòng Entities, Use Cases, Controllers, DB và Web; góc dưới vẽ Controller, Use Case Input Port, Use Case Interactor, Use Case Output Port, Presenter" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 15–16 · góc dưới: Input Port và Output Port thuộc vòng use case</figcaption></figure>
-  <p>Slide 15 hỏi: controller trả thẳng Entity cho client thì sao? Hub dùng <code>BigInt</code> cho số dư, nên lab đo trên đúng hình dạng đó bằng HTTP thật.</p>
+  <p>Slide 15 hỏi: controller trả thẳng Entity cho client thì sao? Hub dùng <code>BigInt</code> cho số dư, nên lab đo bằng HTTP thật trên một dòng kiểu Prisma có bigint (<code>riskScore</code>, <code>version</code> là field nội bộ minh họa, Hub không có) và trên chính Entity của lab.</p>
   <div class="widget" id="w2">
     <div class="widget-head"><h4>W2 · Trả gì cho client?</h4><span class="eyebrow">Lab 1 · slide 15</span></div>
     <div class="widget-body">
@@ -473,8 +476,9 @@ tong so ca FAIL: 1 (ky vong dung 1, nam o adapter co y sai)
   </div>
   <div class="run-label">Đã chạy ngày 06/11/2026 · <code>npm run lab1</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="lab1">$ npm run lab1   # node v22.18.0
-GET /entity -&gt; 500 {"loi":"Do not know how to serialize a BigInt"}
-GET /entity-to-json-patch -&gt; 200 {"id":7,"storeId":3,"balance":"1500000","riskScore":87,"version":4}
+GET /prisma-row -&gt; 500 {"loi":"Do not know how to serialize a BigInt"}
+GET /prisma-row-to-json-patch -&gt; 200 {"id":7,"storeId":3,"balance":"1500000","riskScore":87,"version":4}
+GET /domain-entity -&gt; 200 {"id":7}
 GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
 [rc=0]</pre></div>
   <div class="callout pg">
@@ -483,7 +487,7 @@ GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
       <div><h5>Slide nói</h5><p>Dùng DTO "in Domain Layer".</p></div>
       <div><h5>Nên làm</h5><p>Đặt DTO ở <b>application</b>, cạnh use case. Sơ đồ Clean trên chính slide này vẽ Use Case Input Port và Output Port ở vòng use case, không phải vòng Entities.</p></div>
     </div>
-    <p>Phần vấn đề của slide thì đúng và còn nặng hơn: trả Entity gây lỗi <b class="m" data-run="lab1">500</b> với bigint. "Sửa nhanh" bằng <code>toJSON</code> cho 200 nhưng làm lộ <b class="m" data-run="lab1">riskScore</b> và <b class="m" data-run="lab1">version</b>. Mọi field thêm vào Entity sau này cũng tự lọt ra API. Hub đang làm đúng: <code>findOne</code> tự map <code>String(wallet.balance)</code>.</p>
+    <p>Phần vấn đề của slide thì đúng, và có 3 kiểu hỏng: dòng Prisma có bigint gây lỗi <b class="m" data-run="lab1">500</b>; "sửa nhanh" bằng <code>toJSON</code> cho 200 nhưng làm lộ <b class="m" data-run="lab1">riskScore</b> và <b class="m" data-run="lab1">version</b>; còn Entity có field <code>#private</code> thì trả 200 với <b class="m" data-run="lab1">{"id":7}</b>, số dư mất mà không báo lỗi. Hub đang làm đúng: <code>findOne</code> tự map <code>String(wallet.balance)</code>.</p>
   </div>
 
   <h3>Ranh giới 2: đi vào hạ tầng (slide 16)</h3>
@@ -515,7 +519,7 @@ GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
   <div class="callout key"><span class="tag">Slide 16 · <span class="vchip ok">Đúng</span></span><p>Slide đặt interface trong repository layer "bọc" entity. Lab đặt ở <code>domain/wallet-repository.ts</code>. Hai cách cùng một luật; port nằm ở vòng trong.</p></div>
 
   <h3>Làm mẫu: quy tắc này máy kiểm được</h3>
-  <p><code>check-dependency-rule.mjs</code> chỉ khoảng 70 dòng: đọc import từng file, đối chiếu bảng tầng nào được import tầng nào. Mở bảng <code>ALLOWED</code> ở đầu file, rồi đoán trước khi xem kết quả.</p>
+  <p><code>check-dependency-rule.mjs</code> chỉ khoảng 70 dòng: đọc import từng file, đối chiếu bảng tầng nào được import tầng nào. Mở bảng <code>ALLOWED</code> ở đầu file, rồi đoán trước khi xem kết quả. Lưu ý: quy tắc phụ thuộc của Clean cho phép presentation import domain vì đó vẫn là hướng vào trong. Bảng của lab <b>chặt hơn</b> để ép controller đi qua DTO, và chỉ chừa <code>domain/errors</code> cho exception filter.</p>
   <div class="widget" id="w3">
     <div class="widget-head"><h4>W3 · Bạn là máy quét</h4><span class="eyebrow">Lab 3 · slide 11, 13, 16</span></div>
     <div class="widget-body"><div data-sorter="scan"></div></div>
@@ -543,7 +547,7 @@ GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
   import ha tang/framework: 7
   this.prisma: 6  tx.: 7  HTTP exception: 4
 [rc=0]</pre></div>
-  <div class="callout teacher"><span class="tag">Đo trên Hub thật</span><p>File <code>wallets.service.ts</code> có <b class="m" data-run="lab3">import ha tang/framework: 7</b>, cùng 4 chỗ ném exception HTTP. Đây không phải lỗi: bản v1.0 chủ động như vậy để bạn tập trung vào DB và Redis (đã chốt ở roadmap). Con số này là đường cơ sở cho đợt refactor ngày 15–17/11.</p></div>
+  <div class="callout teacher"><span class="tag">Đo trên Hub thật</span><p>File <code>wallets.service.ts</code> có <b class="m" data-run="lab3">import ha tang/framework: 7</b>, cùng 4 lệnh <code>new</code> exception HTTP. Đây không phải lỗi: bản v1.0 chủ động như vậy để bạn tập trung vào DB và Redis (đã chốt ở roadmap). Con số này là đường cơ sở cho đợt refactor ngày 15–17/11.</p></div>
 
   <div class="callout pg" id="sl-17">
     <span class="tag">Slide 17 · <span class="vchip diff">Đúng một phần</span></span>
@@ -551,7 +555,7 @@ GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
       <div><h5>Slide nói</h5><p>Team 1–3 người, dự án nhỏ: đừng dùng. Rủi ro lớn là "do it wrong".</p></div>
       <div><h5>Hub thì sao?</h5><p>Hub do một người làm, vậy mà roadmap vẫn nâng lên 4 tầng. Có phải sai không? Không, nếu nói rõ phạm vi và lý do.</p></div>
     </div>
-    <p><b>Áp dụng theo module, không theo repo.</b> <code>wallets</code> và <code>vouchers</code> có bất biến tiền bạc nên chia 4 tầng. <code>products</code>, <code>stores</code> là CRUD nên giữ mỏng. Mục tiêu học và phỏng vấn cũng là một lý do hợp lệ, miễn là bạn nói thẳng ra thay vì coi đó là nhu cầu kỹ thuật. Một dự án thương mại cỡ này, 1 người, mà chia 4 tầng cho mọi CRUD thì đúng là over-engineering.</p>
+    <p><b>Áp dụng theo module, không theo repo.</b> Đúng với ADR-008 đang đề xuất: <code>wallets</code>, <code>vouchers</code>, <code>pos-invoices</code> có bất biến nên chia 4 tầng; <code>products</code>, <code>stores</code> là CRUD nên giữ mỏng. Mục tiêu học và phỏng vấn cũng là một lý do hợp lệ, miễn là bạn nói thẳng ra thay vì coi đó là nhu cầu kỹ thuật. Một dự án thương mại cỡ này, 1 người, mà chia 4 tầng cho mọi CRUD thì đúng là over-engineering.</p>
   </div>
   <div class="table-wrap"><table>
     <thead><tr><th>Tín hiệu</th><th>Giữ mỏng</th><th>Chia 4 tầng</th></tr></thead>
@@ -559,14 +563,14 @@ GET /dto -&gt; 200 {"id":7,"storeId":3,"balance":"1500000"}
       <tr><td>Quy tắc nghiệp vụ</td><td>Không có hoặc chỉ validate</td><td>Có bất biến, có nhiều nhánh từ chối</td></tr>
       <tr><td>Sai thì mất gì</td><td>Sửa lại là xong</td><td>Mất tiền, cần đối soát</td></tr>
       <tr><td>Khả năng đổi hạ tầng</td><td>Gần như không</td><td>Có lộ trình (Hub: tách service ở v3.0)</td></tr>
-      <tr><td>Ví dụ trong Hub</td><td><code>products</code>, <code>stores</code></td><td><code>wallets</code>, <code>vouchers</code></td></tr>
+      <tr><td>Ví dụ trong Hub</td><td><code>products</code>, <code>stores</code></td><td><code>wallets</code>, <code>vouchers</code>, <code>pos-invoices</code></td></tr>
     </tbody>
   </table></div>
 
   <div class="panel">
     <h4>Thử thách (10 phút)</h4>
-    <p>Sửa <code>bad-src</code> tới khi <code>npm run scan -- bad-src</code> in <code>0 vi pham</code>. Không được xóa quy tắc khỏi bảng <code>ALLOWED</code>. Thứ tự gợi ý: tách interface repository vào domain, bỏ <code>@prisma/client</code> khỏi Entity, chuyển DTO về application, controller gọi use case thay vì repository.</p>
-    <p class="muted">Muốn trả về như cũ: <code>git checkout -- bad-src</code>. Máy quét chỉ kiểm được import; "use case nhét quy tắc" nó không nhìn ra. Phần đó ở bài tập tối.</p>
+    <p>Sửa <code>bad-src</code> tới khi <code>npm run scan -- bad-src</code> in <code>0 vi pham</code>. Không được xóa quy tắc khỏi bảng <code>ALLOWED</code>. Thứ tự gợi ý: tách interface repository vào domain, bỏ <code>@prisma/client</code> khỏi Entity, bỏ <code>@nestjs/common</code> khỏi use case, chuyển DTO về application, controller gọi use case thay vì repository.</p>
+    <p class="muted">Muốn trả về như cũ: <code>git checkout -- bad-src &amp;&amp; git clean -fd bad-src</code> (lệnh sau xóa các file bạn vừa tạo trong <code>bad-src</code>). Máy quét chỉ kiểm được import; "use case nhét quy tắc" nó không nhìn ra. Phần đó ở bài tập tối.</p>
   </div>
   <div class="quiz" data-quiz="3"></div>
 </section>
@@ -606,19 +610,22 @@ vo goi loi: OK; thu tu: I/O doc -&gt; quyet dinh -&gt; I/O ghi
   <h3 id="sl-19">Test ở mức nào, tốn bao nhiêu?</h3>
   <div class="run-label">Đã chạy ngày 06/11/2026 · <code>npm run lab2</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="lab2">$ npm run lab2   # node v22.18.0
-domain thuan                    20000 ca   trung vi     11.7 us/ca
-use case + adapter RAM          20000 ca   trung vi     16.9 us/ca
-HTTP + use case + adapter RAM     500 ca   trung vi   1125.8 us/ca
-so voi domain: use case x1.4, HTTP x97
-so lieu phu thuoc may, chua tinh DB that
+thanh cong: domain                    20000 ca   trung vi      0.3 us/ca
+thanh cong: use case + adapter RAM    20000 ca   trung vi      2.0 us/ca
+tu choi: domain                       20000 ca   trung vi     12.6 us/ca
+tu choi: use case + adapter RAM       20000 ca   trung vi     15.0 us/ca
+tu choi: HTTP + use case + adapter RAM    500 ca   trung vi    812.3 us/ca
+thanh cong: use case gap x6.1 lan domain
+tu choi: use case gap x1.2, HTTP gap x64 lan domain
+so lieu phu thuoc may; DB that chua do trong lab nay
 [rc=0]</pre></div>
   <div class="callout pg">
-    <span class="tag">Slide 19 · <span class="vchip diff">Đúng một phần</span></span>
+    <span class="tag">Slide 19 · <span class="vchip ok">Đúng</span>, kèm số đo</span>
     <div class="sayvs">
       <div><h5>Slide nói</h5><p>Domain thì unit test, application thì integration test. FP ít được dùng vì khó học.</p></div>
-      <div><h5>Đo được</h5><p>Use case + adapter RAM chỉ chậm hơn domain thuần <b class="m" data-run="lab2">x1.4</b>; qua HTTP thì <b class="m" data-run="lab2">x97</b>. Vậy use case cũng test nhanh như unit test, miễn là không đụng mạng.</p></div>
+      <div><h5>Đo được</h5><p>Nhánh thành công: use case + adapter RAM gấp domain <b class="m" data-run="lab2">x6.1</b>, nhưng vẫn chỉ vài µs mỗi ca. Nhánh từ chối: <b class="m" data-run="lab2">x1.2</b>, vì phần lớn thời gian là dựng đối tượng <code>Error</code>. Qua HTTP: <b class="m" data-run="lab2">x64</b>.</p></div>
     </div>
-    <p>Ranh giới đắt nằm ở <b>mạng và DB</b>, không phải giữa domain và application. Đừng dựng thành một quy tắc cứng "application luôn là integration test". Về "khó học": <code>decideTransfer</code> ở trên chỉ là JavaScript thường. "Ít được dùng" là nhận định của slide, chưa đo trực tiếp. Số thời gian phụ thuộc máy; lần chạy khác có thể lệch.</p>
+    <p>Cách chia của slide vẫn đúng: logic điều phối test được bằng adapter RAM với giá rẻ, còn khóa và transaction chỉ test được trên DB thật (chặng 2). Trong lab, mạng là bước đắt nhất; DB thật chưa đo ở đây. Slide cũng đúng khi nói chuyển hẳn sang FP tốn thời gian, nhưng bạn không cần chuyển hẳn: <code>decideTransfer</code> ở trên chỉ là JavaScript thường. "Ít được dùng" là nhận định của slide, chưa đo trực tiếp. Số thời gian phụ thuộc máy.</p>
   </div>
 
   <div class="panel">
@@ -679,7 +686,7 @@ modules/wallets/presentation/</code></pre></div><p>Cây thư mục tự nói app
     <tbody>
       <tr><td>22 </td><td>Mở đầu phần DDD</td><td>Slide chuyển mục.</td></tr>
       <tr><td>23 <span class="vchip ok">Đúng</span></td><td>Tên class, method khớp nghiệp vụ; DDD còn là cách làm việc</td><td><code>wallet.debit(amount)</code> nói được với kế toán, còn <code>updateBalance(-x)</code> thì không.</td></tr>
-      <tr><td>24 <span class="vchip ok">Đúng</span></td><td>"credit" có 2 nghĩa: cho vay và tài khoản nhận tiền</td><td>Trong Hub, chữ "credit" ở <code>wallet.credit()</code> nghĩa là ghi có. Nếu sau này có tín dụng cho cửa hàng, hãy đặt nó ở context riêng thay vì dùng chung từ.</td></tr>
+      <tr><td>24 <span class="vchip ok">Đúng</span></td><td>"credit" có 2 nghĩa: cho vay và tài khoản nhận tiền</td><td>Trong lab, <code>wallet.credit()</code> nghĩa là ghi có. Nếu sau này có tín dụng cho cửa hàng, hãy đặt nó ở context riêng thay vì dùng chung từ.</td></tr>
       <tr><td>25 <span class="vchip ok">Đúng</span></td><td>Dev ngồi với chuyên gia nghiệp vụ</td><td>Không có domain expert? Dùng đúng từ trong SRS OmniPOS và trải nghiệm chuỗi F&amp;B của bạn. Đó cũng là chuyện đáng kể khi phỏng vấn.</td></tr>
     </tbody>
   </table></div>
@@ -728,31 +735,39 @@ Money: a === b -&gt; false; a.equals(b) -&gt; true
 Money: gan a.minor -&gt; TypeError: Cannot assign to read only property 'minor' of object '[object Object]'
 Vi sao khong dung number: 0.1 + 0.2 = 0.30000000000000004
 So lon: 9007199254740993 khi la number = 9007199254740992; khi la bigint = 9007199254740993
-Money.of(10.5) -&gt; MONEY_NOT_INTEGER
+Money.of(10.5) -&gt; MONEY_NOT_SAFE_INTEGER
 Money.of(-1) -&gt; MONEY_NEGATIVE
+Money.of(9007199254740992) -&gt; MONEY_NOT_SAFE_INTEGER
+new Money(-5n) -&gt; MONEY_NEGATIVE
 Entity: vi 1 va vi 2 cung so du true, nhung cung vi? false
 Aggregate: debit qua so du -&gt; INSUFFICIENT_FUNDS; so du van 500
 Aggregate: gan w.balance -&gt; TypeError: Cannot set property balance of #&lt;Wallet&gt; which has only a getter
-Aggregate: doc w['#balance'] -&gt; undefined; Object.keys -&gt; ["id"]
-TS private (chi luc bien dich): gan duoc so du = -1
+Aggregate: doc w.#balance ngoai class -&gt; SyntaxError: Private field '#balance' must be declared in an enclosing class
+Aggregate: Object.keys -&gt; ["id"]
+TS private (chi kiem luc bien dich): luc chay gan duoc so du = -1
 [rc=0]</pre></div>
   <div class="callout teacher"><span class="tag">3 điều rút ra</span><ul>
-    <li><b>TypeScript <code>private</code> chỉ tồn tại lúc biên dịch.</b> Lab ghi được số dư <b class="m" data-run="lab5">= -1</b> trên class dùng field thường. Field <code>#balance</code> mới chặn thật lúc chạy: đọc ra <b class="m" data-run="lab5">undefined</b> từ bên ngoài. Với code TS bình thường, <code>private</code> thường đủ dùng; chọn <code>#</code> khi muốn đảm bảo cả lúc chạy.</li>
+    <li><b>TypeScript <code>private</code> chỉ tồn tại lúc biên dịch.</b> Gán từ JS vào field <code>private balance</code>, lab ghi được số dư <b class="m" data-run="lab5">= -1</b>. Còn đọc <code>w.#balance</code> ngoài class thì lỗi <b class="m" data-run="lab5">SyntaxError</b> ngay. Với code TS bình thường, <code>private</code> thường đủ dùng; chọn <code>#</code> khi muốn đảm bảo cả lúc chạy.</li>
     <li><b>Tiền không dùng number:</b> <code>9007199254740993</code> thành <b class="m" data-run="lab5">9007199254740992</b>. Đây cũng là lý do Hub dùng BigInt.</li>
-    <li><b><code>private constructor</code> + <code>Money.of</code></b> nghĩa là không có Money nào không hợp lệ tồn tại trong hệ thống. Code bên trong đỡ phải kiểm tra lại.</li>
+    <li><b>Kiểm tra đặt trong constructor</b>, nên <code>new Money(-5n)</code> cũng ném lỗi dù <code>private constructor</code> chỉ chặn lúc biên dịch. <code>Money.of</code> từ chối cả số vượt ngưỡng an toàn: dòng in ra <code>9007199254740992</code> cho thấy số đã bị làm tròn trước khi vào hàm, vì vậy số lớn phải truyền bigint.</li>
   </ul></div>
 
+  <div class="callout warn">
+    <span class="tag">Lab đơn giản hơn Hub ở một điểm</span>
+    <p>Lab chỉ mô hình ví cửa hàng, và <code>Money</code> ở đây là số tiền không âm. Trong Hub, bất biến <code>I-03</code> chỉ cấm âm với ví STORE; ví TREASURY được phép âm, DB cũng ghi <code>check(store_id is null or balance&gt;=0)</code>. Nếu bê nguyên lab vào Hub, nạp ví TREASURY sẽ ném <code>MONEY_NEGATIVE</code>. Khi refactor: <code>Money</code> dùng cho số tiền chuyển, số dư phải được âm, còn quy tắc thiếu tiền nằm trong <code>Wallet</code> và phụ thuộc loại ví.</p>
+  </div>
+
   <div class="callout pg" id="sl-27">
-    <span class="tag">Slide 27 · <span class="vchip diff">Đúng một phần</span></span>
-    <p>Định nghĩa của slide đúng. Có hai chỗ cần thêm khi áp dụng thực tế:</p>
+    <span class="tag">Slide 27 · <span class="vchip ok">Đúng</span>, thêm 2 ghi chú</span>
+    <p>Định nghĩa của slide đúng. Có hai điều cần thêm khi áp dụng thực tế:</p>
     <ul>
-      <li><b>Chuyển tiền đụng 2 Aggregate.</b> Sách DDD thường khuyên mỗi transaction chỉ sửa một Aggregate, nhưng sổ cái kép cần cả hai ví cùng commit. Chọn thực dụng: một Domain Service, một transaction DB, khóa theo thứ tự id (I-07). Saga cho việc này chỉ cần khi ví tách DB ở v3.0.</li>
-      <li><b>Đặt tên theo công nghệ:</b> <code>PrismaWalletRepository</code>, không phải <code>BookingRepositoryImpl</code> như ví dụ của slide. Hậu tố <code>Impl</code> không cho biết gì, còn khi có 2 adapter thì tên đó không phân biệt được.</li>
+      <li><b>Chuyển tiền đụng 2 Aggregate.</b> Sách DDD thường khuyên mỗi transaction chỉ sửa một Aggregate, nhưng sổ cái kép cần cả hai ví cùng commit. Chọn thực dụng: một Domain Service, một transaction DB, khóa theo thứ tự id (I-07). Tài liệu kiến trúc giữ Wallet và LedgerEntry chung DB <code>omnipos_wallet</code> ngay cả ở v3.0, nên chuyển ví vẫn một transaction; Saga dành cho luồng order sang wallet.</li>
+      <li><b>Về đặt tên (sở thích, không phải lỗi):</b> lab dùng <code>PrismaWalletRepository</code> thay vì <code>BookingRepositoryImpl</code> như ví dụ của slide, vì khi có 2 adapter thì hậu tố <code>Impl</code> không phân biệt được.</li>
     </ul>
   </div>
   <div class="callout warn">
     <span class="tag">Bẫy khi refactor: ghi tuyệt đối</span>
-    <p><code>tx.save(wallet)</code> ghi đè số dư bằng một giá trị tuyệt đối, tức cách B của Lab 14.01, nơi tổng tiền bị in thêm. Nó chỉ an toàn khi đã giữ khóa từ <code>lockMany</code>. Vì vậy <code>lockMany</code> phải thật sự là <code>FOR UPDATE</code>; đó là điều bộ kiểm hợp đồng ở chặng 2 bắt được. Hub hiện dùng <code>decrement</code> tương đối, lại có <code>CHECK</code> ở DB. Cứ giữ <code>CHECK</code>: domain chặn sớm, DB là lưới cuối.</p>
+    <p><code>tx.save(wallet)</code> ghi đè số dư bằng một giá trị tuyệt đối, tức cách B của Lab 14.01, nơi tổng tiền bị in thêm. Nó chỉ an toàn khi đã giữ khóa từ lúc đọc, hoặc khi ghi có điều kiện <code>version</code> (Bài 14 chặng 7). Trong port của lab, <code>lockMany</code> phải thật sự là <code>FOR UPDATE</code>; đó là điều bộ kiểm hợp đồng ở chặng 2 bắt được. Hub hiện dùng <code>decrement</code> tương đối, lại có <code>CHECK</code> ở DB. Cứ giữ <code>CHECK</code>: domain chặn sớm, DB là lưới cuối.</p>
   </div>
 
   <figure class="slide-fig"><img src="../../Tài Liệu/advanced_backend/assets/4_Codebase_Structure/page_28_img_01.png" alt="Slide 28: Key Terms in DDD; Value Object mô tả Entity, Entity là phần của Aggregate; Repository lưu và nạp Aggregate; Factory tạo Aggregate; Domain Service điều phối nhiều Aggregate; Aggregate phát Domain Event" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>Slide 28 <span class="vchip ok">Đúng</span> · hai khối mới so với slide 26–27: Factory (<code>Money.of</code> là bản nhỏ nhất) và Domain Event (dùng ở Outbox, Cụm 5)</figcaption></figure>
@@ -762,7 +777,7 @@ TS private (chi luc bien dich): gan duoc so du = -1
   <div class="callout pg">
     <span class="tag">Slide 29 · <span class="vchip fix">Cần sửa</span></span>
     <div class="sayvs">
-      <div><h5>Hình vẽ</h5><p>Domain phụ thuộc xuống Infrastructure. Đây chính là layered của chặng 1.</p></div>
+      <div><h5>Hình vẽ</h5><p>Domain phụ thuộc xuống Infrastructure, đúng kiểu layered của chặng 1. Có thể đây là cách vẽ DDD cổ điển, nhưng không còn khớp với phần slide này đang dạy.</p></div>
       <div><h5>Mâu thuẫn với</h5><p>Slide 16 và 27: interface ở domain, cài đặt ở infrastructure, nên <b>infrastructure phụ thuộc domain</b>. Lab 3 kiểm đúng chiều này và <b class="m" data-run="lab3">0 vi pham</b> trên bản 4 tầng.</p></div>
     </div>
     <p>Phần chữ của slide vẫn đúng: "Application là người điều phối, không biết quy tắc domain". Mở <code>application/transfer-funds.ts</code>: không có một phép so sánh nghiệp vụ nào. Đừng dùng hình này khi phỏng vấn.</p>
@@ -770,7 +785,7 @@ TS private (chi luc bien dich): gan duoc so du = -1
 
   <div class="panel" id="todo-dat">
     <h4>Thử thách chính: TODO(Đạt), 10–15 phút</h4>
-    <p>Mở <code>challenge/voucher-campaign.todo.ts</code>, viết thân hàm <code>claim(storeId, now)</code>. Phao đã nằm ngay trên khối TODO. Chạy <code>npm run challenge</code>, đạt khi in <code>6/6 dat</code>.</p>
+    <p>Mở <code>challenge/voucher-campaign.todo.ts</code>, viết thân hàm <code>claim(storeId, now)</code>. Phao đã nằm ngay trên khối TODO. Chạy <code>npm run challenge</code>, đạt khi in <code>8/8 dat</code>.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>Nấc</th><th>Khi nào</th><th>Lệnh</th></tr></thead>
       <tbody>
@@ -786,8 +801,10 @@ FAIL  C2 het han: VOUCHER_EXPIRED, remaining giu nguyen
 FAIL  C3 cung cua hang claim lan 2: ALREADY_CLAIMED, khong tru them
 FAIL  C4 het suat: SOLD_OUT, remaining khong am
 FAIL  C5 het han duoc kiem truoc het suat
+FAIL  C7 claim bi tu choi khong duoc ghi nho cua hang
+FAIL  C8 cua hang da claim luon nhan ALREADY_CLAIMED, ke ca khi vua het suat
 PASS  C6 khong the ghi de remaining tu ben ngoai
-1/6 dat
+1/8 dat
 [rc=1]</pre></div></div></details>
     <p class="muted">Lưu ý ca C6 đã PASS sẵn: <code>#remaining</code> chỉ có getter. Đó là thiết kế làm hộ bạn. Ở phỏng vấn, câu ăn điểm là: "now truyền vào làm tham số, nên test được ca hết hạn mà không phải chỉnh đồng hồ".</p>
   </div>
@@ -809,18 +826,21 @@ PASS  C6 khong the ghi de remaining tu ben ngoai
     <thead><tr><th></th><th>Dependency Injection</th><th>Dependency Inversion</th></tr></thead>
     <tbody>
       <tr><td><b>Là gì</b></td><td>Kỹ thuật: ai tạo đối tượng và đưa vào</td><td>Nguyên tắc: dòng import hướng về đâu</td></tr>
-      <tr><td><b>Hub v1.0</b></td><td>Có: <code>constructor(prisma: PrismaService)</code></td><td>Không: file vẫn import class Prisma cụ thể</td></tr>
+      <tr><td><b>Hub v1.0</b></td><td>Có: <code>constructor(prisma: PrismaService)</code>, nên test tiêm được bản giả</td><td>Không: file vẫn gọi tên class Prisma và dùng API của nó</td></tr>
       <tr><td><b>Lab <code>src/</code></b></td><td>Có: truyền repo qua constructor</td><td>Có: use case chỉ biết interface</td></tr>
     </tbody>
   </table></div>
   <div class="run-label">Đã chạy ngày 06/11/2026 · <code>npm run lab7</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="lab7">$ npm run lab7   # node v22.18.0
-DI khong DIP: import that bai truoc khi kip tiem prisma gia -&gt; PrismaService: thieu DATABASE_URL
+DI khong DIP: tiem ban gia chay duoc, exists -&gt; false
+  ban gia phai biet API cua Prisma: wallet.findUnique({"where":{"id":1}})
+  service import: ./prisma-service.ts
 DI + DIP: {"transferId":"t1"}
+  use case import: ../domain/errors.ts, ../domain/money.ts, ../domain/transfer-between-wallets.ts, ../domain/wallet-repository.ts, ./transfer-dto.ts
 Sau khi bo kieu, con lai:
 export const WALLET_REPOSITORY = Symbol("WALLET_REPOSITORY");
 [rc=0]</pre></div>
-  <p>Dòng đầu là bằng chứng: bạn đã chuẩn bị prisma giả để tiêm, nhưng <b class="m" data-run="lab7">import that bai truoc khi kip tiem prisma gia</b>. <code>di-only/prisma-service.ts</code> mô phỏng việc khởi tạo client lúc import; PrismaService thật của Hub có thể hành xử khác, nhưng điểm chung là file service phải tải module đó. Dòng cuối cho thấy <code>interface</code> biến mất khi bỏ kiểu, chỉ <code>Symbol</code> còn lại. Đó là lý do Nest không tiêm được theo interface mà cần token.</p>
+  <p><b>Đừng nói "không có DIP thì không test được".</b> DI đã đủ để tiêm bản giả, và Hub cũng đang làm thế bằng <code>overrideProvider(PrismaService)</code>. Khác biệt nằm ở <b>ai sở hữu hợp đồng</b>. Bản giả ở trên phải biết <b class="m" data-run="lab7">wallet.findUnique</b>, tức test và service cùng gắn vào API của Prisma; đổi ORM là sửa cả hai. Với DIP, use case chỉ import vào trong, còn hợp đồng do lõi đặt ra theo ngôn ngữ nghiệp vụ. Dòng cuối cho thấy <code>interface</code> biến mất khi bỏ kiểu, chỉ <code>Symbol</code> còn lại, nên Nest cần token. Khi tự chạy, bạn sẽ thấy thêm <code>ExperimentalWarning</code> ở stderr; output trên chỉ ghi stdout.</p>
   <h4>Nối dây trong Nest <span class="muted">(chưa chạy trong lab này, kiểm chứng ở Pha B)</span></h4>
   <div class="code"><pre><code>// modules/wallets/wallets.module.ts: nơi duy nhất biết Prisma nối với port
 providers: [
@@ -831,7 +851,7 @@ providers: [
     inject: [WALLET_REPOSITORY],
   },
 ],</code></pre></div>
-  <p><b>Đánh đổi:</b> dùng <code>useFactory</code> thì use case không cần <code>@Injectable()</code>, 0 vi phạm nhưng thêm vài dòng module. Dùng <code>@Injectable()</code> + <code>@Inject(TOKEN)</code> ở application thì ngắn hơn, nhưng application phải import <code>@nestjs/common</code>. Slide 17 gọi đó là "violating the rules by using frameworks". Nhiều team chấp nhận điều này. Quan trọng là chọn có ý thức, và domain thì tuyệt đối sạch.</p>
+  <p><b>Đánh đổi:</b> dùng <code>useFactory</code> thì use case không cần <code>@Injectable()</code>, 0 vi phạm nhưng thêm vài dòng module. Dùng <code>@Injectable()</code> + <code>@Inject(TOKEN)</code> ở application thì ngắn hơn, nhưng application phải import <code>@nestjs/common</code>. Slide 17 gọi đó là "violating the rules by using frameworks". Nhiều team chấp nhận điều này. Tài liệu kiến trúc đang để ngỏ quyết định này cho bạn, ghi vào ADR-008 sau khi làm xong. Domain thì giữ sạch trong cả hai cách.</p>
 
   <h3>Làm mẫu: bản đồ refactor</h3>
   <div class="widget" id="w4">
@@ -850,17 +870,17 @@ providers: [
   <p>Slide 32 <span class="vchip ok">Đúng</span> yêu cầu dựng khung Clean + DDD cho đặt vé máy bay, chỉ tạo package và class, không viết logic. Bài chia 3 phần, từ dễ đến khó. Phần A là chính, vì ở công việc thật bạn sẽ review code AI nhiều hơn tự viết.</p>
 
   <h3>Phần A: review bản AI (15 phút)</h3>
-  <p>Mở <code>hw/ai-draft/booking</code>. Tìm đủ <b>9 lỗi</b>, ghi file và dòng. Máy bắt được 5 lỗi import; 4 lỗi còn lại cần mắt người. Chạy <code>npm run hw:draft</code> sau khi đã tự tìm.</p>
+  <p>Mở <code>hw/ai-draft/booking</code>. Tìm đủ <b>8 lỗi</b>, ghi file và dòng: 5 lỗi import và 3 lỗi thiết kế. Máy quét bắt được 5 lỗi import; <code>hw-check</code> dò thêm được <code>saveToDb</code>; 2 lỗi còn lại chỉ mắt người nhìn ra. Chạy <code>npm run hw:draft</code> sau khi đã tự tìm.</p>
   <textarea class="field" data-store="l04-hw-a" placeholder="file:dòng, lỗi gì, sửa thế nào"></textarea>
   <details class="fold"><summary>Kết quả máy chấm trên bản AI</summary><div class="fold-body"><div class="run-label">Đã chạy ngày 06/11/2026 · <code>npm run hw:draft</code></div>
   <div class="code terminal"><pre class="code terminal" data-run="hw-draft">$ npm run hw:draft   # node v22.18.0
 PASS  H1 du 4 tang
 PASS  H2 Aggregate Booking o domain
 FAIL  H3 Booking khong co ham luu DB
-FAIL  H4 port repository la interface o domain
+FAIL  H4 port repository (interface hoac abstract class) o domain
 FAIL  H5 adapter implements port o infrastructure
-PASS  H6 use case o application
-PASS  H7 co DTO rieng o application
+PASS  H6 use case la class o application
+FAIL  H7 co DTO rieng o application
 FAIL  H8 controller o presentation, khong tra Entity
 FAIL  H9 quy tac phu thuoc (5 vi pham)
       booking/application/book-flight.use-case.ts:1  application -&gt; goi-ngoai  '@nestjs/common'
@@ -868,14 +888,13 @@ FAIL  H9 quy tac phu thuoc (5 vi pham)
       booking/application/book-flight.use-case.ts:4  application -&gt; infrastructure  '../infrastructure/prisma-booking-repository.ts'
       booking/domain/booking.ts:1  domain -&gt; goi-ngoai  '@prisma/client'
       booking/presentation/bookings.controller.ts:2  presentation -&gt; domain  '../domain/booking.ts'
-4/9 dat
+3/9 dat
 [rc=1]</pre></div></div></details>
-  <details class="fold"><summary>Đáp án 4 lỗi cần mắt người</summary><div class="fold-body"><ol>
+  <details class="fold"><summary>Đáp án 3 lỗi thiết kế</summary><div class="fold-body"><ol>
     <li><code>Booking</code> không có hành vi: <code>status</code> để public, lại có <code>saveToDb</code>. Entity vừa thiếu quy tắc vừa biết về DB.</li>
     <li>Quy tắc "trước giờ bay 2 tiếng" nằm trong use case, và use case tự gán <code>booking.status</code>. Đáng ra là <code>booking.confirm(now)</code>.</li>
     <li><code>domain/flight.ts</code> chép nguyên Flight của context khác, kèm cả <code>seatsLeft</code>. Booking chỉ nên giữ <code>FlightId</code> và lịch bay cần thiết.</li>
-    <li>Không có port: use case phải import thẳng <code>PrismaBookingRepository</code>, nên không test được nếu thiếu Prisma.</li>
-  </ol></div></details>
+  </ol><p>Lỗi import <code>application -&gt; infrastructure</code> có gốc là thiếu port: use case gọi tên thẳng <code>PrismaBookingRepository</code>, nên không đổi được adapter. Thiếu port là lý do H4, H5 trượt.</p></div></details>
 
   <h3>Phần B: xếp tầng (10 phút)</h3>
   <div class="widget" id="w5">
@@ -890,9 +909,9 @@ FAIL  H9 quy tac phu thuoc (5 vi pham)
 PASS  H1 du 4 tang
 PASS  H2 Aggregate Booking o domain
 PASS  H3 Booking khong co ham luu DB
-PASS  H4 port repository la interface o domain
+PASS  H4 port repository (interface hoac abstract class) o domain
 PASS  H5 adapter implements port o infrastructure
-PASS  H6 use case o application
+PASS  H6 use case la class o application
 PASS  H7 co DTO rieng o application
 PASS  H8 controller o presentation, khong tra Entity
 PASS  H9 quy tac phu thuoc (0 vi pham)
@@ -918,13 +937,13 @@ PASS  H9 quy tac phu thuoc (0 vi pham)
       <tr><td><b>domain</b></td><td>domain</td><td>Entity, Value Object, Domain Service, port repository</td></tr>
       <tr><td><b>application</b></td><td>domain, application</td><td>Use case, DTO, port ra ngoài</td></tr>
       <tr><td><b>infrastructure</b></td><td>domain, application, gói ngoài</td><td>Adapter Prisma, Redis, Stripe; dịch lỗi DB thành lỗi nghiệp vụ</td></tr>
-      <tr><td><b>presentation</b></td><td>application, gói ngoài</td><td>Controller, dịch mã lỗi thành HTTP status</td></tr>
+      <tr><td><b>presentation</b></td><td>application, gói ngoài, <code>domain/errors</code></td><td>Controller, dịch mã lỗi thành HTTP status</td></tr>
     </tbody>
   </table></div>
   <h3>Dòng code này về đâu?</h3>
   <ol>
-    <li>Có từ nghiệp vụ và không có I/O: domain.</li>
-    <li>Sắp thứ tự các bước, mở transaction qua port: application.</li>
+    <li>Quyết định đúng sai về nghiệp vụ, không có I/O: domain.</li>
+    <li>Sắp thứ tự các bước, mở transaction qua port, kiểm tìm đủ dữ liệu: application.</li>
     <li>Có tên công nghệ (Prisma, <code>FOR UPDATE</code>, <code>Redis</code>): infrastructure.</li>
     <li>Có HTTP (<code>status</code>, <code>ConflictException</code>, decorator route): presentation.</li>
     <li>Chọn adapter nào: module, tức nơi nối dây.</li>
@@ -976,8 +995,8 @@ PASS  H9 quy tac phu thuoc (0 vi pham)
 
 </main>
 </div>
-<script type="application/json" id="run-lab1">[{"path":"/entity","status":500,"body":"{\"loi\":\"Do not know how to serialize a BigInt\"}"},{"path":"/entity-to-json-patch","status":200,"body":"{\"id\":7,\"storeId\":3,\"balance\":\"1500000\",\"riskScore\":87,\"version\":4}"},{"path":"/dto","status":200,"body":"{\"id\":7,\"storeId\":3,\"balance\":\"1500000\"}"}]</script>
-<script type="application/json" id="run-lab4">{"adapters":[{"name":"RAM (xep hang)","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":true,"note":"vi1=700 vi2=300 but_toan=60"}]},{"name":"File JSON","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":true,"note":"vi1=700 vi2=300 but_toan=60"}]},{"name":"RAM thieu khoa (co y sai)","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":false,"note":"vi1=990 vi2=10 but_toan=60"}]}]}</script>
+<script type="application/json" id="run-lab1">[{"path":"/prisma-row","status":500,"body":"{\"loi\":\"Do not know how to serialize a BigInt\"}"},{"path":"/prisma-row-to-json-patch","status":200,"body":"{\"id\":7,\"storeId\":3,\"balance\":\"1500000\",\"riskScore\":87,\"version\":4}"},{"path":"/domain-entity","status":200,"body":"{\"id\":7}"},{"path":"/dto","status":200,"body":"{\"id\":7,\"storeId\":3,\"balance\":\"1500000\"}"}]</script>
+<script type="application/json" id="run-lab4">{"adapters":[{"name":"RAM (xep hang)","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"ghi xong moi loi: phai hoan tac (rollback)","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":true,"note":"vi1=700 vi2=300 but_toan=60"}]},{"name":"File JSON","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"ghi xong moi loi: phai hoan tac (rollback)","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":true,"note":"vi1=700 vi2=300 but_toan=60"}]},{"name":"RAM thieu khoa (co y sai)","cases":[{"name":"chuyen hop le, sum so cai = 0","ok":true,"note":null},{"name":"thieu tien: tu choi, khong doi gi","ok":true,"note":null},{"name":"vi khong ton tai: WALLET_NOT_FOUND","ok":true,"note":null},{"name":"ghi xong moi loi: phai hoan tac (rollback)","ok":true,"note":null},{"name":"30 lenh dong thoi moi lenh 10","ok":false,"note":"vi1=990 vi2=10 but_toan=60"}]}]}</script>
 <script>
 /* === GUIDE_DATA_START === */
 var SLIDES = [
@@ -988,9 +1007,9 @@ var SLIDES = [
   { n: 5, title: 'Flow of Control', href: '#chang-1', chip: 'Đúng' },
   { n: 6, title: '1.1. Layer Architecture', href: '#sl-6', chip: 'Đúng một phần' },
   { n: 7, title: 'Layer: tầng mở', href: '#chang-1', chip: 'Đúng' },
-  { n: 8, title: 'Layer: ưu, nhược', href: '#sl-8', chip: 'Đúng một phần' },
+  { n: 8, title: 'Layer: ưu, nhược', href: '#sl-8', chip: 'Đúng' },
   { n: 9, title: '1.2. Hexagonal', href: '#chang-2', chip: 'Đúng' },
-  { n: 10, title: 'Hexagonal: ưu, nhược', href: '#sl-10', chip: 'Đúng một phần' },
+  { n: 10, title: 'Hexagonal: ưu, nhược', href: '#sl-10', chip: 'Đúng' },
   { n: 11, title: '1.3. Onion', href: '#chang-2', chip: 'Đúng' },
   { n: 12, title: 'Onion: ưu, nhược', href: '#chang-2', chip: 'Đúng' },
   { n: 13, title: '1.4. Clean', href: '#chang-3', chip: 'Đúng' },
@@ -999,7 +1018,7 @@ var SLIDES = [
   { n: 16, title: 'Crossing Boundary: Repository', href: '#chang-3', chip: 'Đúng' },
   { n: 17, title: 'Clean: khi nào dùng', href: '#sl-17', chip: 'Đúng một phần' },
   { n: 18, title: '1.5. Functional', href: '#chang-4', chip: 'Đúng' },
-  { n: 19, title: 'Functional: ưu, nhược', href: '#sl-19', chip: 'Đúng một phần' },
+  { n: 19, title: 'Functional: ưu, nhược', href: '#sl-19', chip: 'Đúng' },
   { n: 20, title: '2. Project Structure', href: '#chang-5', chip: null },
   { n: 21, title: 'How to divide domains?', href: '#sl-21', chip: null },
   { n: 22, title: '3. Domain Driven Design', href: '#chang-5', chip: null },
@@ -1007,7 +1026,7 @@ var SLIDES = [
   { n: 24, title: '3.2. Bounded Context', href: '#chang-5', chip: 'Đúng' },
   { n: 25, title: '3.2. Collaborative Modeling', href: '#chang-5', chip: 'Đúng' },
   { n: 26, title: 'Tactical: Entity, Value Object', href: '#chang-6', chip: 'Đúng' },
-  { n: 27, title: 'Tactical: Aggregate, Service, Repository', href: '#sl-27', chip: 'Đúng một phần' },
+  { n: 27, title: 'Tactical: Aggregate, Service, Repository', href: '#sl-27', chip: 'Đúng' },
   { n: 28, title: 'Key Terms in DDD', href: '#chang-6', chip: 'Đúng' },
   { n: 29, title: '3.4. Layers', href: '#sl-29', chip: 'Cần sửa' },
   { n: 30, title: 'Recap', href: '#chang-7', chip: 'Đúng' },
@@ -1020,13 +1039,13 @@ var QUIZ = {
   1: [
     { q: 'Sơ đồ slide 5 vẽ luồng chạy đi từ UI, qua lõi, sang hạ tầng rồi quay về. Clean Architecture đổi điều gì trong hình này?', opts: ['Bỏ bước gọi sang hạ tầng', 'Không đổi luồng chạy, chỉ đổi chiều import trong source', 'Đảo luồng chạy, để DB gọi vào lõi', 'Bắt mọi lời gọi đi qua message queue'], ans: 1, why: 'Lúc chạy lõi vẫn phải lưu dữ liệu. Thứ đảo là chiều phụ thuộc trong source (Lab 3 kiểm chiều này).' },
     { q: 'Controller gọi thẳng repository vì "service chỉ chuyển tiếp, thừa". Trong layered đóng, đó là gì?', opts: ['Được phép nếu service rỗng', 'Vi phạm, vì tầng đóng không được nhảy cóc; chỉ tầng mở mới bỏ qua được', 'Bắt buộc phải làm vậy', 'Chỉ sai khi có transaction'], ans: 1, why: 'Slide 6: tầng đóng không được bỏ qua. Slide 7: chỉ tầng khai báo là "open" mới được đi qua. Nếu cả tầng service chỉ chuyển tiếp, hãy cân nhắc khai báo mở tầng đó thay vì để mỗi nơi tự nhảy.' },
-    { q: 'Slide 8 ghi layered "khó scale". Nên hiểu thế nào?', opts: ['Layered chịu tải kém hơn Clean', 'Khó mở rộng codebase và team, vì các tầng phụ thuộc nhau; khả năng chịu tải không do cấu trúc thư mục quyết định', 'Không chạy được nhiều instance', 'DB không shard được'], ans: 1, why: 'Thư mục không đổi số request/giây. Bài 12 và Bài 14 cho thấy thông lượng phụ thuộc khóa và index.' },
-    { q: 'Lab 8: một endpoint chuyển tiền là 39 dòng spaghetti, 167 dòng ở 4 tầng. Kết luận nào hợp lý nhất?', opts: ['4 tầng luôn tệ hơn', 'Luôn phải dùng 4 tầng', 'Có chi phí trả trước; chỉ đáng khi nghiệp vụ đủ nhiều và đủ quan trọng', 'Số dòng không liên quan gì tới chi phí'], ans: 2, why: 'Đó là lý do slide 17 có mục "không nên dùng". Lab chỉ đo chi phí, không đo được lợi ích dài hạn.' }
+    { q: 'Slide 8 ghi layered "khó scale". Nên hiểu thế nào?', opts: ['Layered chịu tải kém hơn Clean', 'Cả khối chạy chung một process nên chỉ nhân bản được toàn bộ, không scale riêng từng phần; Clean chung process cũng vậy', 'Không chạy được nhiều instance', 'DB không shard được'], ans: 1, why: 'Vẫn nhân bản được cả khối, nên C sai. Cách chia thư mục không đổi đơn vị triển khai, nên A sai. Slide không nói rõ loại scale, đây là cách đọc hợp lý.' },
+    { q: 'Lab 8: một endpoint chuyển tiền là 39 dòng spaghetti, 168 dòng ở 4 tầng. Kết luận nào hợp lý nhất?', opts: ['4 tầng luôn tệ hơn', 'Luôn phải dùng 4 tầng', 'Có chi phí trả trước; chỉ đáng khi nghiệp vụ đủ nhiều và đủ quan trọng', 'Số dòng không liên quan gì tới chi phí'], ans: 2, why: 'Đó là lý do slide 17 có mục "không nên dùng". Lab chỉ đo chi phí, không đo được lợi ích dài hạn.' }
   ],
   2: [
     { q: 'Port là gì trong code TypeScript của lab?', opts: ['Cổng mạng của server', 'Interface do lõi tự định nghĩa, ví dụ WalletRepository', 'Class PrismaService', 'Một module của Nest'], ans: 1, why: 'Slide 9: Port là interface, Adapter là cài đặt. Điểm mấu chốt là lõi đặt ra interface theo nhu cầu của nó.' },
     { q: 'Kafka consumer nhận event rồi gọi use case. Nó là adapter phía nào?', opts: ['Driven, vì Kafka là hạ tầng', 'Driving, vì nó khởi xướng lời gọi vào lõi', 'Không phải adapter', 'Cả hai, không phân biệt được'], ans: 1, why: 'Phân loại theo ai khởi xướng, không theo công nghệ. Consumer gọi vào lõi nên là driving; producer được lõi gọi ra nên là driven, dù cùng là Kafka.' },
-    { q: 'Adapter thiếu khóa trong Lab 4 qua 3 ca tuần tự và rớt ca đồng thời. Rút ra điều gì?', opts: ['Bộ kiểm quá khó', 'Test tuần tự không chứng minh được adapter an toàn đồng thời; hợp đồng phải có ca đồng thời', 'Chỉ cần tăng số ca tuần tự', 'Adapter trong RAM là đủ để thay DB khi test'], ans: 1, why: 'Lab 4: vi1=990 thay vì 700 và but_toan=60, trong khi 3 ca còn lại PASS.' },
+    { q: 'Adapter thiếu khóa trong Lab 4 qua 4 ca tuần tự và rớt ca đồng thời. Rút ra điều gì?', opts: ['Bộ kiểm quá khó', 'Test tuần tự không chứng minh được adapter an toàn đồng thời; hợp đồng phải có ca đồng thời', 'Chỉ cần tăng số ca tuần tự', 'Adapter trong RAM là đủ để thay DB khi test'], ans: 1, why: 'Lab 4: vi1=990 thay vì 700 và but_toan=60, trong khi 4 ca còn lại PASS.' },
     { q: 'Hub đổi từ Prisma sang driver pg thuần. Với kiến trúc port đúng, cần sửa những gì?', opts: ['Domain, application và controller', 'Chỉ adapter và chỗ nối dây; rồi chạy lại bộ kiểm hợp đồng', 'Chỉ cần đổi biến môi trường', 'Không sửa gì cả'], ans: 1, why: 'Lab 4 đổi adapter mà không sửa domain hay use case. "Dễ đổi" chỉ tính sau khi adapter mới qua hết bộ kiểm.' }
   ],
   3: [
@@ -1038,7 +1057,7 @@ var QUIZ = {
   4: [
     { q: 'Hàm nào thuần?', opts: ['const f = (a) => a + Date.now()', 'const f = (a, now) => a + now', 'const f = async (id) => db.find(id)', 'const f = (a) => { console.log(a); return a; }'], ans: 1, why: 'Chỉ bản nhận now làm tham số là cùng đầu vào, cùng đầu ra và không có tác dụng phụ. console.log cũng là tác dụng phụ.' },
     { q: 'Domain cần id cho giao dịch mới. Làm thế nào?', opts: ['Gọi randomUUID() ngay trong Entity', 'Nhận id từ ngoài; use case lấy qua hàm được tiêm vào', 'Để DB sinh rồi đọc lại trong Entity', 'Dùng biến toàn cục'], ans: 1, why: 'Trong lab, TransferFunds nhận newId qua constructor nên test cố định được id; domain chỉ nhận transferId.' },
-    { q: 'Lab 2: use case + adapter RAM chỉ chậm x1.4 so với domain, HTTP chậm x97. Kết luận?', opts: ['Phải bỏ tầng use case vì chậm', 'Ranh giới đắt nằm ở mạng; use case với adapter RAM test nhanh gần như unit test', 'Không nên test qua HTTP bao giờ', 'Domain không cần test'], ans: 1, why: 'Vẫn cần một ít test HTTP, vì chỉ chúng kiểm được status và mapping lỗi. Nhưng phần lớn nhánh nghiệp vụ nên test ở mức thấp hơn.' },
+    { q: 'Lab 2: use case + adapter RAM gấp domain x6.1 ở nhánh thành công nhưng chỉ vài µs mỗi ca; qua HTTP gấp x64 ở nhánh từ chối. Kết luận?', opts: ['Phải bỏ tầng use case vì chậm', 'Trong lab, mạng là bước đắt nhất; use case với adapter RAM vẫn đủ rẻ để phủ các nhánh logic', 'Không nên test qua HTTP bao giờ', 'Adapter RAM thay được test trên DB thật'], ans: 1, why: 'Vẫn cần một ít test HTTP cho status và mapping lỗi, và cần test trên DB thật cho khóa. DB thật chưa đo trong lab này.' },
     { q: 'Vì sao kiểm được 90601 tổ hợp mà không cần mock nào trong Lab 6?', opts: ['Vì dùng framework test mạnh', 'Vì lõi không có phụ thuộc nên không có gì để mock', 'Vì chạy song song', 'Vì đã có sẵn DB'], ans: 1, why: 'Đây là lợi ích chính của lõi thuần: test hết đầu vào rẻ tới mức chạy được hàng chục nghìn ca.' }
   ],
   5: [
@@ -1049,15 +1068,15 @@ var QUIZ = {
   ],
   6: [
     { q: 'Hai object Money cùng 100, a === b trả false. Vậy phải so bằng gì?', opts: ['Vẫn dùng ===', 'a.equals(b), vì Value Object bằng nhau theo giá trị', 'So bằng id', 'JSON.stringify, vì luôn an toàn'], ans: 1, why: 'Lab 5 dòng 1. Value Object không có id nên so giá trị.' },
-    { q: 'Quy tắc "số dư không được âm" nên đặt ở đâu trong Hub v2.0?', opts: ['Chỉ ở CHECK của DB', 'Chỉ trong use case', 'Trong Wallet.debit, và vẫn giữ CHECK ở DB làm lưới cuối', 'Trong controller'], ans: 2, why: 'Domain từ chối sớm với mã lỗi nghiệp vụ, DB chặn nếu có đường ghi bỏ qua domain. Đây là phòng thủ nhiều lớp từ Bài 14.' },
-    { q: 'Chuyển tiền sửa 2 Aggregate Wallet. Sách khuyên mỗi transaction một Aggregate. Hub làm thế nào?', opts: ['Dùng Saga ngay', 'Domain Service + một transaction DB, khóa theo thứ tự id, vì tiền phải cùng commit', 'Bỏ sổ cái kép', 'Sửa 2 ví ở 2 transaction'], ans: 1, why: 'Bất biến sổ cái cần nhất quán tức thì và cả hai ví đang chung DB. Chỉ khi tách DB ở v3.0 mới phải trả giá của Saga.' },
-    { q: 'Repository.save(wallet) ghi số dư tuyệt đối. Khi nào an toàn?', opts: ['Luôn an toàn', 'Chỉ khi đang giữ khóa từ lúc đọc, vì nếu không sẽ mất cập nhật', 'Khi dùng BigInt', 'Khi có index'], ans: 1, why: 'Không khóa thì thành cách B của Lab 14.01, hoặc adapter thiếu khóa của Lab 4: 30 lệnh mà ví chỉ giảm 10.' }
+    { q: 'Quy tắc "ví cửa hàng không được âm" (I-03) nên đặt ở đâu trong Hub v2.0?', opts: ['Chỉ ở CHECK của DB', 'Chỉ trong use case', 'Trong Wallet.debit theo loại ví, và vẫn giữ CHECK ở DB làm lưới cuối', 'Trong controller'], ans: 2, why: 'Domain từ chối sớm với mã lỗi nghiệp vụ, DB chặn nếu có đường ghi bỏ qua domain. Phải theo loại ví, vì TREASURY được phép âm.' },
+    { q: 'Chuyển tiền sửa 2 Aggregate Wallet. Sách khuyên mỗi transaction một Aggregate. Hub làm thế nào?', opts: ['Dùng Saga ngay', 'Domain Service + một transaction DB, khóa theo thứ tự id, vì tiền phải cùng commit', 'Bỏ sổ cái kép', 'Sửa 2 ví ở 2 transaction'], ans: 1, why: 'Bất biến sổ cái cần nhất quán tức thì và cả hai ví chung DB, kể cả ở v3.0 (omnipos_wallet). Saga dành cho luồng order sang wallet, khi dữ liệu thật sự nằm ở hai DB.' },
+    { q: 'Repository.save(wallet) ghi số dư tuyệt đối. Khi nào an toàn?', opts: ['Luôn an toàn', 'Khi đang giữ khóa từ lúc đọc, hoặc ghi có điều kiện version; nếu không sẽ mất cập nhật', 'Khi dùng BigInt', 'Khi có index'], ans: 1, why: 'Không có cả hai thì thành cách B của Lab 14.01, hoặc adapter thiếu khóa của Lab 4: 30 lệnh mà ví chỉ giảm 10.' }
   ],
   7: [
-    { q: 'constructor(private prisma: PrismaService). Câu nào đúng?', opts: ['Đã có cả DI và DIP', 'Có DI, chưa có DIP, vì file vẫn phụ thuộc class Prisma cụ thể', 'Không có DI', 'Có DIP, chưa có DI'], ans: 1, why: 'Có tiêm từ ngoài vào, nhưng dòng import vẫn hướng ra hạ tầng. Lab 7: import thất bại trước khi kịp tiêm bản giả.' },
+    { q: 'constructor(private prisma: PrismaService). Câu nào đúng?', opts: ['Đã có cả DI và DIP', 'Có DI, chưa có DIP, vì file vẫn phụ thuộc class Prisma cụ thể', 'Không có DI', 'Có DIP, chưa có DI'], ans: 1, why: 'Có tiêm từ ngoài vào, nên test dùng được bản giả. Nhưng dòng import vẫn hướng ra hạ tầng, và Lab 7 cho thấy bản giả phải bắt chước đúng API của Prisma.' },
     { q: 'Vì sao @Inject(WalletRepository) với WalletRepository là interface không chạy được trong Nest?', opts: ['Nest cấm interface', 'interface biến mất lúc chạy, nên không còn giá trị làm token', 'Vì thiếu decorator', 'Vì TypeScript chạy chậm'], ans: 1, why: 'Lab 7 dòng cuối: sau khi bỏ kiểu chỉ còn Symbol. Vì vậy dùng token Symbol hoặc chuỗi.' },
     { q: 'Trong transferLocked, catch SQLSTATE 23514 đổi thành INSUFFICIENT_FUNDS. Sau refactor nó về đâu?', opts: ['Domain', 'Adapter infrastructure, vì mã SQLSTATE là chi tiết của DB; adapter dịch thành lỗi nghiệp vụ', 'Controller', 'Bỏ hẳn'], ans: 1, why: 'Domain không được biết 23514. Adapter ném DomainError, presentation đổi thành 409.' },
-    { q: 'Hiện tại nên làm gì với Hub sau khi học xong bài này?', opts: ['Refactor ngay mọi module', 'Giữ nguyên tới Pha B, lấy số "trước" từ checks M1, chỉ refactor wallets và vouchers, rồi so lại', 'Viết lại từ đầu', 'Không bao giờ refactor'], ans: 1, why: 'Refactor là đổi cấu trúc, không đổi hành vi. Không có số trước thì không chứng minh được điều đó.' }
+    { q: 'Hiện tại nên làm gì với Hub sau khi học xong bài này?', opts: ['Refactor ngay mọi module', 'Giữ nguyên tới Pha B, lấy số "trước" từ checks M1, chỉ refactor các module có bất biến theo ADR-008, rồi so lại', 'Viết lại từ đầu', 'Không bao giờ refactor'], ans: 1, why: 'Refactor là đổi cấu trúc, không đổi hành vi. Không có số trước thì không chứng minh được điều đó.' }
   ]
 };
 
@@ -1084,13 +1103,13 @@ var SORTERS = {
       { t: 'if (this.mode === "naive") … else …', a: 'module (nối dây)', why: 'Hai nhánh này thực chất là hai adapter. Chọn adapter theo M1_IMPL là việc của provider.' },
       { t: 'prisma.$transaction(…, this.txOptions)', a: 'infrastructure', why: 'Application chỉ gọi repo.transaction(work); Prisma và timeout nằm trong adapter.' },
       { t: 'SELECT … ORDER BY id ASC FOR UPDATE (I-07)', a: 'infrastructure', why: 'Thành lockMany. Thứ tự khóa chống deadlock là chi tiết của DB.' },
-      { t: 'if (locked.length !== 2) → không đủ ví', a: 'application', why: 'Use case kiểm tra tìm thấy đủ ví rồi ném DomainError, không dùng NotFoundException.' },
-      { t: 'fromRow.balance < amountBig → thiếu tiền', a: 'domain', why: 'Thành Wallet.debit. Đây là quy tắc nghiệp vụ thật sự.' },
+      { t: 'if (locked.length !== 2) → không đủ ví', a: 'application', why: 'Kiểm tìm đủ dữ liệu là bước điều phối. Use case ném DomainError, không dùng NotFoundException.' },
+      { t: 'fromRow.balance < amountBig → thiếu tiền', a: 'domain', why: 'Thành Wallet.debit. Đây là quy tắc nghiệp vụ thật sự, và phải xét loại ví vì TREASURY được phép âm (I-03).' },
       { t: 'Tạo 2 bút toán -amount, +amount (I-01)', a: 'domain', why: 'Domain tạo ra các entry; adapter chỉ lưu chúng.' },
       { t: 'tx.ledgerEntry.createMany(…)', a: 'infrastructure', why: 'Thành appendLedger trong adapter.' },
       { t: 'catch sqlState(e) === "23514"', a: 'infrastructure', why: 'SQLSTATE là chi tiết DB; adapter dịch thành DomainError.' },
       { t: 'new ConflictException("INSUFFICIENT_FUNDS")', a: 'presentation', why: 'Domain chỉ ném mã lỗi. Đổi sang HTTP 409 là việc của controller hoặc filter.' },
-      { t: 'randomUUID() cho transferId', a: 'application', why: 'Use case gọi hàm sinh id được tiêm vào, như newId trong lab. Hàm thật truyền vào ở module.' }
+      { t: 'Gọi hàm sinh id để lấy transferId, ngay trước khi ghi', a: 'application', why: 'Use case gọi hàm được tiêm vào, như newId trong lab. Chính hàm randomUUID thì truyền vào ở module.' }
     ]
   },
   flight: {
@@ -1104,7 +1123,7 @@ var SORTERS = {
       { t: 'interface BookingRepository', a: 'domain', why: 'Slide 27: port repository ở domain.' },
       { t: 'BookFlightUseCase', a: 'application', why: 'Điều phối: tính giá, tạo Booking, thanh toán, lưu.' },
       { t: 'BookFlightCommand, BookFlightResult', a: 'application', why: 'DTO ở ranh giới use case.' },
-      { t: 'interface PaymentGateway', a: 'application', why: 'Port để điều phối hệ thống ngoài. Đặt ở domain cũng có người chọn, miễn không nằm ở infrastructure.' },
+      { t: 'interface PaymentGateway', a: 'application', also: ['domain'], why: 'Port để điều phối hệ thống ngoài. Đặt ở domain cũng được, miễn không nằm ở infrastructure.' },
       { t: 'PrismaBookingRepository', a: 'infrastructure', why: 'Adapter driven.' },
       { t: 'StripePaymentGateway', a: 'infrastructure', why: 'Adapter driven.' },
       { t: 'BookingsController', a: 'presentation', why: 'Adapter driving.' }
@@ -1115,12 +1134,12 @@ var SORTERS = {
 var EXAM = [
   { q: '1. Quy tắc phụ thuộc là gì, và kiểm tra nó bằng cách nào?', a: 'Dòng import trong source chỉ được hướng vào trong: domain không biết application, application không biết hạ tầng và framework. Luồng chạy vẫn đi ra DB; thứ đảo là chiều import. Kiểm được bằng máy: Lab 3 chỉ cần đọc import và đối chiếu một bảng, 0 vi phạm trên bản sạch, 5 trên bản AI. Có thể đưa nó vào CI.' },
   { q: '2. Layered, Hexagonal, Onion, Clean khác nhau chỗ nào?', a: 'Layered có đáy là database, nên business phụ thuộc persistence. Hexagonal nói về rìa: port và adapter, chia driving và driven. Onion nói về các vòng bên trong với domain ở tâm. Clean, theo chính slide 13, là gói lại các ý đó. Ba cái sau chung một luật, còn số tầng không quan trọng.' },
-  { q: '3. DI và DIP khác nhau thế nào? Cho ví dụ.', a: 'DI là kỹ thuật đưa dependency từ ngoài vào. DIP là nguyên tắc về chiều phụ thuộc. constructor(prisma: PrismaService) có DI nhưng không có DIP: Lab 7 cho thấy import thất bại trước khi kịp tiêm bản giả. Dùng interface ở tầng trong và token trong Nest thì có cả hai.' },
-  { q: '4. Bạn có dùng Clean Architecture cho mọi dự án không?', a: 'Không. Lab 8 đo: 39 dòng thành 167 dòng cho một endpoint. Tôi áp dụng theo module: module có bất biến tiền bạc, nhiều nhánh từ chối thì chia tầng; CRUD thì giữ mỏng. Dự án của tôi do một người làm, vẫn chia tầng cho wallets và vouchers vì sai là mất tiền, và cũng vì mục tiêu học; tôi không coi đó là nhu cầu của mọi dự án cùng cỡ.' },
-  { q: '5. Có adapter trong RAM rồi, còn cần test với DB thật không?', a: 'Có. Lab 4: adapter thiếu khóa qua cả 3 ca tuần tự, chỉ lộ ở ca đồng thời, ví còn 990 thay vì 700. Adapter RAM chứng minh được logic, không chứng minh được khóa, index hay isolation. Mỗi adapter thật phải chạy cùng một bộ kiểm hợp đồng, có cả ca đồng thời.' },
-  { q: '6. Entity, Value Object, Aggregate khác nhau ra sao? Ví dụ trong ví điện tử.', a: 'Entity có id và vòng đời: Wallet. Value Object không id, bất biến, bằng nhau theo giá trị: Money. Aggregate là cụm phải nhất quán, chỉ sửa qua root: mọi thay đổi số dư đi qua Wallet.debit và credit. Lab 5 cho thấy TypeScript private không chặn lúc chạy, còn #balance thì có.' },
-  { q: '7. Chuyển tiền sửa 2 ví. Có vi phạm "mỗi transaction một Aggregate" không?', a: 'Có, và tôi chấp nhận có chủ đích. Sổ cái kép cần cả hai ví cùng commit, cả hai đang chung một DB. Tôi dùng Domain Service và một transaction, khóa theo thứ tự id để tránh deadlock. Saga chỉ đáng trả giá khi ví thực sự tách DB, vì lúc đó phải xử lý trạng thái trung gian và bù trừ.' },
-  { q: '8. Review một PR: use case có if (departureAt - now < 2h) và controller trả thẳng Booking. Bạn góp ý gì?', a: 'Quy tắc giờ bay chuyển vào Booking, ví dụ booking.confirm(now), và now truyền vào để test được. Use case chỉ điều phối. Controller trả DTO để field nội bộ không lọt ra và hợp đồng API không đổi theo Entity. Lab 1 đã đo: trả Entity thì bigint gây 500, còn vá bằng toJSON thì lộ riskScore. Thêm máy quét import vào CI, nhưng lỗi if thì máy không bắt được, phải có người review.' }
+  { q: '3. DI và DIP khác nhau thế nào? Cho ví dụ.', a: 'DI là kỹ thuật đưa dependency từ ngoài vào. DIP là nguyên tắc về chiều phụ thuộc: tầng cao không phụ thuộc tầng thấp, cả hai phụ thuộc vào hợp đồng do tầng cao đặt ra. constructor(prisma: PrismaService) có DI, nên test vẫn tiêm bản giả được. Nhưng không có DIP: service gọi tên class Prisma, và bản giả phải bắt chước wallet.findUnique. Dùng interface ở tầng trong và token trong Nest thì có cả hai.' },
+  { q: '4. Bạn có dùng Clean Architecture cho mọi dự án không?', a: 'Không. Lab 8 đo: 39 dòng thành 168 dòng cho một endpoint. Tôi áp dụng theo module: module có bất biến tiền bạc, nhiều nhánh từ chối thì chia tầng; CRUD thì giữ mỏng. Dự án của tôi do một người làm, vẫn chia tầng cho các module tiền bạc vì sai là mất tiền, và cũng vì mục tiêu học; tôi không coi đó là nhu cầu của mọi dự án cùng cỡ.' },
+  { q: '5. Có adapter trong RAM rồi, còn cần test với DB thật không?', a: 'Có. Lab 4: adapter thiếu khóa qua cả 4 ca tuần tự, chỉ lộ ở ca đồng thời, ví còn 990 thay vì 700. Adapter RAM chứng minh được logic, không chứng minh được khóa, index hay isolation. Mỗi adapter thật phải chạy cùng một bộ kiểm hợp đồng, có cả ca đồng thời.' },
+  { q: '6. Entity, Value Object, Aggregate khác nhau ra sao? Ví dụ trong ví điện tử.', a: 'Entity có id và vòng đời: Wallet. Value Object không id, bất biến, bằng nhau theo giá trị: Money. Aggregate là cụm phải nhất quán, chỉ sửa qua root: mọi thay đổi số dư đi qua Wallet.debit và credit. Lab 5 cho thấy TypeScript private không chặn lúc chạy, còn #balance thì có. Nếu có ví được phép âm như TREASURY, số dư không dùng chung kiểu với số tiền không âm.' },
+  { q: '7. Chuyển tiền sửa 2 ví. Có vi phạm "mỗi transaction một Aggregate" không?', a: 'Có, và tôi chấp nhận có chủ đích. Sổ cái kép cần cả hai ví cùng commit, cả hai đang chung một DB. Tôi dùng Domain Service và một transaction, khóa theo thứ tự id để tránh deadlock. Saga chỉ đáng trả giá khi dữ liệu thực sự nằm ở hai DB, vì lúc đó phải xử lý trạng thái trung gian và bù trừ.' },
+  { q: '8. Review một PR: use case có if (departureAt - now < 2h) và controller trả thẳng Booking. Bạn góp ý gì?', a: 'Quy tắc giờ bay chuyển vào Booking, ví dụ booking.confirm(now), và now truyền vào để test được. Use case chỉ điều phối. Controller trả DTO để field nội bộ không lọt ra và hợp đồng API không đổi theo Entity. Lab 1 đã đo: dòng Prisma có bigint gây 500, vá bằng toJSON thì lộ field nội bộ, còn Entity có field #private thì mất số dư mà không báo lỗi. Thêm máy quét import vào CI, nhưng lỗi if thì máy không bắt được, phải có người review.' }
 ];
 /* === GUIDE_DATA_END === */
 
@@ -1203,7 +1222,7 @@ var EXAM = [
       set.items.forEach((it, i) => {
         const tr = $(`tr[data-i="${i}"]`, box), why = $('.sorter-why', tr), val = selects[i].value;
         if (!val) { blank++; why.hidden = true; return; }
-        const ok = val === it.a;
+        const ok = val === it.a || (it.also || []).includes(val);
         if (ok) right++;
         why.hidden = false;
         why.innerHTML = `<span class="${ok ? 'good' : 'badx'}">${ok ? '✔ Đúng.' : `✘ Đáp án: ${esc(it.a)}.`}</span> ${esc(it.why)}`;
@@ -1237,8 +1256,8 @@ var EXAM = [
   const L1 = run('lab1');
   const w2 = $('#w2-btns');
   if (L1 && w2) {
-    const label = { '/entity': 'Trả Entity', '/entity-to-json-patch': 'Trả Entity + vá toJSON', '/dto': 'Trả DTO' };
-    const say = { '/entity': 'JSON.stringify không biết bigint, nên cả endpoint chết.', '/entity-to-json-patch': 'Chạy được, nhưng field nội bộ lọt ra. Sau này thêm field nào vào Entity, field đó cũng ra API.', '/dto': 'Chỉ field đã hứa đi qua ranh giới. balance là chuỗi nên client JS không mất độ chính xác.' };
+    const label = { '/prisma-row': 'Trả dòng Prisma', '/prisma-row-to-json-patch': 'Dòng Prisma + vá toJSON', '/domain-entity': 'Trả Entity của lab', '/dto': 'Trả DTO' };
+    const say = { '/prisma-row': 'JSON.stringify không biết bigint, nên cả endpoint chết.', '/prisma-row-to-json-patch': 'Chạy được, nhưng field nội bộ lọt ra. Sau này thêm field nào vào bảng, field đó cũng ra API.', '/domain-entity': 'Status 200 nên trông như thành công, nhưng số dư đã biến mất vì #balance không nằm trong JSON.', '/dto': 'Chỉ field đã hứa đi qua ranh giới. balance là chuỗi nên client JS không mất độ chính xác.' };
     const show = (r) => {
       $('#w2-out').innerHTML = `<p><code>GET ${esc(r.path)}</code> → <b class="${r.status === 200 ? 'good' : 'badx'}">${r.status}</b></p><p><code>${esc(r.body)}</code></p><p>${esc(say[r.path])}</p>`;
     };

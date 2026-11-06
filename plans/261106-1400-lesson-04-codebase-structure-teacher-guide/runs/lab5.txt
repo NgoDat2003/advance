@@ -3,11 +3,14 @@ Money: a === b -> false; a.equals(b) -> true
 Money: gan a.minor -> TypeError: Cannot assign to read only property 'minor' of object '[object Object]'
 Vi sao khong dung number: 0.1 + 0.2 = 0.30000000000000004
 So lon: 9007199254740993 khi la number = 9007199254740992; khi la bigint = 9007199254740993
-Money.of(10.5) -> MONEY_NOT_INTEGER
+Money.of(10.5) -> MONEY_NOT_SAFE_INTEGER
 Money.of(-1) -> MONEY_NEGATIVE
+Money.of(9007199254740992) -> MONEY_NOT_SAFE_INTEGER
+new Money(-5n) -> MONEY_NEGATIVE
 Entity: vi 1 va vi 2 cung so du true, nhung cung vi? false
 Aggregate: debit qua so du -> INSUFFICIENT_FUNDS; so du van 500
 Aggregate: gan w.balance -> TypeError: Cannot set property balance of #<Wallet> which has only a getter
-Aggregate: doc w['#balance'] -> undefined; Object.keys -> ["id"]
-TS private (chi luc bien dich): gan duoc so du = -1
+Aggregate: doc w.#balance ngoai class -> SyntaxError: Private field '#balance' must be declared in an enclosing class
+Aggregate: Object.keys -> ["id"]
+TS private (chi kiem luc bien dich): luc chay gan duoc so du = -1
 [rc=0]

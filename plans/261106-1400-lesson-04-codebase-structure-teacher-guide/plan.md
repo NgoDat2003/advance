@@ -1,7 +1,7 @@
 ---
 title: "Bài 04 Codebase Structure teacher guide (Clean Architecture, DDD; measured with plain Node labs)"
-description: "Vietnamese single-file guide for Bài 04: 33 slides, 6 stages, one wallet-transfer domain shown in spaghetti and clean form, every number from a recorded run."
-status: in-progress
+description: "Vietnamese single-file guide for Bài 04: 33 slides, 7 stages, one wallet-transfer domain shown in spaghetti and clean form, every number from a recorded run."
+status: completed
 priority: P1
 branch: feat/lesson-04-codebase-structure-guide
 tags: [lesson-04, clean-architecture, ddd, teacher-guide]
@@ -30,7 +30,10 @@ created: 2026-11-06
 | 4 | 18–19 | functional core, test speed | `06-functional-core`, `02-test-speed` |
 | 5 | 20–25 | project structure, dividing domains, bounded context, ubiquitous language | – |
 | 6 | 26–29 | entity, value object, aggregate, service, repository, layers | `05-value-object-aggregate` |
-| wrap | 30–33 | recap (DI vs DIP), references, homework | `07-di-vs-dip`, `hw-check`, `challenge` |
+| 7 | 30–31, 33 | recap (DI vs DIP), references, Hub refactor map | `07-di-vs-dip` |
+| homework | 32 | Flight Booking review and skeleton | `hw-check` |
+
+The `TODO(Đạt)` challenge sits in stage 6.
 
 ## Acceptance criteria
 
@@ -57,6 +60,16 @@ created: 2026-11-06
 | Node version differs (nvm 22 vs 24) | erasable TypeScript only; run labs on the installed version and state it |
 | Timing numbers depend on the machine | median of 3, labelled "phụ thuộc máy" |
 | In-memory adapter hides races | contract lab shows it; real Postgres numbers stay in Bài 14 |
+
+## Review log
+
+One independent review reported 3 Critical, 7 Important and 2 Minor findings. The Critical and Important findings were checked against source and applied. Items handled differently:
+
+- Slide 29 keeps "Cần sửa", and the guide notes that the drawing may follow classic DDD layering.
+- Slide 27's naming point stays as a stated preference.
+- Not applied (Minor): a non-numeric `amount` such as `'abc'` still rethrows as a `SyntaxError` in the lab handler, because input validation belongs to the DTO edge. The note about the Hub's `@IsNumber` transfer amount was also left out of the guide.
+
+Changes from the plan: the validate and red-team gates were merged into this single review because the account is close to expiry.
 
 ## Rollback
 

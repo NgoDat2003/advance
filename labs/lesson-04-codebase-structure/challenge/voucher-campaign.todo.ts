@@ -25,7 +25,7 @@ export class VoucherCampaign {
   // Phao cú pháp:
   //   throw new DomainError('MA_LOI');
   //   this.#claimedStores.has(storeId)  /  this.#claimedStores.add(storeId)
-  //   now được truyền vào, không gọi Date.now(): nhờ vậy hàm là pure với đầu vào của nó.
+  //   now được truyền vào, không gọi Date.now(): nhờ vậy test được ca hết hạn mà không phải chỉnh đồng hồ.
   claim(storeId: number, now: number): void {
     throw new DomainError('TODO_DAT');
   }

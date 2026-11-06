@@ -1,22 +1,22 @@
 import { DomainError } from './errors.ts';
 
 // Value Object: không có id, bằng nhau theo giá trị, tạo xong không đổi được.
+// Đây là số tiền không âm. Số dư ví TREASURY của Hub được phép âm nên không dùng được kiểu này.
 export class Money {
   readonly minor: bigint;
 
   private constructor(minor: bigint) {
+    if (minor < 0n) throw new DomainError('MONEY_NEGATIVE');
     this.minor = minor;
     Object.freeze(this);
   }
 
-  // Cổng duy nhất tạo Money, nên mọi Money trong hệ thống đều hợp lệ.
+  // Cổng tạo Money. number chỉ nhận số nguyên an toàn; số lớn hơn thì truyền bigint.
   static of(minor: bigint | number): Money {
-    if (typeof minor === 'number' && !Number.isInteger(minor)) {
-      throw new DomainError('MONEY_NOT_INTEGER');
+    if (typeof minor === 'number' && !Number.isSafeInteger(minor)) {
+      throw new DomainError('MONEY_NOT_SAFE_INTEGER');
     }
-    const value = BigInt(minor);
-    if (value < 0n) throw new DomainError('MONEY_NEGATIVE');
-    return new Money(value);
+    return new Money(BigInt(minor));
   }
 
   equals(other: Money): boolean {

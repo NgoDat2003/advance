@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const LAYERS = ['domain', 'application', 'infrastructure', 'presentation'];
 // Mỗi tầng được phép import những tầng nào. "bare" là gói ngoài, gồm cả node:crypto, @nestjs/*, @prisma/*.
+// Clean cho phép presentation import domain; bảng này chặt hơn để ép controller đi qua DTO, chỉ chừa domain/errors.
 const ALLOWED = {
   domain: { layers: ['domain'], bare: false },
   application: { layers: ['domain', 'application'], bare: false },
@@ -38,11 +39,13 @@ export function scan(root) {
     for (const { specifier, line } of importsOf(readFileSync(path, 'utf8'))) {
       const isRelative = specifier.startsWith('.');
       const target = isRelative ? layerOf(relative(root, resolve(dirname(path), specifier))) : 'goi-ngoai';
+      // Import tương đối ra thư mục không thuộc tầng nào (prisma/, config/, common/) cũng là đi ra ngoài.
+      const errorsOnly = layer === 'presentation' && /\/domain\/errors(\.ts)?$/.test(specifier);
       const rule = ALLOWED[layer];
-      const ok = isRelative ? !target || rule.layers.includes(target) : rule.bare;
+      const ok = errorsOnly || (isRelative && target ? rule.layers.includes(target) : rule.bare);
       if (!ok) {
         const at = `${relative(root, path).split(sep).join('/')}:${line}`;
-        violations.push({ at, layer, target, specifier });
+        violations.push({ at, layer, target: target ?? 'ngoai-tang', specifier });
       }
     }
   };

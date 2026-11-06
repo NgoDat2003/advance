@@ -1,6 +1,9 @@
 $ npm run lab7   # node v22.18.0
-DI khong DIP: import that bai truoc khi kip tiem prisma gia -> PrismaService: thieu DATABASE_URL
+DI khong DIP: tiem ban gia chay duoc, exists -> false
+  ban gia phai biet API cua Prisma: wallet.findUnique({"where":{"id":1}})
+  service import: ./prisma-service.ts
 DI + DIP: {"transferId":"t1"}
+  use case import: ../domain/errors.ts, ../domain/money.ts, ../domain/transfer-between-wallets.ts, ../domain/wallet-repository.ts, ./transfer-dto.ts
 Sau khi bo kieu, con lai:
 export const WALLET_REPOSITORY = Symbol("WALLET_REPOSITORY");
 [rc=0]

@@ -11,7 +11,7 @@ Toàn bộ tài liệu (`Tài Liệu/`) và báo cáo thực hành (`reports/`) 
 ### 1. Advanced Backend (Giáo Trình Cũ)
 - 🗺️ **Tổng quan & Bảng map 16 chuyên đề**: [`TONG_QUAN_KHOA_HOC_ADVANCED_BACKEND.md`](./TONG_QUAN_KHOA_HOC_ADVANCED_BACKEND.md)
 - 📚 **Tài liệu học tập (15 PDF & Markdown kèm assets)**: `Tài Liệu/advanced_backend/`
-- 🔬 **Mã nguồn Labs thực hành (PostgreSQL & Redis)**: `labs/lesson-02-caching/`, `labs/lesson-03-index/`, `labs/lesson-06-redis/` (redis-cli), `labs/lesson-07-data-modeling/` (SQL chạy bằng DBX), `labs/lesson-12-transaction/`, `labs/lesson-14-locking/`
+- 🔬 **Mã nguồn Labs thực hành (PostgreSQL & Redis)**: `labs/lesson-02-caching/`, `labs/lesson-03-index/`, `labs/lesson-04-codebase-structure/` (Node thuần, không cài đặt), `labs/lesson-06-redis/` (redis-cli), `labs/lesson-07-data-modeling/` (SQL chạy bằng DBX), `labs/lesson-12-transaction/`, `labs/lesson-14-locking/`
 - 📊 **Teacher Guides & Báo cáo chuyên sâu**: `reports/advanced_backend/`
 
 ### 2. Khóa 3. Khóa Học System Design Highly Concurrent Systems Cùng Roninhub
@@ -74,6 +74,7 @@ advance-be/
 │   ├── advanced_backend/
 │   │   ├── lesson_02_caching_teacher_guide.html
 │   │   ├── lesson_03_index_teacher_guide.html
+│   │   ├── lesson_04_codebase_structure_teacher_guide.html
 │   │   ├── lesson_06_redis_teacher_guide.html
 │   │   ├── lesson_07_data_modeling_teacher_guide.html
 │   │   ├── lesson_12_transaction_teacher_guide.html
@@ -86,6 +87,7 @@ advance-be/
     ├── k2-lesson-04-caching/
     ├── lesson-02-caching/
     ├── lesson-03-index/
+    ├── lesson-04-codebase-structure/
     ├── lesson-06-redis/
     ├── lesson-07-data-modeling/
     ├── lesson-12-transaction/

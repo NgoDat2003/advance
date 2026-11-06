@@ -139,7 +139,7 @@ Ba khóa học không tách rời mà tạo thành một **tam giác năng lực
   + Mã nguồn biến thành 'Big Ball of Mud' sau 1 năm phát triển, sửa chỗ này hỏng chỗ kia.
   + Business logic bị trộn lẫn trực tiếp trong Controller hoặc SQL queries, không thể viết Unit Test.
   + Ràng buộc chặt chẽ vào một framework hoặc database cụ thể khiến việc refactor hoặc nâng cấp là bất khả thi.
-- 📦 **Thực hành / Artifacts liên quan**: Cấu trúc thư mục chuẩn áp dụng cho các labs và dự án tích hợp.
+- 📦 **Thực hành / Artifacts liên quan**: labs/lesson-04-codebase-structure/ & reports/advanced_backend/lesson_04_codebase_structure_teacher_guide.html
 
 #### Bài 05: Computer Networking for Backend Engineers
 - 📁 **File tài liệu gốc**: `Tài Liệu/advanced_backend/5. Networking.pdf (.md)`

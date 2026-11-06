@@ -14,6 +14,7 @@ branch: feat/lesson-04-codebase-structure-guide
 - **Lab:** `labs/lesson-04-codebase-structure/`. Không cài gì, không Docker, Node từ 22.18.
 - **Số liệu gốc:** `plans/261106-1400-lesson-04-codebase-structure-teacher-guide/runs/`.
 - **Kiểm tra guide:** `node plans/261106-1400-lesson-04-codebase-structure-teacher-guide/verify-guide.mjs` từ gốc repo.
+- **Sửa guide:** sửa `plans/261106-1400-lesson-04-codebase-structure-teacher-guide/guide-source/guide-body.html` hoặc `guide-data.js`, rồi chạy `node plans/261106-1400-lesson-04-codebase-structure-teacher-guide/guide-source/assemble.mjs`. Đừng sửa tay file HTML.
 
 ## Cách bắt đầu
 
@@ -34,7 +35,7 @@ Nên học xong Bài 06 và K2 Bài 04 trước, theo đúng thứ tự Cụm 2.
 
 ## Hạn chế
 
-- Lab chỉ chạy trên Node v22.18.0, chưa chạy trên Node 24 của Hub.
+- Số liệu ghi trên Node v22.18.0. `npm run all` cũng đạt trên Node 24.22.1 của Hub.
 - Số ở Lab 2 phụ thuộc máy.
 - Máy quét import không bắt được lỗi thiết kế như quy tắc nằm trong use case; `hw-check` dò theo tên và mẫu nên 9/9 chỉ là điều kiện cần.
 
@@ -46,5 +47,5 @@ Nên học xong Bài 06 và K2 Bài 04 trước, theo đúng thứ tự Cụm 2.
 ## Bước tiếp
 
 1. Bài kế theo roadmap là **Bài 13 Clean Code** (`Tài Liệu/advanced_backend/13. Clean Code.md`), Cụm 3 ngày 2. Chưa có guide.
-2. Dựng theo cùng khuôn: khung CSS của guide này, `runs/` + `verify-guide.mjs`, lab không cài đặt.
+2. Dựng theo cùng khuôn: `guide-source/` của guide này, `runs/` + `verify-guide.mjs`, lab không cài đặt.
 3. Hub Pha B (15–17/11): theo widget W4 ở chặng 7, chạy `checks/m1` lấy số trước khi refactor.
